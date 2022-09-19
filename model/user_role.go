@@ -8,4 +8,5 @@ type UserRole struct {
 	UserID     uint `json:"user_id"`
 	User       User `json:"user"`
 	RoleID     uint `json:"role_id"`
+	Role       Role `json:"role"`
 }

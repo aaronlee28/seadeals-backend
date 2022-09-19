@@ -13,6 +13,7 @@ import (
 
 type UserService interface {
 	Register(req *dto.RegisterRequest) (*dto.RegisterResponse, *gorm.DB, error)
+	CheckGoogleAccount(req *dto.GoogleLogin) (*model.User, error)
 }
 
 type userService struct {
@@ -103,4 +104,31 @@ func (u *userService) Register(req *dto.RegisterRequest) (*dto.RegisterResponse,
 	}
 
 	return userResponse, tx, nil
+}
+
+func (u *userService) CheckGoogleAccount(req *dto.GoogleLogin) (*model.User, error) {
+	_, err := mail.ParseAddress(req.Email)
+	if err != nil {
+		return nil, apperror.BadRequestError("Email is not valid")
+	}
+
+	tx := u.db.Begin()
+	isEmailExist, err := u.userRepository.HasExistEmail(tx, req.Email)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	if !isEmailExist {
+		return nil, nil
+	}
+
+	user, err := u.userRepository.GetUserByEmail(tx, req.Email)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	tx.Commit()
+	return user, nil
 }

@@ -24,6 +24,9 @@ func Init() {
 	authService := service.NewAuthService(&service.AuthSConfig{
 		DB:               db.Get(),
 		RefreshTokenRepo: refreshTokenRepository,
+		UserRepository:   userRepository,
+		UserRoleRepo:     userRoleRepository,
+		WalletRepository: walletRepository,
 		AppConfig:        config.Config,
 	})
 

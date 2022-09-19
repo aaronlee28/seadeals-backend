@@ -7,7 +7,8 @@ import (
 )
 
 type WalletRepository interface {
-	CreateWallet(tx *gorm.DB, wallet *model.Wallet) (*model.Wallet, error)
+	CreateWallet(*gorm.DB, *model.Wallet) (*model.Wallet, error)
+	GetWalletByUserID(*gorm.DB, uint) (*model.Wallet, error)
 }
 
 type walletRepository struct {
@@ -27,4 +28,14 @@ func (w *walletRepository) CreateWallet(tx *gorm.DB, wallet *model.Wallet) (*mod
 	}
 
 	return wallet, result.Error
+}
+
+func (w *walletRepository) GetWalletByUserID(tx *gorm.DB, userID uint) (*model.Wallet, error) {
+	var wallet = &model.Wallet{UserID: userID}
+	result := tx.Model(&wallet).First(&wallet)
+	if result.Error != nil {
+		return nil, apperror.InternalServerError("cannot find wallet")
+	}
+
+	return wallet, nil
 }
