@@ -13,6 +13,7 @@ func Init() {
 	userRoleRepository := repository.NewUserRoleRepository(&repository.UserRoleRepositoryConfig{})
 	walletRepository := repository.NewWalletRepository(&repository.WalletRepositoryConfig{})
 	refreshTokenRepository := repository.NewRefreshTokenRepo(&repository.RefreshTokenRepositoryConfig{})
+	productRepository := repository.NewProductRepository()
 
 	userService := service.NewUserService(&service.UserServiceConfig{
 		DB:               db.Get(),
@@ -30,9 +31,15 @@ func Init() {
 		AppConfig:        config.Config,
 	})
 
+	productService := service.NewProductService(&service.ProductConfig{
+		DB:          db.Get(),
+		ProductRepo: productRepository,
+	})
+
 	router := NewRouter(&RouterConfig{
-		UserService: userService,
-		AuthService: authService,
+		UserService:    userService,
+		AuthService:    authService,
+		ProductService: productService,
 	})
 	log.Fatalln(router.Run(":" + config.Config.Port))
 }

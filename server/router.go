@@ -9,8 +9,9 @@ import (
 )
 
 type RouterConfig struct {
-	UserService service.UserService
-	AuthService service.AuthService
+	UserService    service.UserService
+	AuthService    service.AuthService
+	ProductService service.ProductService
 }
 
 func NewRouter(c *RouterConfig) *gin.Engine {
@@ -18,13 +19,15 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.NoRoute()
 
 	h := handler.New(&handler.Config{
-		UserService: c.UserService,
-		AuthService: c.AuthService,
+		UserService:    c.UserService,
+		AuthService:    c.AuthService,
+		ProductService: c.ProductService,
 	})
 
 	r.Use(middleware.ErrorHandler)
 	r.Use(middleware.AllowCrossOrigin)
 
+	// Auth
 	r.POST("/register", middleware.RequestValidator(func() any {
 		return &dto.RegisterRequest{}
 	}), h.Register)
@@ -33,5 +36,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		return &dto.GoogleLogin{}
 	}), h.SignInWithGoogleEmail)
 
+	// Product
+	r.GET("/products/:slug", h.FindProductDetailBySlug)
 	return r
 }
