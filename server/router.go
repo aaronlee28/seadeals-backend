@@ -17,7 +17,7 @@ type RouterConfig struct {
 	DistrictService    service.DistrictService
 	SubDistrictService service.SubDistrictService
 	AddressService     service.AddressService
-	WalletService service.WalletService
+	WalletService      service.WalletService
 	ProductService     service.ProductService
 }
 
@@ -34,7 +34,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		SubDistrictService: c.SubDistrictService,
 		AddressService:     c.AddressService,
 		ProductService:     c.ProductService,
-		WalletService: c.WalletService,
+		WalletService:      c.WalletService,
 	})
 
 	r.Use(middleware.ErrorHandler)
@@ -49,13 +49,11 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		return &dto.GoogleLogin{}
 	}), h.SignInWithGoogleEmail)
 
-	// GUEST ROUTE
+	// ADDRESS
 	r.GET("/provinces", h.GetProvinces)
 	r.GET("/provinces/:id/cities", h.GetCitiesByProvinceID)
 	r.GET("/cities/:id/districts", h.GetDistrictsByCityID)
 	r.GET("/districts/:id/sub-districts", h.GetSubDistrictsByCityID)
-
-	// USER ROUTE
 	r.POST("/user/profiles/addresses", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.CreateAddressReq{}
 	}), h.CreateNewAddress)
@@ -68,7 +66,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.GET("/products/:slug", h.FindProductDetailBySlug)
 
 	// WALLET
-	r.GET("/userwallet", middleware.AuthorizeJWTFor("user"), h.WalletDataTransactions)
+	r.GET("/user-wallet", middleware.AuthorizeJWTFor("user"), h.WalletDataTransactions)
 
 	return r
 }

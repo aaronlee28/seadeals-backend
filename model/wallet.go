@@ -15,3 +15,5 @@ type Wallet struct {
 	Status       string     `json:"status"`
 	BlockedUntil *time.Time `json:"blocked_until"`
 }
+
+const WalletActive = "active"

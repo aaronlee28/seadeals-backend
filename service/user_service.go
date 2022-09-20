@@ -71,7 +71,7 @@ func (u *userService) Register(req *dto.RegisterRequest) (*dto.RegisterResponse,
 		UserID:       user.ID,
 		Balance:      0,
 		Pin:          nil,
-		Status:       "active",
+		Status:       model.WalletActive,
 		BlockedUntil: nil,
 	}
 	wallet, err := u.walletRepository.CreateWallet(tx, newWallet)
