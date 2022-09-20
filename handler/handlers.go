@@ -10,6 +10,7 @@ type Handler struct {
 	districtService    service.DistrictService
 	subDistrictService service.SubDistrictService
 	addressService     service.AddressService
+	walletService service.WalletService
 	productService service.ProductService
 }
 
@@ -22,12 +23,14 @@ type Config struct {
 	SubDistrictService service.SubDistrictService
 	AddressService     service.AddressService
 	ProductService service.ProductService
+	WalletService service.WalletService
 }
 
 func New(config *Config) *Handler {
 	return &Handler{
-		userService:        config.UserService,
-		authService:        config.AuthService,
+		userService:   config.UserService,
+		authService:   config.AuthService,
+		walletService: config.WalletService,
 		cityService:        config.CityService,
 		provinceService:    config.ProvinceService,
 		districtService:    config.DistrictService,

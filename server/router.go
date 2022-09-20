@@ -17,6 +17,7 @@ type RouterConfig struct {
 	DistrictService    service.DistrictService
 	SubDistrictService service.SubDistrictService
 	AddressService     service.AddressService
+	WalletService service.WalletService
 	ProductService     service.ProductService
 }
 
@@ -33,6 +34,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		SubDistrictService: c.SubDistrictService,
 		AddressService:     c.AddressService,
 		ProductService:     c.ProductService,
+		WalletService: c.WalletService,
 	})
 
 	r.Use(middleware.ErrorHandler)
@@ -42,6 +44,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.POST("/register", middleware.RequestValidator(func() any {
 		return &dto.RegisterRequest{}
 	}), h.Register)
+
 	r.POST("/google/sign-in", middleware.RequestValidator(func() any {
 		return &dto.GoogleLogin{}
 	}), h.SignInWithGoogleEmail)
@@ -63,5 +66,9 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 
 	// PRODUCTS
 	r.GET("/products/:slug", h.FindProductDetailBySlug)
+
+	// WALLET
+	r.GET("/userwallet", middleware.AuthorizeJWTFor("user"), h.WalletDataTransactions)
+
 	return r
 }

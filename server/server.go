@@ -66,6 +66,10 @@ func Init() {
 		ProductRepo: productRepository,
 	})
 
+	walletService := service.NewWalletService(&service.WalletServiceConfig{
+		DB:               db.Get(),
+		WalletRepository: walletRepository,
+	})
 	router := NewRouter(&RouterConfig{
 		UserService:        userService,
 		AuthService:        authService,
@@ -74,6 +78,7 @@ func Init() {
 		DistrictService:    districtService,
 		SubDistrictService: subDistrictService,
 		AddressService:     addressService,
+		WalletService: walletService,
 		ProductService:     productService,
 	})
 	log.Fatalln(router.Run(":" + config.Config.Port))
