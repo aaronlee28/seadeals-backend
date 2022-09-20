@@ -10,8 +10,9 @@ type Handler struct {
 	districtService    service.DistrictService
 	subDistrictService service.SubDistrictService
 	addressService     service.AddressService
-	walletService service.WalletService
-	productService service.ProductService
+	walletService      service.WalletService
+	productService     service.ProductService
+	seaLabsPayAccServ  service.UserSeaPayAccountServ
 }
 
 type Config struct {
@@ -22,20 +23,22 @@ type Config struct {
 	DistrictService    service.DistrictService
 	SubDistrictService service.SubDistrictService
 	AddressService     service.AddressService
-	ProductService service.ProductService
-	WalletService service.WalletService
+	ProductService     service.ProductService
+	WalletService      service.WalletService
+	SeaLabsPayAccServ  service.UserSeaPayAccountServ
 }
 
 func New(config *Config) *Handler {
 	return &Handler{
-		userService:   config.UserService,
-		authService:   config.AuthService,
-		walletService: config.WalletService,
+		userService:        config.UserService,
+		authService:        config.AuthService,
+		walletService:      config.WalletService,
 		cityService:        config.CityService,
 		provinceService:    config.ProvinceService,
 		districtService:    config.DistrictService,
 		subDistrictService: config.SubDistrictService,
 		addressService:     config.AddressService,
-		productService: config.ProductService,
+		productService:     config.ProductService,
+		seaLabsPayAccServ:  config.SeaLabsPayAccServ,
 	}
 }

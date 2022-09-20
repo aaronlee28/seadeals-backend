@@ -37,6 +37,7 @@ func (h *Handler) UpdateAddress(ctx *gin.Context) {
 	json, _ := value.(*dto.UpdateAddressReq)
 	if user.(dto.UserJWT).UserID != json.UserID {
 		_ = ctx.Error(apperror.ForbiddenError("Cannot update another user address"))
+		return
 	}
 
 	result, err := h.addressService.UpdateAddress(json)

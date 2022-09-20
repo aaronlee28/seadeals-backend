@@ -41,6 +41,7 @@ func (w *walletRepository) GetWalletByUserID(tx *gorm.DB, userID uint) (*model.W
 	if result.Error != nil {
 		return nil, apperror.InternalServerError("cannot find wallet")
 	}
+
 	return wallet, nil
 }
 
