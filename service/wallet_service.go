@@ -98,7 +98,6 @@ func (w *walletService) PaginatedTransactions(q *repository.Query, userID uint) 
 		Limit:        limit,
 		Transactions: ts,
 	}
-
 	return &paginatedTransactions, nil
 }
 
