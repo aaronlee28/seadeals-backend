@@ -10,6 +10,7 @@ type WalletRepository interface {
 	CreateWallet(*gorm.DB, *model.Wallet) (*model.Wallet, error)
 	GetWalletByUserID(*gorm.DB, uint) (*model.Wallet, error)
 	GetTransactionsByUserID(tx *gorm.DB, userID uint) (*[]model.Transaction, error)
+	TransactionDetails(tx *gorm.DB, transactionID uint) (*model.Transaction, error)
 }
 
 type walletRepository struct{}
@@ -46,7 +47,11 @@ func (w *walletRepository) GetTransactionsByUserID(tx *gorm.DB, userID uint) (*[
 	return transactions, nil
 }
 
-//
-//func (w *walletRepository) GetTransactionDetails(tx *gorm.DB, transactionID uint) (*model.Transaction, error) {
-//
-//}
+func (w *walletRepository) TransactionDetails(tx *gorm.DB, transactionID uint) (*model.Transaction, error) {
+	var transaction *model.Transaction
+	result := tx.Where("id = ?", transactionID).First(&transaction)
+	if result.Error != nil {
+		return nil, apperror.InternalServerError("cannot find transactions")
+	}
+	return transaction, nil
+}
