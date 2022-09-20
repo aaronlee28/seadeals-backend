@@ -38,6 +38,7 @@ func (w *walletService) UserWalletData(id uint) (*dto.WalletDataRes, error) {
 	wallet, err := w.walletRepository.GetWalletByUserID(tx, id)
 
 	if err != nil {
+		tx.Rollback()
 		return nil, err
 	}
 	transactions, err := w.walletRepository.GetTransactionsByUserID(tx, id)
@@ -54,6 +55,7 @@ func (w *walletService) TransactionDetails(id uint) (*dto.TransactionDetailsRes,
 	tx := w.db.Begin()
 	t, err := w.walletRepository.TransactionDetails(tx, id)
 	if err != nil {
+		tx.Rollback()
 		return nil, err
 	}
 	transaction := &dto.TransactionDetailsRes{
@@ -79,6 +81,7 @@ func (w *walletService) PaginatedTransactions(q *repository.Query, userID uint) 
 	var ts []dto.TransactionsRes
 	l, t, err := w.walletRepository.PaginatedTransactions(tx, q, userID)
 	if err != nil {
+		tx.Rollback()
 		return nil, err
 	}
 	for _, transaction := range *t {
@@ -108,6 +111,7 @@ func (w *walletService) WalletPin(userID uint, pin int) error {
 	err := w.walletRepository.WalletPin(tx, userID, pinString)
 
 	if err != nil {
+		tx.Rollback()
 		return err
 	}
 

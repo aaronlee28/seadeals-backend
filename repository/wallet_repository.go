@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"fmt"
 	"gorm.io/gorm"
 	"seadeals-backend/apperror"
 	"seadeals-backend/model"
@@ -93,7 +92,6 @@ func (w *walletRepository) WalletPin(tx *gorm.DB, userID uint, pin string) error
 
 	result2 := tx.Model(&wallet).Update("pin", pin)
 	if result2.Error != nil {
-		fmt.Println("error", result2.Error)
 		return apperror.InternalServerError("failed to update pin")
 	}
 	return nil
