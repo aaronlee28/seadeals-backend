@@ -27,9 +27,9 @@ func (h *Handler) WalletDataTransactions(ctx *gin.Context) {
 func (h *Handler) TransactionDetails(ctx *gin.Context) {
 	value, _ := ctx.Get("payload")
 	json, _ := value.(*dto.TransactionDetailsReq)
-	transactionId := json.TransactionID
+	transactionID := json.TransactionID
 
-	result, err := h.walletService.
+	result, err := h.walletService.TransactionDetails(transactionID)
 	if err != nil {
 		e := ctx.Error(err)
 		ctx.JSON(http.StatusBadRequest, e)

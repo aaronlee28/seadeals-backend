@@ -68,5 +68,6 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	// WALLET
 	r.GET("/user-wallet", middleware.AuthorizeJWTFor("user"), h.WalletDataTransactions)
 
+	r.GET("/transaction-details", middleware.RequestValidator(func() any { return &dto.TransactionDetailsReq{} }), middleware.AuthorizeJWTFor("user"), h.TransactionDetails)
 	return r
 }

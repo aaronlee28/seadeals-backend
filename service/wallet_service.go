@@ -4,11 +4,11 @@ import (
 	"gorm.io/gorm"
 	"seadeals-backend/dto"
 	"seadeals-backend/repository"
-	"time"
 )
 
 type WalletService interface {
 	UserWalletData(id uint) (*dto.WalletDataRes, error)
+	TransactionDetails(id uint) (*dto.TransactionDetailsRes, error)
 }
 
 type walletService struct {
@@ -50,12 +50,13 @@ func (w *walletService) TransactionDetails(id uint) (*dto.TransactionDetailsRes,
 		return nil, err
 	}
 	transaction := &dto.TransactionDetailsRes{
-		VoucherID:     0,
-		Total:         0,
-		PaymentType:   "",
-		PaymentMethod: "",
-		CreatedAt:     time.Time{},
-		UpdatedAt:     time.Time{},
+		Id:            t.Id,
+		VoucherID:     t.VoucherID,
+		Total:         t.Total,
+		PaymentType:   t.PaymentType,
+		PaymentMethod: t.PaymentMethod,
+		CreatedAt:     t.CreatedAt,
+		UpdatedAt:     t.UpdatedAt,
 	}
 	return transaction, nil
 }
