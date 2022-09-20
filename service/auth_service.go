@@ -100,7 +100,7 @@ func (a *authService) AuthAfterRegister(user *model.User, wallet *model.Wallet, 
 		Username: user.Username,
 		WalletID: wallet.ID,
 	}
-	token, refreshToken, err := a.generateJWTToken(userJWT, "user")
+	token, refreshToken, err := a.generateJWTToken(userJWT, model.UserRoleName)
 	if os.Getenv("ENV") == "testing" {
 		token = "test"
 		refreshToken = "test"

@@ -5,6 +5,7 @@ import (
 	"seadeals-backend/dto"
 	"seadeals-backend/handler"
 	"seadeals-backend/middleware"
+	"seadeals-backend/model"
 	"seadeals-backend/service"
 )
 
@@ -16,7 +17,7 @@ type RouterConfig struct {
 	DistrictService    service.DistrictService
 	SubDistrictService service.SubDistrictService
 	AddressService     service.AddressService
-	ProductService service.ProductService
+	ProductService     service.ProductService
 }
 
 func NewRouter(c *RouterConfig) *gin.Engine {
@@ -31,7 +32,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		DistrictService:    c.DistrictService,
 		SubDistrictService: c.SubDistrictService,
 		AddressService:     c.AddressService,
-		ProductService: c.ProductService,
+		ProductService:     c.ProductService,
 	})
 
 	r.Use(middleware.ErrorHandler)
@@ -52,13 +53,13 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.GET("/districts/:id/sub-districts", h.GetSubDistrictsByCityID)
 
 	// USER ROUTE
-	r.POST("/user/profiles/addresses", middleware.AuthorizeJWTFor("user"), middleware.RequestValidator(func() any {
+	r.POST("/user/profiles/addresses", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.CreateAddressReq{}
 	}), h.CreateNewAddress)
-	r.PATCH("/user/profiles/addresses", middleware.AuthorizeJWTFor("user"), middleware.RequestValidator(func() any {
+	r.PATCH("/user/profiles/addresses", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.UpdateAddressReq{}
 	}), h.UpdateAddress)
-	r.GET("/user/profiles/addresses", middleware.AuthorizeJWTFor("user"), h.GetAddressesByUserID)
+	r.GET("/user/profiles/addresses", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetAddressesByUserID)
 
 	// PRODUCTS
 	r.GET("/products/:slug", h.FindProductDetailBySlug)
