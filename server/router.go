@@ -70,6 +70,6 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 
 	r.GET("/transaction-details", middleware.RequestValidator(func() any { return &dto.TransactionDetailsReq{} }), middleware.AuthorizeJWTFor("user"), h.TransactionDetails)
 
-	r.GET("/paginated-transaction", middleware.AuthorizeJWTFor("user"), h.TransactionDetails)
+	r.GET("/paginated-transaction", middleware.AuthorizeJWTFor("user"), h.PaginatedTransactions)
 	return r
 }

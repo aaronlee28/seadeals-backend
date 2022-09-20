@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"seadeals-backend/dto"
@@ -20,7 +19,6 @@ func (h *Handler) WalletDataTransactions(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, e)
 		return
 	}
-	fmt.Println("handler", result.UserID)
 	successResponse := dto.StatusOKResponse(result)
 	ctx.JSON(http.StatusOK, successResponse)
 

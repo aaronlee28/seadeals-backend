@@ -72,11 +72,11 @@ func (w *walletRepository) PaginatedTransactions(tx *gorm.DB, q *Query, userID u
 	if result1.Error != nil {
 		return 0, nil, apperror.InternalServerError("cannot find transactions")
 	}
-	totalLength := len(*trans)
 
 	result2 := tx.Limit(limit).Offset(offset).Order("created_at desc").Find(&trans)
 	if result2.Error != nil {
 		return 0, nil, apperror.InternalServerError("cannot find transactions")
 	}
+	totalLength := len(*trans)
 	return totalLength, trans, nil
 }
