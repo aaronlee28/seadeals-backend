@@ -33,9 +33,11 @@ func (w *walletService) UserWalletData(id uint) (*dto.WalletDataRes, error) {
 	if err != nil {
 		return nil, err
 	}
+	transactions, err := w.walletRepository.GetTransactionsByUserID(tx, id)
 	walletData := &dto.WalletDataRes{
-		UserID:  wallet.UserID,
-		Balance: wallet.Balance,
+		UserID:       wallet.UserID,
+		Balance:      wallet.Balance,
+		Transactions: transactions,
 	}
 	return walletData, nil
 }

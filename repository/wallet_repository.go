@@ -9,6 +9,7 @@ import (
 type WalletRepository interface {
 	CreateWallet(*gorm.DB, *model.Wallet) (*model.Wallet, error)
 	GetWalletByUserID(*gorm.DB, uint) (*model.Wallet, error)
+	GetTransactionsByUserID(tx *gorm.DB, userID uint) (*[]model.Transaction, error)
 }
 
 type walletRepository struct {
