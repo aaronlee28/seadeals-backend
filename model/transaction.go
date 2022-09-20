@@ -2,7 +2,7 @@ package model
 
 import "time"
 
-type transaction struct {
+type Transaction struct {
 	Id        uint      `json:"id"`
 	StatusID  uint      `json:"status_id"`
 	OrderID   uint      `json:"order_id"`

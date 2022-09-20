@@ -39,3 +39,12 @@ func (w *walletRepository) GetWalletByUserID(tx *gorm.DB, userID uint) (*model.W
 
 	return wallet, nil
 }
+
+func (w *walletRepository) GetTransactionsByUserID(tx *gorm.DB, userID uint) (*[]model.Transaction, error) {
+	var transactions *[]model.Transaction
+	result := tx.Where("user_id = ?", userID).Find(&transactions)
+	if result.Error != nil {
+		return nil, apperror.InternalServerError("cannot find transactions")
+	}
+	return transactions, nil
+}
