@@ -19,6 +19,7 @@ func Init() {
 	provinceRepository := repository.NewProvinceRepository()
 	subDistrictRepository := repository.NewSubDistrictRepository()
 	productRepository := repository.NewProductRepository()
+	productVariantRepository := repository.NewProductVariantRepository()
 	userSeaLabsPayAccountRepo := repository.NewSeaPayAccountRepo()
 	orderItemRepository := repository.NewOrderItemRepository()
 
@@ -68,6 +69,11 @@ func Init() {
 		ProductRepo: productRepository,
 	})
 
+	productVariantService := service.NewProductVariantService(&service.ProductVariantServiceConfig{
+		DB:                 db.Get(),
+		ProductVariantRepo: productVariantRepository,
+	})
+
 	walletService := service.NewWalletService(&service.WalletServiceConfig{
 		DB:               db.Get(),
 		WalletRepository: walletRepository,
@@ -93,6 +99,7 @@ func Init() {
 		AddressService:        addressService,
 		WalletService:         walletService,
 		ProductService:        productService,
+		ProductVariantService: productVariantService,
 		UserSeaLabsPayAccServ: userSeaLabsPayAccountServ,
 		OrderItemService:      orderItemService,
 	})
