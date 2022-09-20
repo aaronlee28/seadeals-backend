@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v4"
 	"os"
@@ -31,7 +30,6 @@ func AuthorizeJWTFor(role string) gin.HandlerFunc {
 			unauthorizedError := apperror.UnauthorizedError("Unauthorized")
 			if len(splitAuthHeader) < 2 {
 				c.AbortWithStatusJSON(unauthorizedError.StatusCode, unauthorizedError)
-				fmt.Println("here 1")
 				return
 			}
 
@@ -39,14 +37,12 @@ func AuthorizeJWTFor(role string) gin.HandlerFunc {
 			token, err := helper.ValidateToken(encodedToken)
 			if err != nil || !token.Valid {
 				c.AbortWithStatusJSON(unauthorizedError.StatusCode, unauthorizedError)
-				fmt.Println("here 2")
 				return
 			}
 
 			claims, ok := token.Claims.(jwt.MapClaims)
 			if !ok {
 				c.AbortWithStatusJSON(unauthorizedError.StatusCode, unauthorizedError)
-				fmt.Println("here 3")
 				return
 			}
 
@@ -56,7 +52,6 @@ func AuthorizeJWTFor(role string) gin.HandlerFunc {
 			err = json.Unmarshal(scopeJson, &scope)
 			if err != nil {
 				c.AbortWithStatusJSON(unauthorizedError.StatusCode, unauthorizedError)
-				fmt.Println("here 4")
 				return
 			}
 			splitScope := strings.Split(scope, " ")
@@ -69,7 +64,6 @@ func AuthorizeJWTFor(role string) gin.HandlerFunc {
 			}
 			if !isAuthorize {
 				c.AbortWithStatusJSON(unauthorizedError.StatusCode, unauthorizedError)
-				fmt.Println("here 5")
 				return
 			}
 
