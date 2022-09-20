@@ -56,7 +56,6 @@ func (h *Handler) PaginatedTransactions(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, e)
 		return
 	}
-
 	successResponse := dto.StatusOKResponse(result)
 	ctx.JSON(http.StatusOK, successResponse)
 }
