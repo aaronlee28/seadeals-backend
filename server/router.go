@@ -19,6 +19,7 @@ type RouterConfig struct {
 	AddressService        service.AddressService
 	WalletService         service.WalletService
 	ProductService        service.ProductService
+	ProductVariantService service.ProductVariantService
 	UserSeaLabsPayAccServ service.UserSeaPayAccountServ
 }
 
@@ -27,16 +28,17 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.NoRoute()
 
 	h := handler.New(&handler.Config{
-		UserService:        c.UserService,
-		AuthService:        c.AuthService,
-		ProvinceService:    c.ProvinceService,
-		CityService:        c.CityService,
-		DistrictService:    c.DistrictService,
-		SubDistrictService: c.SubDistrictService,
-		AddressService:     c.AddressService,
-		ProductService:     c.ProductService,
-		WalletService:      c.WalletService,
-		SeaLabsPayAccServ:  c.UserSeaLabsPayAccServ,
+		UserService:           c.UserService,
+		AuthService:           c.AuthService,
+		ProvinceService:       c.ProvinceService,
+		CityService:           c.CityService,
+		DistrictService:       c.DistrictService,
+		SubDistrictService:    c.SubDistrictService,
+		AddressService:        c.AddressService,
+		ProductService:        c.ProductService,
+		ProductVariantService: c.ProductVariantService,
+		WalletService:         c.WalletService,
+		SeaLabsPayAccServ:     c.UserSeaLabsPayAccServ,
 	})
 
 	r.Use(middleware.ErrorHandler)
@@ -65,7 +67,8 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.GET("/user/profiles/addresses", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetAddressesByUserID)
 
 	// PRODUCTS
-	r.GET("/products/:slug", h.FindProductDetailBySlug)
+	r.GET("/products/:id/variant", h.FindAllProductVariantByProductID)
+	//r.GET("/products/:slug", h.FindProductDetailBySlug)
 
 	// WALLET
 	r.GET("/user-wallet", middleware.AuthorizeJWTFor("user"), h.WalletDataTransactions)
