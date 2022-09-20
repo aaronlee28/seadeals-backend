@@ -15,4 +15,5 @@ type Product struct {
 	IsArchived    bool            `json:"is_archived"`
 	ProductDetail *ProductDetail  `json:"product_detail"`
 	ProductPhotos []*ProductPhoto `json:"product_photos"`
+	Promotion     *Promotion      `json:"promotion"`
 }
