@@ -2,6 +2,12 @@ package dto
 
 import "seadeals-backend/model"
 
+type ProductVariantRes struct {
+	MinPrice        float64                 `json:"min_price"`
+	MaxPrice        float64                 `json:"max_price"`
+	ProductVariants []*GetProductVariantRes `json:"product_variants"`
+}
+
 type GetProductVariantRes struct {
 	ID            uint    `json:"id"`
 	ProductID     uint    `json:"product_id"`

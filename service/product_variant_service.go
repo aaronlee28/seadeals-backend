@@ -1,13 +1,15 @@
 package service
 
 import (
+	"errors"
 	"gorm.io/gorm"
+	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
 	"seadeals-backend/repository"
 )
 
 type ProductVariantService interface {
-	FindAllProductVariantByProductID(productID uint) ([]*dto.GetProductVariantRes, error)
+	FindAllProductVariantByProductID(productID uint) (*dto.ProductVariantRes, error)
 }
 
 type productVariantService struct {
@@ -27,18 +29,36 @@ func NewProductVariantService(c *ProductVariantServiceConfig) ProductVariantServ
 	}
 }
 
-func (s *productVariantService) FindAllProductVariantByProductID(productID uint) ([]*dto.GetProductVariantRes, error) {
+func (s *productVariantService) FindAllProductVariantByProductID(productID uint) (*dto.ProductVariantRes, error) {
 	tx := s.db.Begin()
 
 	productVariants, err := s.productVariantRepo.FindAllProductVariantByProductID(tx, productID)
 	if err != nil {
 		tx.Rollback()
+		if errors.Is(err, &apperror.ProductNotFoundError{}) {
+			return nil, apperror.NotFoundError(err.Error())
+		}
 		return nil, err
 	}
 
-	var res []*dto.GetProductVariantRes
+	var productVariantRes []*dto.GetProductVariantRes
+	minPrice := productVariants[0].Price
+	maxPrice := minPrice
+
 	for _, pv := range productVariants {
-		res = append(res, new(dto.GetProductVariantRes).From(pv))
+		if pv.Price > maxPrice {
+			maxPrice = pv.Price
+		}
+		if pv.Price < minPrice {
+			minPrice = pv.Price
+		}
+		productVariantRes = append(productVariantRes, new(dto.GetProductVariantRes).From(pv))
+	}
+
+	res := &dto.ProductVariantRes{
+		MinPrice:        minPrice,
+		MaxPrice:        maxPrice,
+		ProductVariants: productVariantRes,
 	}
 
 	tx.Commit()
