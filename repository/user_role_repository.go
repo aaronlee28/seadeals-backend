@@ -32,7 +32,7 @@ func (u *userRoleRepository) CreateRoleToUser(tx *gorm.DB, userRole *model.UserR
 
 func (u *userRoleRepository) GetRolesByUserID(tx *gorm.DB, userID uint) ([]*model.UserRole, error) {
 	var userRoles []*model.UserRole
-	result := tx.Where("user_id = ?", userID).Find(&userRoles)
+	result := tx.Model(&model.UserRole{}).Where("user_id = ?", userID).Joins("Role").Find(&userRoles)
 	if result.Error != nil {
 		return nil, apperror.InternalServerError("unable to get user roles")
 	}
