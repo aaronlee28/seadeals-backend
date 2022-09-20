@@ -3,6 +3,7 @@ package service
 import (
 	"gorm.io/gorm"
 	"math"
+	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
 	"seadeals-backend/repository"
 	"strconv"
@@ -12,6 +13,7 @@ type WalletService interface {
 	UserWalletData(id uint) (*dto.WalletDataRes, error)
 	TransactionDetails(id uint) (*dto.TransactionDetailsRes, error)
 	PaginatedTransactions(q *repository.Query, userID uint) (*dto.PaginatedTransactionsRes, error)
+	WalletPin(userID uint, pin int) error
 }
 
 type walletService struct {
@@ -95,4 +97,19 @@ func (w *walletService) PaginatedTransactions(q *repository.Query, userID uint) 
 	}
 
 	return &paginatedTransactions, nil
+}
+
+func (w *walletService) WalletPin(userID uint, pin int) error {
+	tx := w.db.Begin()
+	pinString := strconv.Itoa(pin)
+	if len(pinString) != 6 {
+		return apperror.BadRequestError("Pin has to be 6 digits long")
+	}
+	err := w.walletRepository.WalletPin(tx, userID, pin)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

@@ -60,3 +60,21 @@ func (h *Handler) PaginatedTransactions(ctx *gin.Context) {
 	successResponse := dto.StatusOKResponse(result)
 	ctx.JSON(http.StatusOK, successResponse)
 }
+
+//
+//func (h *Handler) WalletPin(ctx *gin.Context) {
+//	payload, _ := ctx.Get("user")
+//	user, _ := payload.(model.User)
+//	userID := user.ID
+//
+//	query := &repository.Query{
+//		Limit: ctx.Query("limit"),
+//		Page:  ctx.Query("page"),
+//	}
+//
+//	result, err := h.walletService.
+//	if err != nil {
+//		e := ctx.Error(err)
+//		ctx.JSON(http.StatusBadRequest, e)
+//		return
+//	}
