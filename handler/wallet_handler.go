@@ -23,3 +23,19 @@ func (h *Handler) WalletDataTransactions(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, successResponse)
 
 }
+
+func (h *Handler) TransactionDetails(ctx *gin.Context) {
+	value, _ := ctx.Get("payload")
+	json, _ := value.(*dto.TransactionDetailsReq)
+	transactionId := json.TransactionID
+
+	result, err := h.walletService.
+	if err != nil {
+		e := ctx.Error(err)
+		ctx.JSON(http.StatusBadRequest, e)
+		return
+	}
+
+	successResponse := dto.StatusOKResponse(result)
+	ctx.JSON(http.StatusOK, successResponse)
+}

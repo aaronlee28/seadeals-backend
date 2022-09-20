@@ -4,6 +4,7 @@ import (
 	"gorm.io/gorm"
 	"seadeals-backend/dto"
 	"seadeals-backend/repository"
+	"time"
 )
 
 type WalletService interface {
@@ -40,4 +41,21 @@ func (w *walletService) UserWalletData(id uint) (*dto.WalletDataRes, error) {
 		Transactions: transactions,
 	}
 	return walletData, nil
+}
+
+func (w *walletService) TransactionDetails(id uint) (*dto.TransactionDetailsRes, error) {
+	tx := w.db.Begin()
+	t, err := w.walletRepository.GetTransactionsByUserID(tx, id)
+	if err != nil {
+		return nil, err
+	}
+	transaction := &dto.TransactionDetailsRes{
+		VoucherID:     0,
+		Total:         0,
+		PaymentType:   "",
+		PaymentMethod: "",
+		CreatedAt:     time.Time{},
+		UpdatedAt:     time.Time{},
+	}
+	return transaction, nil
 }

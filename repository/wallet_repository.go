@@ -45,3 +45,8 @@ func (w *walletRepository) GetTransactionsByUserID(tx *gorm.DB, userID uint) (*[
 	}
 	return transactions, nil
 }
+
+//
+//func (w *walletRepository) GetTransactionDetails(tx *gorm.DB, transactionID uint) (*model.Transaction, error) {
+//
+//}
