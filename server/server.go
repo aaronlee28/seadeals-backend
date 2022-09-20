@@ -19,6 +19,7 @@ func Init() {
 	provinceRepository := repository.NewProvinceRepository()
 	subDistrictRepository := repository.NewSubDistrictRepository()
 	productRepository := repository.NewProductRepository()
+	userSeaLabsPayAccountRepo := repository.NewSeaPayAccountRepo()
 
 	userService := service.NewUserService(&service.UserServiceConfig{
 		DB:               db.Get(),
@@ -70,16 +71,23 @@ func Init() {
 		DB:               db.Get(),
 		WalletRepository: walletRepository,
 	})
+
+	userSeaLabsPayAccountServ := service.NewUserSeaPayAccountServ(&service.UserSeaPayAccountServConfig{
+		DB:                    db.Get(),
+		UserSeaPayAccountRepo: userSeaLabsPayAccountRepo,
+	})
+
 	router := NewRouter(&RouterConfig{
-		UserService:        userService,
-		AuthService:        authService,
-		ProvinceService:    provinceService,
-		CityService:        cityService,
-		DistrictService:    districtService,
-		SubDistrictService: subDistrictService,
-		AddressService:     addressService,
-		WalletService: walletService,
-		ProductService:     productService,
+		UserService:           userService,
+		AuthService:           authService,
+		ProvinceService:       provinceService,
+		CityService:           cityService,
+		DistrictService:       districtService,
+		SubDistrictService:    subDistrictService,
+		AddressService:        addressService,
+		WalletService:         walletService,
+		ProductService:        productService,
+		UserSeaLabsPayAccServ: userSeaLabsPayAccountServ,
 	})
 	log.Fatalln(router.Run(":" + config.Config.Port))
 }

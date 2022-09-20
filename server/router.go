@@ -10,15 +10,16 @@ import (
 )
 
 type RouterConfig struct {
-	UserService        service.UserService
-	AuthService        service.AuthService
-	ProvinceService    service.ProvinceService
-	CityService        service.CityService
-	DistrictService    service.DistrictService
-	SubDistrictService service.SubDistrictService
-	AddressService     service.AddressService
-	WalletService      service.WalletService
-	ProductService     service.ProductService
+	UserService           service.UserService
+	AuthService           service.AuthService
+	ProvinceService       service.ProvinceService
+	CityService           service.CityService
+	DistrictService       service.DistrictService
+	SubDistrictService    service.SubDistrictService
+	AddressService        service.AddressService
+	WalletService         service.WalletService
+	ProductService        service.ProductService
+	UserSeaLabsPayAccServ service.UserSeaPayAccountServ
 }
 
 func NewRouter(c *RouterConfig) *gin.Engine {
@@ -35,6 +36,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		AddressService:     c.AddressService,
 		ProductService:     c.ProductService,
 		WalletService:      c.WalletService,
+		SeaLabsPayAccServ:  c.UserSeaLabsPayAccServ,
 	})
 
 	r.Use(middleware.ErrorHandler)
@@ -67,6 +69,17 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 
 	// WALLET
 	r.GET("/user-wallet", middleware.AuthorizeJWTFor("user"), h.WalletDataTransactions)
+
+	// SEA LABS ACCOUNT
+	r.POST("/user/sea-labs-pay/register", middleware.AuthorizeJWTFor("user"), middleware.RequestValidator(func() any {
+		return &dto.RegisterSeaLabsPayReq{}
+	}), h.RegisterSeaLabsPayAccount)
+	r.POST("/user/sea-labs-pay/validator", middleware.AuthorizeJWTFor("user"), middleware.RequestValidator(func() any {
+		return &dto.CheckSeaLabsPayReq{}
+	}), h.CheckSeaLabsPayAccount)
+	r.PATCH("/user/sea-labs-pay", middleware.AuthorizeJWTFor("user"), middleware.RequestValidator(func() any {
+		return &dto.UpdateSeaLabsPayToMainReq{}
+	}), h.UpdateSeaLabsPayToMain)
 
 	return r
 }
