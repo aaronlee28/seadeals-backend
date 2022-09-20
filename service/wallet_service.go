@@ -60,3 +60,10 @@ func (w *walletService) TransactionDetails(id uint) (*dto.TransactionDetailsRes,
 	}
 	return transaction, nil
 }
+
+//
+//func (w *walletService) PaginatedTransactions(id uint) (*dto.PaginatedTransactionRes, error) {
+//	tx := w.db.Begin()
+//	transactions, err := w.walletRepository.GetTransactionsByUserID(tx, id)
+//
+//}
