@@ -114,6 +114,5 @@ func (w *walletService) WalletPin(userID uint, pin int) error {
 		tx.Rollback()
 		return err
 	}
-
 	return nil
 }
