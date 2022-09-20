@@ -10,13 +10,9 @@ type CityRepository interface {
 	GetCitiesByProvinceID(*gorm.DB, uint) ([]*model.City, error)
 }
 
-type cityRepository struct {
-}
+type cityRepository struct{}
 
-type CityRepositoryConfig struct {
-}
-
-func NewCityRepository(c *CityRepositoryConfig) CityRepository {
+func NewCityRepository() CityRepository {
 	return &cityRepository{}
 }
 

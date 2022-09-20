@@ -9,15 +9,15 @@ import (
 )
 
 func Init() {
-	userRepository := repository.NewUserRepository(&repository.UserRepositoryConfig{})
-	userRoleRepository := repository.NewUserRoleRepository(&repository.UserRoleRepositoryConfig{})
-	walletRepository := repository.NewWalletRepository(&repository.WalletRepositoryConfig{})
-	refreshTokenRepository := repository.NewRefreshTokenRepo(&repository.RefreshTokenRepositoryConfig{})
-	addressRepository := repository.NewAddressRepository(&repository.AddressRepositoryConfig{})
-	cityRepository := repository.NewCityRepository(&repository.CityRepositoryConfig{})
-	districtRepository := repository.NewDistrictRepository(&repository.DistrictRepositoryConfig{})
-	provinceRepository := repository.NewProvinceRepository(&repository.ProvinceRepositoryConfig{})
-	subDistrictRepository := repository.NewSubDistrictRepository(&repository.SubDistrictRepositoryConfig{})
+	userRepository := repository.NewUserRepository()
+	userRoleRepository := repository.NewUserRoleRepository()
+	walletRepository := repository.NewWalletRepository()
+	refreshTokenRepository := repository.NewRefreshTokenRepo()
+	addressRepository := repository.NewAddressRepository()
+	cityRepository := repository.NewCityRepository()
+	districtRepository := repository.NewDistrictRepository()
+	provinceRepository := repository.NewProvinceRepository()
+	subDistrictRepository := repository.NewSubDistrictRepository()
 	productRepository := repository.NewProductRepository()
 
 	userService := service.NewUserService(&service.UserServiceConfig{
@@ -67,14 +67,14 @@ func Init() {
 	})
 
 	router := NewRouter(&RouterConfig{
-		UserService:    userService,
-		AuthService:    authService,
+		UserService:        userService,
+		AuthService:        authService,
 		ProvinceService:    provinceService,
 		CityService:        cityService,
 		DistrictService:    districtService,
 		SubDistrictService: subDistrictService,
 		AddressService:     addressService,
-		ProductService: productService,
+		ProductService:     productService,
 	})
 	log.Fatalln(router.Run(":" + config.Config.Port))
 }

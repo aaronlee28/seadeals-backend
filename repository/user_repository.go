@@ -15,11 +15,7 @@ type UserRepository interface {
 	MatchingCredential(*gorm.DB, string, string) (*model.User, error)
 }
 
-type userRepository struct {
-}
-
-type UserRepositoryConfig struct {
-}
+type userRepository struct{}
 
 func hashPassword(password string) (string, error) {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
@@ -31,7 +27,7 @@ func checkPasswordHash(password, hash string) bool {
 	return err == nil
 }
 
-func NewUserRepository(c *UserRepositoryConfig) UserRepository {
+func NewUserRepository() UserRepository {
 	return &userRepository{}
 }
 

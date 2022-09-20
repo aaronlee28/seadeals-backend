@@ -11,13 +11,9 @@ type WalletRepository interface {
 	GetWalletByUserID(*gorm.DB, uint) (*model.Wallet, error)
 }
 
-type walletRepository struct {
-}
+type walletRepository struct{}
 
-type WalletRepositoryConfig struct {
-}
-
-func NewWalletRepository(c *WalletRepositoryConfig) WalletRepository {
+func NewWalletRepository() WalletRepository {
 	return &walletRepository{}
 }
 

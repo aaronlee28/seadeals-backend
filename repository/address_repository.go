@@ -13,13 +13,9 @@ type AddressRepository interface {
 	UpdateAddress(*gorm.DB, *model.Address) (*model.Address, error)
 }
 
-type addressRepository struct {
-}
+type addressRepository struct{}
 
-type AddressRepositoryConfig struct {
-}
-
-func NewAddressRepository(c *AddressRepositoryConfig) AddressRepository {
+func NewAddressRepository() AddressRepository {
 	return &addressRepository{}
 }
 

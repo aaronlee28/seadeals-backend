@@ -11,13 +11,9 @@ type UserRoleRepository interface {
 	GetRolesByUserID(*gorm.DB, uint) ([]*model.UserRole, error)
 }
 
-type userRoleRepository struct {
-}
+type userRoleRepository struct{}
 
-type UserRoleRepositoryConfig struct {
-}
-
-func NewUserRoleRepository(c *UserRoleRepositoryConfig) UserRoleRepository {
+func NewUserRoleRepository() UserRoleRepository {
 	return &userRoleRepository{}
 }
 
