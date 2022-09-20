@@ -2,8 +2,10 @@ package service
 
 import (
 	"gorm.io/gorm"
+	"math"
 	"seadeals-backend/dto"
 	"seadeals-backend/repository"
+	"strconv"
 )
 
 type WalletService interface {
@@ -65,6 +67,12 @@ func (w *walletService) TransactionDetails(id uint) (*dto.TransactionDetailsRes,
 }
 
 func (w *walletService) PaginatedTransactions(q *repository.Query, userID uint) (*dto.PaginatedTransactionsRes, error) {
+	if q.Limit == "" {
+		q.Limit = "10"
+	}
+	if q.Page == "" {
+		q.Page = "1"
+	}
 	tx := w.db.Begin()
 	var ts []dto.TransactionsRes
 	l, t, err := w.walletRepository.PaginatedTransactions(tx, q, userID)
@@ -75,8 +83,16 @@ func (w *walletService) PaginatedTransactions(q *repository.Query, userID uint) 
 		tr := new(dto.TransactionsRes).FromTransaction(&transaction)
 		ts = append(ts, *tr)
 	}
-	var paginatedTransactions dto.PaginatedTransactionsRes
-	paginatedTransactions.TotalLength = l
-	paginatedTransactions.Transactions = ts
+	limit, _ := strconv.Atoi(q.Limit)
+	page, _ := strconv.Atoi(q.Page)
+	totalPage := float64(l) / float64(limit)
+	paginatedTransactions := dto.PaginatedTransactionsRes{
+		TotalLength:  l,
+		TotalPage:    int(math.Ceil(totalPage)),
+		CurrentPage:  page,
+		Limit:        limit,
+		Transactions: ts,
+	}
+
 	return &paginatedTransactions, nil
 }
