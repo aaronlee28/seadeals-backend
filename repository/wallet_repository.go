@@ -28,8 +28,8 @@ func (w *walletRepository) CreateWallet(tx *gorm.DB, wallet *model.Wallet) (*mod
 }
 
 func (w *walletRepository) GetWalletByUserID(tx *gorm.DB, userID uint) (*model.Wallet, error) {
-	var wallet = &model.Wallet{UserID: userID}
-	result := tx.Model(&wallet).First(&wallet)
+	var wallet = &model.Wallet{}
+	result := tx.Model(&wallet).Where("user_id", userID).First(&wallet)
 	if result.Error != nil {
 		return nil, apperror.InternalServerError("cannot find wallet")
 	}
