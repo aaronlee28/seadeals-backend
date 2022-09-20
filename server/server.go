@@ -9,15 +9,16 @@ import (
 )
 
 func Init() {
-	userRepository := repository.NewUserRepository(&repository.UserRepositoryConfig{})
-	userRoleRepository := repository.NewUserRoleRepository(&repository.UserRoleRepositoryConfig{})
-	walletRepository := repository.NewWalletRepository(&repository.WalletRepositoryConfig{})
-	refreshTokenRepository := repository.NewRefreshTokenRepo(&repository.RefreshTokenRepositoryConfig{})
-	addressRepository := repository.NewAddressRepository(&repository.AddressRepositoryConfig{})
-	cityRepository := repository.NewCityRepository(&repository.CityRepositoryConfig{})
-	districtRepository := repository.NewDistrictRepository(&repository.DistrictRepositoryConfig{})
-	provinceRepository := repository.NewProvinceRepository(&repository.ProvinceRepositoryConfig{})
-	subDistrictRepository := repository.NewSubDistrictRepository(&repository.SubDistrictRepositoryConfig{})
+	userRepository := repository.NewUserRepository()
+	userRoleRepository := repository.NewUserRoleRepository()
+	walletRepository := repository.NewWalletRepository()
+	refreshTokenRepository := repository.NewRefreshTokenRepo()
+	addressRepository := repository.NewAddressRepository()
+	cityRepository := repository.NewCityRepository()
+	districtRepository := repository.NewDistrictRepository()
+	provinceRepository := repository.NewProvinceRepository()
+	subDistrictRepository := repository.NewSubDistrictRepository()
+	productRepository := repository.NewProductRepository()
 
 	userService := service.NewUserService(&service.UserServiceConfig{
 		DB:               db.Get(),
@@ -60,6 +61,11 @@ func Init() {
 		AddressRepository: addressRepository,
 	})
 
+	productService := service.NewProductService(&service.ProductConfig{
+		DB:          db.Get(),
+		ProductRepo: productRepository,
+	})
+
 	walletService := service.NewWalletService(&service.WalletServiceConfig{
 		DB:               db.Get(),
 		WalletRepository: walletRepository,
@@ -73,6 +79,7 @@ func Init() {
 		SubDistrictService: subDistrictService,
 		AddressService:     addressService,
 		WalletService: walletService,
+		ProductService:     productService,
 	})
 	log.Fatalln(router.Run(":" + config.Config.Port))
 }

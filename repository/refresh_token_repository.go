@@ -9,13 +9,9 @@ type RefreshTokenRepository interface {
 	CreateRefreshToken(tx *gorm.DB, userID uint, token string) error
 }
 
-type refreshTokenRepository struct {
-}
+type refreshTokenRepository struct{}
 
-type RefreshTokenRepositoryConfig struct {
-}
-
-func NewRefreshTokenRepo(c *RefreshTokenRepositoryConfig) RefreshTokenRepository {
+func NewRefreshTokenRepo() RefreshTokenRepository {
 	return &refreshTokenRepository{}
 }
 

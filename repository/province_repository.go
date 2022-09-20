@@ -10,13 +10,9 @@ type ProvinceRepository interface {
 	GetProvinces(*gorm.DB) ([]*model.Province, error)
 }
 
-type provinceRepository struct {
-}
+type provinceRepository struct{}
 
-type ProvinceRepositoryConfig struct {
-}
-
-func NewProvinceRepository(c *ProvinceRepositoryConfig) ProvinceRepository {
+func NewProvinceRepository() ProvinceRepository {
 	return &provinceRepository{}
 }
 

@@ -96,7 +96,7 @@ func (u *userService) Register(req *dto.RegisterRequest) (*dto.RegisterResponse,
 		Username: user.Username,
 		Email:    user.Email,
 		Phone:    user.Phone,
-		Role:     "user",
+		Role:     model.UserRoleName,
 		Wallet: model.Wallet{
 			ID:      wallet.ID,
 			Balance: wallet.Balance,

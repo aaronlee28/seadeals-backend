@@ -10,13 +10,9 @@ type SubDistrictRepository interface {
 	GetSubDistrictByDistrictID(*gorm.DB, uint) ([]*model.SubDistrict, error)
 }
 
-type subDistrictRepository struct {
-}
+type subDistrictRepository struct{}
 
-type SubDistrictRepositoryConfig struct {
-}
-
-func NewSubDistrictRepository(c *SubDistrictRepositoryConfig) SubDistrictRepository {
+func NewSubDistrictRepository() SubDistrictRepository {
 	return &subDistrictRepository{}
 }
 

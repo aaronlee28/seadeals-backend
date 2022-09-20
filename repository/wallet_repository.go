@@ -12,13 +12,9 @@ type WalletRepository interface {
 	GetTransactionsByUserID(tx *gorm.DB, userID uint) (*[]model.Transaction, error)
 }
 
-type walletRepository struct {
-}
+type walletRepository struct{}
 
-type WalletRepositoryConfig struct {
-}
-
-func NewWalletRepository(c *WalletRepositoryConfig) WalletRepository {
+func NewWalletRepository() WalletRepository {
 	return &walletRepository{}
 }
 

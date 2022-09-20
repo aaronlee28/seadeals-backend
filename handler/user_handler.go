@@ -35,7 +35,7 @@ func (h *Handler) Register(ctx *gin.Context) {
 		ctx.SetCookie("access_token", refreshToken, 60*60*24, "/", ctx.Request.Header.Get("Origin"), true, true)
 	}
 
-	ctx.JSON(http.StatusCreated, gin.H{"data": gin.H{"user": result, "id_token": accessToken}})
+	ctx.JSON(http.StatusCreated, dto.StatusCreatedResponse(gin.H{"data": gin.H{"user": result, "id_token": accessToken}}))
 }
 func (h *Handler) SignInWithGoogleEmail(ctx *gin.Context) {
 	value, _ := ctx.Get("payload")
@@ -48,7 +48,7 @@ func (h *Handler) SignInWithGoogleEmail(ctx *gin.Context) {
 	}
 
 	if result == nil {
-		ctx.JSON(http.StatusCreated, gin.H{"data": gin.H{"user": result, "has_login": false, "id_token": ""}})
+		ctx.JSON(http.StatusCreated, dto.StatusCreatedResponse(gin.H{"data": gin.H{"user": result, "has_login": false, "id_token": ""}}))
 		return
 	}
 
@@ -64,5 +64,5 @@ func (h *Handler) SignInWithGoogleEmail(ctx *gin.Context) {
 		ctx.SetCookie("access_token", refreshToken, 60*60*24, "/", ctx.Request.Header.Get("Origin"), true, true)
 	}
 
-	ctx.JSON(http.StatusCreated, gin.H{"data": gin.H{"user": result, "has_login": true, "id_token": accessToken}})
+	ctx.JSON(http.StatusCreated, dto.StatusCreatedResponse(gin.H{"data": gin.H{"user": result, "has_login": true, "id_token": accessToken}}))
 }
