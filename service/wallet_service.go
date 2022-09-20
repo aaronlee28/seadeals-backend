@@ -105,7 +105,7 @@ func (w *walletService) WalletPin(userID uint, pin int) error {
 	if len(pinString) != 6 {
 		return apperror.BadRequestError("Pin has to be 6 digits long")
 	}
-	err := w.walletRepository.WalletPin(tx, userID, pin)
+	err := w.walletRepository.WalletPin(tx, userID, pinString)
 
 	if err != nil {
 		return err

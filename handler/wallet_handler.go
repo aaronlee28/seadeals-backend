@@ -1,10 +1,10 @@
 package handler
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"seadeals-backend/dto"
-	"seadeals-backend/model"
 	"seadeals-backend/repository"
 )
 
@@ -42,8 +42,8 @@ func (h *Handler) TransactionDetails(ctx *gin.Context) {
 
 func (h *Handler) PaginatedTransactions(ctx *gin.Context) {
 	payload, _ := ctx.Get("user")
-	user, _ := payload.(model.User)
-	userID := user.ID
+	user, _ := payload.(dto.UserJWT)
+	userID := user.UserID
 
 	query := &repository.Query{
 		Limit: ctx.Query("limit"),
@@ -63,17 +63,20 @@ func (h *Handler) PaginatedTransactions(ctx *gin.Context) {
 
 func (h *Handler) WalletPin(ctx *gin.Context) {
 	payload, _ := ctx.Get("user")
-	user, _ := payload.(model.User)
-	userID := user.ID
+	user, _ := payload.(dto.UserJWT)
+	userID := user.UserID
 
 	value, _ := ctx.Get("payload")
 	json, _ := value.(*dto.PinReq)
 	pin := json.Pin
-
+	fmt.Println("id", userID)
 	err := h.walletService.WalletPin(userID, pin)
 	if err != nil {
 		e := ctx.Error(err)
 		ctx.JSON(http.StatusBadRequest, e)
 		return
 	}
+	successResponse := dto.StatusOKResponse(err)
+	ctx.JSON(http.StatusOK, successResponse)
+
 }

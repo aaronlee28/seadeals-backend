@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"fmt"
 	"gorm.io/gorm"
 	"seadeals-backend/apperror"
 	"seadeals-backend/model"
@@ -13,7 +14,7 @@ type WalletRepository interface {
 	GetTransactionsByUserID(tx *gorm.DB, userID uint) (*[]model.Transaction, error)
 	TransactionDetails(tx *gorm.DB, transactionID uint) (*model.Transaction, error)
 	PaginatedTransactions(tx *gorm.DB, q *Query, userID uint) (int, *[]model.Transaction, error)
-	WalletPin(tx *gorm.DB, userID uint, pin int) error
+	WalletPin(tx *gorm.DB, userID uint, pin string) error
 }
 
 type walletRepository struct{}
@@ -83,7 +84,7 @@ func (w *walletRepository) PaginatedTransactions(tx *gorm.DB, q *Query, userID u
 	return totalLength, trans, nil
 }
 
-func (w *walletRepository) WalletPin(tx *gorm.DB, userID uint, pin int) error {
+func (w *walletRepository) WalletPin(tx *gorm.DB, userID uint, pin string) error {
 	var wallet *model.Wallet
 	result1 := tx.Model(&wallet).Where("user_id = ?", userID).First(&wallet)
 	if result1.Error != nil {
@@ -92,6 +93,7 @@ func (w *walletRepository) WalletPin(tx *gorm.DB, userID uint, pin int) error {
 
 	result2 := tx.Model(&wallet).Update("pin", pin)
 	if result2.Error != nil {
+		fmt.Println("error", result2.Error)
 		return apperror.InternalServerError("failed to update pin")
 	}
 	return nil
