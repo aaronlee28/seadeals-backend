@@ -71,6 +71,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.GET("/user-wallet", middleware.AuthorizeJWTFor("user"), h.WalletDataTransactions)
 	r.GET("/transaction-details", middleware.RequestValidator(func() any { return &dto.TransactionDetailsReq{} }), middleware.AuthorizeJWTFor("user"), h.TransactionDetails)
 	r.GET("/paginated-transaction", middleware.AuthorizeJWTFor("user"), h.PaginatedTransactions)
+	r.PATCH("/wallet-pin", middleware.AuthorizeJWTFor("user"), middleware.RequestValidator(func() any { return &dto.PinReq{} }), h.WalletPin)
 
 	// SEA LABS ACCOUNT
 	r.POST("/user/sea-labs-pay/register", middleware.AuthorizeJWTFor("user"), middleware.RequestValidator(func() any {
