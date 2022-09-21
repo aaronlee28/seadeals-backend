@@ -1,10 +1,14 @@
 package repository
 
 import (
+	"context"
+	"github.com/go-redis/redis/v8"
 	"gorm.io/gorm"
 	"seadeals-backend/apperror"
 	"seadeals-backend/model"
+	"seadeals-backend/redisutils"
 	"strconv"
+	"time"
 )
 
 type WalletRepository interface {
@@ -14,6 +18,8 @@ type WalletRepository interface {
 	TransactionDetails(tx *gorm.DB, transactionID uint) (*model.Transaction, error)
 	PaginatedTransactions(tx *gorm.DB, q *Query, userID uint) (int, *[]model.Transaction, error)
 	WalletPin(tx *gorm.DB, userID uint, pin string) error
+	ValidateWalletPin(tx *gorm.DB, userID uint, pin string) error
+	GetWalletStatus(tx *gorm.DB, userID uint) (string, error)
 }
 
 type walletRepository struct{}
@@ -26,6 +32,11 @@ type Query struct {
 	Limit string
 	Page  string
 }
+
+const (
+	WalletBlocked string = "blocked"
+	WalletActive  string = "active"
+)
 
 func (w *walletRepository) CreateWallet(tx *gorm.DB, wallet *model.Wallet) (*model.Wallet, error) {
 	result := tx.Create(&wallet)
@@ -95,4 +106,65 @@ func (w *walletRepository) WalletPin(tx *gorm.DB, userID uint, pin string) error
 		return apperror.InternalServerError("failed to update pin")
 	}
 	return nil
+}
+
+func (w *walletRepository) ValidateWalletPin(tx *gorm.DB, userID uint, pin string) error {
+	rds := redisutils.Use()
+	ctx := context.Background()
+	keyTries := "user:" + strconv.Itoa(int(userID)) + ":wallet:tries"
+
+	tries, err := rds.Get(ctx, keyTries).Int()
+	if err != nil && err != redis.Nil {
+		return apperror.InternalServerError("Cannot get data in redis")
+	}
+	if tries >= 3 {
+		return apperror.BadRequestError("Wallet is blocked because too many wrong attempts")
+	}
+
+	var wallet *model.Wallet
+	result1 := tx.Model(&wallet).Where("user_id = ?", userID).First(&wallet)
+	if result1.Error != nil {
+		return apperror.InternalServerError("cannot find wallet")
+	}
+	if wallet.Pin == nil {
+		return apperror.BadRequestError("Wallet does not have pin")
+	}
+
+	if *wallet.Pin != pin {
+		tries += 1
+		rds.Set(ctx, keyTries, tries, 15*time.Minute)
+		if tries >= 3 {
+			return apperror.BadRequestError("Too many wrong attempts, wallet is blocked for 15 minutes")
+		}
+		return apperror.BadRequestError("Pin is incorrect")
+	}
+
+	rds.Del(ctx, keyTries)
+	return nil
+}
+
+func (w *walletRepository) GetWalletStatus(tx *gorm.DB, userID uint) (string, error) {
+	rds := redisutils.Use()
+	ctx := context.Background()
+	keyTries := "user:" + strconv.Itoa(int(userID)) + ":wallet:tries"
+
+	tries, err := rds.Get(ctx, keyTries).Int()
+	if err != nil && err != redis.Nil {
+		return "", apperror.InternalServerError("Cannot get data in redis")
+	}
+	if tries >= 3 {
+		return WalletBlocked, nil
+	}
+
+	if err == redis.Nil {
+		var wallet *model.Wallet
+		result1 := tx.Model(&wallet).Where("user_id = ?", userID).First(&wallet)
+		if result1.Error != nil {
+			return "", apperror.InternalServerError("cannot find wallet")
+		}
+
+		return wallet.Status, nil
+	}
+
+	return WalletActive, nil
 }
