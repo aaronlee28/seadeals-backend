@@ -16,6 +16,7 @@ type ProductRepository interface {
 	SearchPromoPrice(tx *gorm.DB, productID uint) (float64, error)
 	SearchRating(tx *gorm.DB, productID uint) ([]int, error)
 	SearchCity(tx *gorm.DB, productID uint) (string, error)
+	SearchCategory(tx *gorm.DB, productID uint) (string, error)
 }
 
 type productRepository struct{}
@@ -100,7 +101,7 @@ func (r *productRepository) SearchPromoPrice(tx *gorm.DB, productID uint) (float
 
 	promoQuery := tx.Select("amount").Table("promotions").Where("product_id = ?", productID).Order("amount asc").Limit(1).Scan(&promo)
 	if promoQuery.Error != nil {
-		return 0, apperror.InternalServerError("cannot find price")
+		return 0, apperror.InternalServerError("cannot find promo price")
 	}
 	return promo, nil
 }
@@ -109,7 +110,7 @@ func (r *productRepository) SearchRating(tx *gorm.DB, productID uint) ([]int, er
 	var rating []int
 	ratingQuery := tx.Select("rating").Table("reviews").Where("product_id = ?", productID).Scan(&rating)
 	if ratingQuery.Error != nil {
-		return nil, apperror.InternalServerError("cannot find price")
+		return nil, apperror.InternalServerError("cannot find rating")
 	}
 
 	return rating, nil
@@ -119,7 +120,17 @@ func (r *productRepository) SearchCity(tx *gorm.DB, productID uint) (string, err
 	var city string
 	result := tx.Raw("SELECT cities.name FROM (SELECT districts.city_id FROM (SELECT sub_districts.district_id FROM (SELECT addresses.sub_district_id FROM (SELECT products.id as product_id, sellers.address_id FROM products JOIN sellers ON products.seller_id = sellers.id WHERE products.id = ?) a JOIN addresses on a.address_id = addresses.id) b JOIN sub_districts on b.sub_district_id = sub_districts.id) c join districts on c.district_id = districts.id) d join cities on d.city_id = cities.id", productID).Scan(&city)
 	if result.Error != nil {
-		return "", apperror.InternalServerError("cannot find image")
+		return "", apperror.InternalServerError("cannot find city")
 	}
 	return city, nil
+}
+
+func (r *productRepository) SearchCategory(tx *gorm.DB, productID uint) (string, error) {
+	var category string
+	categoryQuery := tx.Table("product_categories").Select("product_categories.name").Joins("join products on products.category_id = product_categories.id").Where("products.id = ?", productID).Scan(&category)
+	if categoryQuery.Error != nil {
+		return "", apperror.InternalServerError("cannot find category")
+	}
+
+	return category, nil
 }

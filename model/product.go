@@ -1,9 +1,8 @@
 package model
 
-import "gorm.io/gorm"
+import "time"
 
 type Product struct {
-	gorm.Model    `json:"-"`
 	ID            uint            `json:"id" gorm:"primaryKey"`
 	CategoryID    uint            `json:"category_id"`
 	SellerID      uint            `json:"seller_id"`
@@ -16,4 +15,5 @@ type Product struct {
 	ProductDetail *ProductDetail  `json:"product_detail"`
 	ProductPhotos []*ProductPhoto `json:"product_photos"`
 	Promotion     *Promotion      `json:"promotion"`
+	UpdatedAt     time.Time       `json:"updated_at"`
 }

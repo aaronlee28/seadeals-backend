@@ -83,15 +83,16 @@ func (p *productService) SearchProduct(q *repository.SearchQuery) (*dto.Searched
 		for _, rating := range ratings {
 			sum += rating
 		}
-		city, err6 := p.productRepo.SearchCity(tx, product.ProductID)
 		averageRating := float64(sum) / float64(len(ratings))
+		city, err6 := p.productRepo.SearchCity(tx, product.ProductID)
+		category, err7 := p.productRepo.SearchCategory(tx, product.ProductID)
 		product.MediaURL = url
 		product.MinPrice = min
 		product.MaxPrice = max
 		product.PromoPrice = promo
 		product.Rating = averageRating
 		product.City = city
-
+		product.Category = category
 		if err2 != nil {
 			tx.Rollback()
 			return nil, err2
@@ -112,6 +113,11 @@ func (p *productService) SearchProduct(q *repository.SearchQuery) (*dto.Searched
 			tx.Rollback()
 			return nil, err6
 		}
+		if err7 != nil {
+			tx.Rollback()
+			return nil, err7
+		}
 	}
+
 	return &searchedSortFilterProducts, nil
 }
