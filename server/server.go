@@ -105,6 +105,11 @@ func Init() {
 		OrderItemRepository: orderItemRepository,
 	})
 
+	refreshTokenService := service.NewRefreshTokenService(&service.RefreshTokenServiceConfig{
+		DB:               db.Get(),
+		RefreshTokenRepo: refreshTokenRepository,
+	})
+
 	router := NewRouter(&RouterConfig{
 		UserService:            userService,
 		AuthService:            authService,
@@ -120,6 +125,7 @@ func Init() {
 		SellerService:          sellerService,
 		UserSeaLabsPayAccServ:  userSeaLabsPayAccountServ,
 		OrderItemService:       orderItemService,
+		RefreshTokenService:    refreshTokenService,
 	})
 	log.Fatalln(router.Run(":" + config.Config.Port))
 }
