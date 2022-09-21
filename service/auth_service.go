@@ -173,6 +173,7 @@ func (a *authService) SignIn(req *dto.SignInReq) (string, string, error) {
 	userJWT := &dto.UserJWT{
 		UserID:   user.ID,
 		Email:    user.Email,
+		Username: user.Username,
 		WalletID: wallet.ID,
 	}
 
