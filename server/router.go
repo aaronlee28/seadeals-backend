@@ -53,7 +53,9 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		return &dto.RegisterRequest{}
 	}), h.Register)
 
-	r.POST("/google/sign-in", middleware.RequestValidator(func() any {
+	r.GET("/google/sign-in", h.GoogleSignIn)
+	r.GET("/google/callback", h.GoogleCallback)
+	r.POST("/sign-in", middleware.RequestValidator(func() any {
 		return &dto.GoogleLogin{}
 	}), h.SignInWithGoogleEmail)
 

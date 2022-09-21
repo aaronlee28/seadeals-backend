@@ -37,6 +37,7 @@ func (h *Handler) Register(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusCreated, dto.StatusCreatedResponse(gin.H{"data": gin.H{"user": result, "id_token": accessToken}}))
 }
+
 func (h *Handler) SignInWithGoogleEmail(ctx *gin.Context) {
 	value, _ := ctx.Get("payload")
 	json, _ := value.(*dto.GoogleLogin)
