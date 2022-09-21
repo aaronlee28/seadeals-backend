@@ -12,6 +12,7 @@ type SearchedProductRes struct {
 	Rating     uint    `json:"rating" binding:"required"`
 	Bought     int     `json:"Bought" binding:"required"`
 	City       string  `json:"city" binding:"required"`
+	Category   string  `json:"category" binding:"required"`
 }
 
 func (_ *SearchedProductRes) FromProduct(t *model.Product) *SearchedProductRes {
@@ -25,5 +26,6 @@ func (_ *SearchedProductRes) FromProduct(t *model.Product) *SearchedProductRes {
 		Rating:     0,
 		Bought:     0,
 		City:       "",
+		Category:   "",
 	}
 }

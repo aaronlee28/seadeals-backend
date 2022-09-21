@@ -4,12 +4,13 @@ import (
 	"gorm.io/gorm"
 	"seadeals-backend/apperror"
 	"seadeals-backend/model"
+	"strconv"
 )
 
 type ProductRepository interface {
 	FindProductDetailByID(tx *gorm.DB, id uint) (*model.Product, error)
 	FindProductBySlug(tx *gorm.DB, slug string) (*model.Product, error)
-	SearchProduct(tx *gorm.DB, q *SearchQuery) (int, *[]model.Product, error)
+	SearchProduct(tx *gorm.DB, q *SearchQuery) (*[]model.Product, error)
 }
 
 type productRepository struct{}
@@ -46,19 +47,19 @@ func (r *productRepository) FindProductBySlug(tx *gorm.DB, slug string) (*model.
 	return product, nil
 }
 
-func (r *productRepository) SearchProduct(tx *gorm.DB, q *SearchQuery) (int, *[]model.Product, error) {
+func (r *productRepository) SearchProduct(tx *gorm.DB, q *SearchQuery) (*[]model.Product, error) {
 	//need to join product with location and rating
 	//for location, need to join product -> seller -> addresses -> sub_district-> district->cities
 	//for rating, need to join product -> reviews
 	//do this on a different function
 	var p *[]model.Product
 	search := "%" + q.Search + "%"
-	//limit, _ := strconv.Atoi(q.Limit)
+	limit, _ := strconv.Atoi(q.Limit)
 	//page, _ := strconv.Atoi(q.Page)
-	result := tx.Where("upper(name) like UPPER(?)", search).Find(&p)
+
+	result := tx.Where("UPPER(name) like UPPER(?)", search).Limit(limit).Find(&p)
 	if result.Error != nil {
-		return 0, nil, apperror.InternalServerError("cannot find product")
+		return nil, apperror.InternalServerError("cannot find product")
 	}
-	totalLength := len(*p)
-	return totalLength, p, nil
+	return p, nil
 }
