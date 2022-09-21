@@ -1,4 +1,4 @@
-package redis
+package redisutils
 
 import (
 	"fmt"
@@ -14,7 +14,7 @@ func Setup() {
 		DB:       0,
 	})
 
-	fmt.Println("redis client initialized")
+	fmt.Println("redisutils client initialized")
 }
 
 func Use() *redis.Client {
@@ -23,6 +23,6 @@ func Use() *redis.Client {
 
 // REDIS EXAMPLE
 
-// redis.Setup()
+// redisutils.Setup()
 // ctx := context.Background()
-// fmt.Println(redis.Use().Get(ctx, "test"))
+// fmt.Println(redisutils.Use().Get(ctx, "test"))

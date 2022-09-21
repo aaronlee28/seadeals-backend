@@ -13,7 +13,9 @@ type WalletService interface {
 	UserWalletData(id uint) (*dto.WalletDataRes, error)
 	TransactionDetails(id uint) (*dto.TransactionDetailsRes, error)
 	PaginatedTransactions(q *repository.Query, userID uint) (*dto.PaginatedTransactionsRes, error)
-	WalletPin(userID uint, pin int) error
+	WalletPin(userID uint, pin string) error
+	ValidateWalletPin(userID uint, pin string) (bool, error)
+	GetWalletStatus(userID uint) (string, error)
 }
 
 type walletService struct {
@@ -67,6 +69,8 @@ func (w *walletService) TransactionDetails(id uint) (*dto.TransactionDetailsRes,
 		CreatedAt:     t.CreatedAt,
 		UpdatedAt:     t.UpdatedAt,
 	}
+
+	tx.Commit()
 	return transaction, nil
 }
 
@@ -98,19 +102,51 @@ func (w *walletService) PaginatedTransactions(q *repository.Query, userID uint) 
 		Limit:        limit,
 		Transactions: ts,
 	}
+
+	tx.Commit()
 	return &paginatedTransactions, nil
 }
 
-func (w *walletService) WalletPin(userID uint, pin int) error {
+func (w *walletService) WalletPin(userID uint, pin string) error {
 	tx := w.db.Begin()
-	pinString := strconv.Itoa(pin)
-	if len(pinString) != 6 {
+	if len(pin) != 6 {
 		return apperror.BadRequestError("Pin has to be 6 digits long")
 	}
-	err := w.walletRepository.WalletPin(tx, userID, pinString)
+	err := w.walletRepository.WalletPin(tx, userID, pin)
 	if err != nil {
 		tx.Rollback()
 		return err
 	}
+
+	tx.Commit()
 	return nil
+}
+
+func (w *walletService) ValidateWalletPin(userID uint, pin string) (bool, error) {
+	tx := w.db.Begin()
+	if len(pin) != 6 {
+		return false, apperror.BadRequestError("Pin has to be 6 digits long")
+	}
+
+	err := w.walletRepository.ValidateWalletPin(tx, userID, pin)
+	if err != nil {
+		tx.Rollback()
+		return false, err
+	}
+
+	tx.Commit()
+	return true, nil
+}
+
+func (w *walletService) GetWalletStatus(userID uint) (string, error) {
+	tx := w.db.Begin()
+
+	status, err := w.walletRepository.GetWalletStatus(tx, userID)
+	if err != nil {
+		tx.Rollback()
+		return "", err
+	}
+
+	tx.Commit()
+	return status, nil
 }

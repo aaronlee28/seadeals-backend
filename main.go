@@ -5,7 +5,7 @@ import (
 	"github.com/joho/godotenv"
 	"seadeals-backend/config"
 	"seadeals-backend/db"
-	"seadeals-backend/redis"
+	"seadeals-backend/redisutils"
 	"seadeals-backend/server"
 )
 
@@ -22,6 +22,6 @@ func main() {
 		return
 	}
 
-	redis.Setup()
+	redisutils.Setup()
 	server.Init()
 }
