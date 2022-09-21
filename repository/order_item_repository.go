@@ -8,7 +8,7 @@ import (
 )
 
 type OrderItemRepository interface {
-	AddToCart(*gorm.DB, *model.OrderItem) (*model.OrderItem, error)
+	AddToCart(tx *gorm.DB, orderItem *model.OrderItem) (*model.OrderItem, error)
 	DeleteCartItem(tx *gorm.DB, orderItemID uint, userID uint) (*model.OrderItem, error)
 	GetOrderItem(tx *gorm.DB, query *Query, userID uint) ([]*model.OrderItem, int64, int64, error)
 }
@@ -43,7 +43,7 @@ func (o *orderItemRepository) DeleteCartItem(tx *gorm.DB, orderItemID uint, user
 	var existingOrderItem = &model.OrderItem{ID: orderItemID}
 	result := tx.First(&existingOrderItem)
 	if result.Error != nil {
-		return nil, apperror.InternalServerError("Cannot find order item")
+		return nil, apperror.NotFoundError("Cannot find order item")
 	}
 
 	if existingOrderItem.UserID != userID {
@@ -67,14 +67,13 @@ func (o *orderItemRepository) GetOrderItem(tx *gorm.DB, query *Query, userID uin
 	}
 
 	limit, _ := strconv.Atoi(query.Limit)
-	if limit == 0 {
-		limit = 5
+	if limit != 0 {
+		result = result.Limit(limit)
 	}
 
-	result = result.Limit(limit)
 	result = result.Preload("ProductVariantDetail").Preload("ProductVariantDetail.Product").Preload("ProductVariantDetail.Product.Promotion").Find(&orderItems)
 	if result.Error != nil {
-		return nil, 0, 0, apperror.InternalServerError("Cannot get order item")
+		return nil, 0, 0, apperror.NotFoundError("Cannot get order item")
 	}
 
 	totalPage := count / int64(limit)
