@@ -40,7 +40,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		ProductVariantService: c.ProductVariantService,
 		WalletService:         c.WalletService,
 		SeaLabsPayAccServ:     c.UserSeaLabsPayAccServ,
-		OrderItemService:   c.OrderItemService,
+		OrderItemService:      c.OrderItemService,
 	})
 
 	r.Use(middleware.ErrorHandler)
@@ -71,6 +71,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	// PRODUCTS
 	r.GET("/products/:id/variant", h.FindAllProductVariantByProductID)
 	//r.GET("/products/:slug", h.FindProductDetailBySlug)
+	r.GET("/search-product/", h.SearchProduct)
 
 	// WALLET
 	r.GET("/user-wallet", middleware.AuthorizeJWTFor("user"), h.WalletDataTransactions)

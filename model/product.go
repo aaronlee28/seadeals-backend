@@ -10,7 +10,7 @@ type Product struct {
 	Name          string          `json:"name"`
 	Slug          string          `json:"slug"`
 	IsBulkEnabled bool            `json:"is_bulk_enabled"`
-	SoldCount     uint            `json:"sold_count"`
+	SoldCount     int             `json:"sold_count"`
 	ViewsCount    uint            `json:"views_count"`
 	IsArchived    bool            `json:"is_archived"`
 	ProductDetail *ProductDetail  `json:"product_detail"`

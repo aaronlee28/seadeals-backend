@@ -21,9 +21,9 @@ func (_ *SearchedProductRes) FromProduct(t *model.Product) *SearchedProductRes {
 		MediaURL:   "",
 		MinPrice:   0,
 		MaxPrice:   0,
-		PromoPrice: t.Promotion.Amount,
+		PromoPrice: 0,
 		Rating:     0,
-		Bought:     t.SoldCount,
+		Bought:     0,
 		City:       "",
 	}
 }
