@@ -16,4 +16,5 @@ type Product struct {
 	ProductPhotos []*ProductPhoto `json:"product_photos"`
 	Promotion     *Promotion      `json:"promotion"`
 	UpdatedAt     time.Time       `json:"updated_at"`
+	Seller        Seller          `json:"seller"`
 }

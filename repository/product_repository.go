@@ -3,6 +3,7 @@ package repository
 import (
 	"gorm.io/gorm"
 	"seadeals-backend/apperror"
+	"seadeals-backend/dto"
 	"seadeals-backend/model"
 	"strconv"
 )
@@ -10,7 +11,9 @@ import (
 type ProductRepository interface {
 	FindProductDetailByID(tx *gorm.DB, id uint) (*model.Product, error)
 	FindProductBySlug(tx *gorm.DB, slug string) (*model.Product, error)
+
 	SearchProduct(tx *gorm.DB, q *SearchQuery) (*[]model.Product, error)
+	SearchProduct2(tx *gorm.DB, q *SearchQuery) ([]*dto.SearchedProductRes, error)
 	SearchImageURL(tx *gorm.DB, productID uint) (string, error)
 	SearchMinMaxPrice(tx *gorm.DB, productID uint) (uint, uint, error)
 	SearchPromoPrice(tx *gorm.DB, productID uint) (float64, error)
@@ -54,10 +57,6 @@ func (r *productRepository) FindProductBySlug(tx *gorm.DB, slug string) (*model.
 }
 
 func (r *productRepository) SearchProduct(tx *gorm.DB, q *SearchQuery) (*[]model.Product, error) {
-	//need to join product with location and rating
-	//for location, need to join product -> seller -> addresses -> sub_district-> district->cities
-	//for rating, need to join product -> reviews
-	//do this on a different function
 	var p *[]model.Product
 	search := "%" + q.Search + "%"
 	limit, _ := strconv.Atoi(q.Limit)
@@ -70,6 +69,24 @@ func (r *productRepository) SearchProduct(tx *gorm.DB, q *SearchQuery) (*[]model
 	}
 	return p, nil
 }
+
+func (r *productRepository) SearchProduct2(tx *gorm.DB, q *SearchQuery) ([]*dto.SearchedProductRes, error) {
+	search := "%" + q.Search + "%"
+	limit, _ := strconv.Atoi(q.Limit)
+	page, _ := strconv.Atoi(q.Page)
+	offset := (limit * page) - limit
+
+	var res []*dto.SearchedProductRes
+	result := tx.Raw("SELECT d.product_id, slug, media_url, min_price, max as max_price, bought, updated_at FROM " +
+		"(SELECT b.product_id, slug, media_url, min as min_price, bought, updated_at FROM (SELECT a.product_id as product_id, seller_id, name, slug, category_id, bought, updated_at, media_url  FROM (SELECT id as product_id, seller_id, name, slug, category_id, sold_count as bought, updated_at FROM Products WHERE UPPER(name) like UPPER('" + search + "') Limit " + strconv.Itoa(limit) + " Offset " + strconv.Itoa(offset) + ") a join (select product_id, min(photo_url) as media_url from product_photos group by product_id) as one_photo_url on a.product_id = one_photo_url.product_id) b join (select min(price), product_id from product_variant_details group by product_id) c on b.product_id = c.product_id) d " +
+		"join (select max(price), product_id from product_variant_details group by product_id) e on d.product_id = e.product_id").Scan(&res)
+
+	if result.Error != nil {
+		return nil, apperror.InternalServerError("cannot find product")
+	}
+	return res, nil
+}
+
 func (r *productRepository) SearchImageURL(tx *gorm.DB, productID uint) (string, error) {
 	var url string
 	result := tx.Raw("SELECT photo_url FROM (select product_id, min(id) as First from product_photos group by product_id) foo join product_photos p on foo.product_id = p.product_id and foo.First = p.id where p.product_id=?", productID).Scan(&url)
