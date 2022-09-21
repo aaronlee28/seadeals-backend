@@ -12,6 +12,7 @@ type ProductRepository interface {
 	FindProductBySlug(tx *gorm.DB, slug string) (*model.Product, error)
 	SearchProduct(tx *gorm.DB, q *SearchQuery) (*[]model.Product, error)
 	SearchImageURL(tx *gorm.DB, productID uint) (string, error)
+	SearchMinMaxPrice(tx *gorm.DB, productID uint) (uint, uint, error)
 }
 
 type productRepository struct{}
@@ -72,4 +73,21 @@ func (r *productRepository) SearchImageURL(tx *gorm.DB, productID uint) (string,
 		return "", apperror.InternalServerError("cannot find image")
 	}
 	return url, nil
+}
+
+func (r *productRepository) SearchMinMaxPrice(tx *gorm.DB, productID uint) (uint, uint, error) {
+	var min, max uint
+
+	minQuery := tx.Select("price").Table("product_variant_details").Where("product_id = ?", productID).Order("price asc").Limit(1).Scan(&min)
+
+	if minQuery.Error != nil {
+		return 0, 0, apperror.InternalServerError("cannot find price")
+	}
+
+	maxQuery := tx.Select("price").Table("product_variant_details").Where("product_id = ?", productID).Order("price desc").Limit(1).Scan(&max)
+
+	if maxQuery.Error != nil {
+		return 0, 0, apperror.InternalServerError("cannot find price")
+	}
+	return min, max, nil
 }

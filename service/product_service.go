@@ -1,7 +1,6 @@
 package service
 
 import (
-	"fmt"
 	"gorm.io/gorm"
 	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
@@ -76,12 +75,20 @@ func (p *productService) SearchProduct(q *repository.SearchQuery) (*dto.Searched
 	}
 	for _, product := range searchedSortFilterProducts.SearchedProduct {
 		url, err2 := p.productRepo.SearchImageURL(tx, product.ProductID)
+
+		min, max, err3 := p.productRepo.SearchMinMaxPrice(tx, product.ProductID)
+		product.MediaURL = url
+		product.MinPrice = min
+		product.MaxPrice = max
+
 		if err2 != nil {
 			tx.Rollback()
 			return nil, err2
 		}
-		product.MediaURL = url
-		fmt.Println("url??", product.MediaURL)
+		if err3 != nil {
+			tx.Rollback()
+			return nil, err3
+		}
 	}
 	return &searchedSortFilterProducts, nil
 }
