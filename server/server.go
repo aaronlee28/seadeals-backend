@@ -24,6 +24,8 @@ func Init() {
 	sellerRepository := repository.NewSellerRepository()
 	userSeaLabsPayAccountRepo := repository.NewSeaPayAccountRepo()
 	orderItemRepository := repository.NewOrderItemRepository()
+	reviewRepository := repository.NewReviewRepository()
+	socialGraphRepo := repository.NewSocialGraphRepository()
 
 	userService := service.NewUserService(&service.UserServiceConfig{
 		DB:               db.Get(),
@@ -82,8 +84,10 @@ func Init() {
 	})
 
 	sellerService := service.NewSellerService(&service.SellerServiceConfig{
-		DB:         db.Get(),
-		SellerRepo: sellerRepository,
+		DB:              db.Get(),
+		SellerRepo:      sellerRepository,
+		ReviewRepo:      reviewRepository,
+		SocialGraphRepo: socialGraphRepo,
 	})
 
 	walletService := service.NewWalletService(&service.WalletServiceConfig{
