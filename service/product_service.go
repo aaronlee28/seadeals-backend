@@ -74,18 +74,24 @@ func (p *productService) SearchProduct(q *repository.SearchQuery) (*dto.Searched
 		SearchedProduct: searchedProducts,
 	}
 	for _, product := range searchedSortFilterProducts.SearchedProduct {
-		url, err2 := p.productRepo.SearchImageURL(tx, product.ProductID)
 
+		url, err2 := p.productRepo.SearchImageURL(tx, product.ProductID)
 		min, max, err3 := p.productRepo.SearchMinMaxPrice(tx, product.ProductID)
+		promo, err4 := p.productRepo.SearchPromoPrice(tx, product.ProductID)
 		product.MediaURL = url
 		product.MinPrice = min
 		product.MaxPrice = max
+		product.PromoPrice = promo
 
 		if err2 != nil {
 			tx.Rollback()
 			return nil, err2
 		}
 		if err3 != nil {
+			tx.Rollback()
+			return nil, err3
+		}
+		if err4 != nil {
 			tx.Rollback()
 			return nil, err3
 		}
