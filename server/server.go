@@ -18,6 +18,7 @@ func Init() {
 	districtRepository := repository.NewDistrictRepository()
 	provinceRepository := repository.NewProvinceRepository()
 	subDistrictRepository := repository.NewSubDistrictRepository()
+	productCategoryRepository := repository.NewProductCategoryRepository()
 	productRepository := repository.NewProductRepository()
 	productVariantRepository := repository.NewProductVariantRepository()
 	sellerRepository := repository.NewSellerRepository()
@@ -65,6 +66,11 @@ func Init() {
 		AddressRepository: addressRepository,
 	})
 
+	productCategoryService := service.NewProductCategoryService(&service.ProductCategoryServiceConfig{
+		DB:                        db.Get(),
+		ProductCategoryRepository: productCategoryRepository,
+	})
+
 	productService := service.NewProductService(&service.ProductConfig{
 		DB:          db.Get(),
 		ProductRepo: productRepository,
@@ -96,19 +102,20 @@ func Init() {
 	})
 
 	router := NewRouter(&RouterConfig{
-		UserService:           userService,
-		AuthService:           authService,
-		ProvinceService:       provinceService,
-		CityService:           cityService,
-		DistrictService:       districtService,
-		SubDistrictService:    subDistrictService,
-		AddressService:        addressService,
-		WalletService:         walletService,
-		ProductService:        productService,
-		ProductVariantService: productVariantService,
-		SellerService:         sellerService,
-		UserSeaLabsPayAccServ: userSeaLabsPayAccountServ,
-		OrderItemService:      orderItemService,
+		UserService:            userService,
+		AuthService:            authService,
+		ProvinceService:        provinceService,
+		CityService:            cityService,
+		DistrictService:        districtService,
+		SubDistrictService:     subDistrictService,
+		AddressService:         addressService,
+		WalletService:          walletService,
+		ProductCategoryService: productCategoryService,
+		ProductService:         productService,
+		ProductVariantService:  productVariantService,
+		SellerService:          sellerService,
+		UserSeaLabsPayAccServ:  userSeaLabsPayAccountServ,
+		OrderItemService:       orderItemService,
 	})
 	log.Fatalln(router.Run(":" + config.Config.Port))
 }
