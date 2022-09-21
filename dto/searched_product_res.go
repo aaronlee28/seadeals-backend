@@ -9,7 +9,7 @@ type SearchedProductRes struct {
 	MinPrice   uint    `json:"min_price" binding:"required"`
 	MaxPrice   uint    `json:"max_price" binding:"required"`
 	PromoPrice float64 `json:"promo_price" binding:"required"`
-	Rating     uint    `json:"rating" binding:"required"`
+	Rating     float64 `json:"rating" binding:"required"`
 	Bought     int     `json:"Bought" binding:"required"`
 	City       string  `json:"city" binding:"required"`
 	Category   string  `json:"category" binding:"required"`

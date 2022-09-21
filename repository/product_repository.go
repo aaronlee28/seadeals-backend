@@ -14,6 +14,7 @@ type ProductRepository interface {
 	SearchImageURL(tx *gorm.DB, productID uint) (string, error)
 	SearchMinMaxPrice(tx *gorm.DB, productID uint) (uint, uint, error)
 	SearchPromoPrice(tx *gorm.DB, productID uint) (float64, error)
+	SearchRating(tx *gorm.DB, productID uint) ([]int, error)
 }
 
 type productRepository struct{}
@@ -101,4 +102,14 @@ func (r *productRepository) SearchPromoPrice(tx *gorm.DB, productID uint) (float
 		return 0, apperror.InternalServerError("cannot find price")
 	}
 	return promo, nil
+}
+
+func (r *productRepository) SearchRating(tx *gorm.DB, productID uint) ([]int, error) {
+	var rating []int
+	ratingQuery := tx.Select("rating").Table("reviews").Where("product_id = ?", productID).Scan(&rating)
+	if ratingQuery.Error != nil {
+		return nil, apperror.InternalServerError("cannot find price")
+	}
+
+	return rating, nil
 }
