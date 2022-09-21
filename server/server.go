@@ -20,6 +20,7 @@ func Init() {
 	subDistrictRepository := repository.NewSubDistrictRepository()
 	productRepository := repository.NewProductRepository()
 	productVariantRepository := repository.NewProductVariantRepository()
+	sellerRepository := repository.NewSellerRepository()
 	userSeaLabsPayAccountRepo := repository.NewSeaPayAccountRepo()
 	orderItemRepository := repository.NewOrderItemRepository()
 
@@ -74,6 +75,11 @@ func Init() {
 		ProductVariantRepo: productVariantRepository,
 	})
 
+	sellerService := service.NewSellerService(&service.SellerServiceConfig{
+		DB:         db.Get(),
+		SellerRepo: sellerRepository,
+	})
+
 	walletService := service.NewWalletService(&service.WalletServiceConfig{
 		DB:               db.Get(),
 		WalletRepository: walletRepository,
@@ -100,6 +106,7 @@ func Init() {
 		WalletService:         walletService,
 		ProductService:        productService,
 		ProductVariantService: productVariantService,
+		SellerService:         sellerService,
 		UserSeaLabsPayAccServ: userSeaLabsPayAccountServ,
 		OrderItemService:      orderItemService,
 	})
