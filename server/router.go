@@ -21,6 +21,7 @@ type RouterConfig struct {
 	ProductService        service.ProductService
 	ProductVariantService service.ProductVariantService
 	UserSeaLabsPayAccServ service.UserSeaPayAccountServ
+	OrderItemService      service.OrderItemService
 }
 
 func NewRouter(c *RouterConfig) *gin.Engine {
@@ -39,6 +40,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		ProductVariantService: c.ProductVariantService,
 		WalletService:         c.WalletService,
 		SeaLabsPayAccServ:     c.UserSeaLabsPayAccServ,
+		OrderItemService:   c.OrderItemService,
 	})
 
 	r.Use(middleware.ErrorHandler)
@@ -86,6 +88,15 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.PATCH("/user/sea-labs-pay", middleware.AuthorizeJWTFor("user"), middleware.RequestValidator(func() any {
 		return &dto.UpdateSeaLabsPayToMainReq{}
 	}), h.UpdateSeaLabsPayToMain)
+
+	// ORDER ITEM
+	r.GET("/user/cart", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetOrderItem)
+	r.POST("/user/cart", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
+		return &dto.AddToCartReq{}
+	}), h.AddToCart)
+	r.DELETE("/user/cart", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
+		return &dto.DeleteFromCartReq{}
+	}), h.DeleteOrderItem)
 
 	return r
 }

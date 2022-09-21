@@ -21,6 +21,7 @@ func Init() {
 	productRepository := repository.NewProductRepository()
 	productVariantRepository := repository.NewProductVariantRepository()
 	userSeaLabsPayAccountRepo := repository.NewSeaPayAccountRepo()
+	orderItemRepository := repository.NewOrderItemRepository()
 
 	userService := service.NewUserService(&service.UserServiceConfig{
 		DB:               db.Get(),
@@ -83,6 +84,11 @@ func Init() {
 		UserSeaPayAccountRepo: userSeaLabsPayAccountRepo,
 	})
 
+	orderItemService := service.NewOrderItemService(&service.OrderItemServiceConfig{
+		DB:                  db.Get(),
+		OrderItemRepository: orderItemRepository,
+	})
+
 	router := NewRouter(&RouterConfig{
 		UserService:           userService,
 		AuthService:           authService,
@@ -95,6 +101,7 @@ func Init() {
 		ProductService:        productService,
 		ProductVariantService: productVariantService,
 		UserSeaLabsPayAccServ: userSeaLabsPayAccountServ,
+		OrderItemService:      orderItemService,
 	})
 	log.Fatalln(router.Run(":" + config.Config.Port))
 }

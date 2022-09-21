@@ -29,16 +29,28 @@ func (_ *GetProductVariantRes) From(pv *model.ProductVariantDetail) *GetProductV
 	if pv.ProductVariant2 != nil {
 		name2 = pv.ProductVariant2.Name
 	}
+
+	var variant1Value, variant2Value, pictureURL string
+	if pv.Variant1Value != nil {
+		variant1Value = *pv.Variant1Value
+	}
+	if pv.Variant2Value != nil {
+		variant2Value = *pv.Variant2Value
+	}
+	if pv.PictureURL != nil {
+		pictureURL = *pv.PictureURL
+	}
+
 	return &GetProductVariantRes{
 		ID:            pv.ID,
 		ProductID:     pv.ProductID,
 		Price:         pv.Price,
 		Variant1Name:  name1,
 		Variant2Name:  name2,
-		Variant1Value: pv.Variant1Value,
-		Variant2Value: pv.Variant2Value,
+		Variant1Value: variant1Value,
+		Variant2Value: variant2Value,
 		VariantCode:   pv.VariantCode,
-		PictureURL:    pv.PictureURL,
+		PictureURL:    pictureURL,
 		Stock:         pv.Stock,
 	}
 }
