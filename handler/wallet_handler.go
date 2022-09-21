@@ -1,9 +1,9 @@
 package handler
 
 import (
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
 	"seadeals-backend/repository"
 )
@@ -21,7 +21,6 @@ func (h *Handler) WalletDataTransactions(ctx *gin.Context) {
 	}
 	successResponse := dto.StatusOKResponse(result)
 	ctx.JSON(http.StatusOK, successResponse)
-
 }
 
 func (h *Handler) TransactionDetails(ctx *gin.Context) {
@@ -68,7 +67,7 @@ func (h *Handler) WalletPin(ctx *gin.Context) {
 	value, _ := ctx.Get("payload")
 	json, _ := value.(*dto.PinReq)
 	pin := json.Pin
-	fmt.Println("id", userID)
+
 	err := h.walletService.WalletPin(userID, pin)
 	if err != nil {
 		e := ctx.Error(err)
@@ -77,5 +76,48 @@ func (h *Handler) WalletPin(ctx *gin.Context) {
 	}
 	successResponse := dto.StatusOKResponse(err)
 	ctx.JSON(http.StatusOK, successResponse)
+}
 
+func (h *Handler) ValidateWalletPin(ctx *gin.Context) {
+	user, exists := ctx.Get("user")
+	if !exists {
+		_ = ctx.Error(apperror.BadRequestError("User is invalid"))
+		return
+	}
+	userID := user.(dto.UserJWT).UserID
+
+	value, _ := ctx.Get("payload")
+	json, _ := value.(*dto.PinReq)
+	pin := json.Pin
+
+	result, err := h.walletService.ValidateWalletPin(userID, pin)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, err)
+		return
+	}
+	status := "success"
+	if !result {
+		status = "failed"
+	}
+
+	successResponse := dto.StatusOKResponse(gin.H{"status": status})
+	ctx.JSON(http.StatusOK, successResponse)
+}
+
+func (h *Handler) GetWalletStatus(ctx *gin.Context) {
+	user, exists := ctx.Get("user")
+	if !exists {
+		_ = ctx.Error(apperror.BadRequestError("User is invalid"))
+		return
+	}
+	userID := user.(dto.UserJWT).UserID
+
+	result, err := h.walletService.GetWalletStatus(userID)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, err)
+		return
+	}
+
+	successResponse := dto.StatusOKResponse(gin.H{"status": result})
+	ctx.JSON(http.StatusOK, successResponse)
 }

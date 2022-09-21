@@ -78,19 +78,23 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.GET("/sellers/:id", h.FindSellerByID)
 
 	// WALLET
-	r.GET("/user-wallet", middleware.AuthorizeJWTFor("user"), h.WalletDataTransactions)
+	r.GET("/user-wallet", middleware.AuthorizeJWTFor(model.UserRoleName), h.WalletDataTransactions)
 	r.GET("/transaction-details", middleware.RequestValidator(func() any { return &dto.TransactionDetailsReq{} }), middleware.AuthorizeJWTFor("user"), h.TransactionDetails)
-	r.GET("/paginated-transaction", middleware.AuthorizeJWTFor("user"), h.PaginatedTransactions)
-	r.PATCH("/wallet-pin", middleware.AuthorizeJWTFor("user"), middleware.RequestValidator(func() any { return &dto.PinReq{} }), h.WalletPin)
+	r.GET("/paginated-transaction", middleware.AuthorizeJWTFor(model.UserRoleName), h.PaginatedTransactions)
+	r.PATCH("/wallet-pin", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any { return &dto.PinReq{} }), h.WalletPin)
+	r.POST("/user/validator/wallet-pin", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
+		return &dto.PinReq{}
+	}), h.ValidateWalletPin)
+	r.GET("/user/wallet/status", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetWalletStatus)
 
 	// SEA LABS ACCOUNT
-	r.POST("/user/sea-labs-pay/register", middleware.AuthorizeJWTFor("user"), middleware.RequestValidator(func() any {
+	r.POST("/user/sea-labs-pay/register", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.RegisterSeaLabsPayReq{}
 	}), h.RegisterSeaLabsPayAccount)
-	r.POST("/user/sea-labs-pay/validator", middleware.AuthorizeJWTFor("user"), middleware.RequestValidator(func() any {
+	r.POST("/user/sea-labs-pay/validator", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.CheckSeaLabsPayReq{}
 	}), h.CheckSeaLabsPayAccount)
-	r.PATCH("/user/sea-labs-pay", middleware.AuthorizeJWTFor("user"), middleware.RequestValidator(func() any {
+	r.PATCH("/user/sea-labs-pay", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.UpdateSeaLabsPayToMainReq{}
 	}), h.UpdateSeaLabsPayToMain)
 
