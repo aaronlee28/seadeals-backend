@@ -11,6 +11,7 @@ type ProductRepository interface {
 	FindProductDetailByID(tx *gorm.DB, id uint) (*model.Product, error)
 	FindProductBySlug(tx *gorm.DB, slug string) (*model.Product, error)
 	SearchProduct(tx *gorm.DB, q *SearchQuery) (*[]model.Product, error)
+	SearchImageURL(tx *gorm.DB, productID uint) (string, error)
 }
 
 type productRepository struct{}
@@ -55,11 +56,20 @@ func (r *productRepository) SearchProduct(tx *gorm.DB, q *SearchQuery) (*[]model
 	var p *[]model.Product
 	search := "%" + q.Search + "%"
 	limit, _ := strconv.Atoi(q.Limit)
-	//page, _ := strconv.Atoi(q.Page)
+	page, _ := strconv.Atoi(q.Page)
+	offset := (limit * page) - limit
 
-	result := tx.Where("UPPER(name) like UPPER(?)", search).Limit(limit).Find(&p)
+	result := tx.Where("UPPER(name) like UPPER(?)", search).Limit(limit).Offset(offset).Find(&p)
 	if result.Error != nil {
 		return nil, apperror.InternalServerError("cannot find product")
 	}
 	return p, nil
+}
+func (r *productRepository) SearchImageURL(tx *gorm.DB, productID uint) (string, error) {
+	var url string
+	result := tx.Raw("SELECT photo_url FROM (select product_id, min(id) as First from product_photos group by product_id) foo join product_photos p on foo.product_id = p.product_id and foo.First = p.id where p.product_id=?", productID).Scan(&url)
+	if result.Error != nil {
+		return "", apperror.InternalServerError("cannot find image")
+	}
+	return url, nil
 }
