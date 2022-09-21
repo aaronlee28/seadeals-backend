@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"os"
+	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
 	"seadeals-backend/model"
 )
@@ -30,9 +31,9 @@ func (h *Handler) Register(ctx *gin.Context) {
 	}
 	ctx.SetSameSite(http.SameSiteNoneMode)
 	if os.Getenv("ENV") == "dev" {
-		ctx.SetCookie("access_token", refreshToken, 60*60*24, "/", ctx.Request.Header.Get("Origin"), false, false)
+		ctx.SetCookie("refresh_token", refreshToken, 60*60*24, "/", ctx.Request.Header.Get("Origin"), false, false)
 	} else {
-		ctx.SetCookie("access_token", refreshToken, 60*60*24, "/", ctx.Request.Header.Get("Origin"), true, true)
+		ctx.SetCookie("refresh_token", refreshToken, 60*60*24, "/", ctx.Request.Header.Get("Origin"), true, true)
 	}
 
 	ctx.JSON(http.StatusCreated, dto.StatusCreatedResponse(gin.H{"data": gin.H{"user": result, "id_token": accessToken}}))
@@ -59,10 +60,60 @@ func (h *Handler) SignInWithGoogleEmail(ctx *gin.Context) {
 	}
 	ctx.SetSameSite(http.SameSiteNoneMode)
 	if os.Getenv("ENV") == "dev" {
-		ctx.SetCookie("access_token", refreshToken, 60*60*24, "/", ctx.Request.Header.Get("Origin"), false, false)
+		ctx.SetCookie("refresh_token", refreshToken, 60*60*24, "/", ctx.Request.Header.Get("Origin"), false, false)
 	} else {
-		ctx.SetCookie("access_token", refreshToken, 60*60*24, "/", ctx.Request.Header.Get("Origin"), true, true)
+		ctx.SetCookie("refresh_token", refreshToken, 60*60*24, "/", ctx.Request.Header.Get("Origin"), true, true)
 	}
 
 	ctx.JSON(http.StatusCreated, dto.StatusCreatedResponse(gin.H{"data": gin.H{"user": result, "has_login": true, "id_token": accessToken}}))
+}
+
+func (h *Handler) SignIn(ctx *gin.Context) {
+	value, _ := ctx.Get("payload")
+	json, _ := value.(*dto.SignInReq)
+
+	accessToken, refreshToken, err := h.authService.SignIn(json)
+	ctx.SetSameSite(http.SameSiteNoneMode)
+	if os.Getenv("ENV") == "dev" {
+		ctx.SetCookie("refresh_token", refreshToken, 60*60*24, "/", ctx.Request.Header.Get("Origin"), false, false)
+	} else {
+		ctx.SetCookie("refresh_token", refreshToken, 60*60*24, "/", ctx.Request.Header.Get("Origin"), true, true)
+	}
+
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(gin.H{"id_token": accessToken}))
+}
+
+func (h *Handler) SignOut(ctx *gin.Context) {
+	user, exists := ctx.Get("user")
+	if !exists {
+		_ = ctx.Error(apperror.BadRequestError("User is invalid"))
+		return
+	}
+
+	value, _ := ctx.Get("payload")
+	json, _ := value.(*dto.SignOutReq)
+	jwtUser := user.(dto.UserJWT)
+	if jwtUser.UserID != json.UserID {
+		_ = ctx.Error(apperror.UnauthorizedError("Cannot log out another user"))
+		return
+	}
+
+	err := h.authService.SignOut(jwtUser.UserID)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.SetSameSite(http.SameSiteNoneMode)
+	if os.Getenv("ENV") == "dev" {
+		ctx.SetCookie("refresh_token", "", 60*60*24, "/", ctx.Request.Header.Get("Origin"), false, false)
+	} else {
+		ctx.SetCookie("refresh_token", "", 60*60*24, "/", ctx.Request.Header.Get("Origin"), true, true)
+	}
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(gin.H{"logout_user": user}))
 }

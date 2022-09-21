@@ -24,6 +24,7 @@ type RouterConfig struct {
 	SellerService          service.SellerService
 	UserSeaLabsPayAccServ  service.UserSeaPayAccountServ
 	OrderItemService       service.OrderItemService
+	RefreshTokenService    service.RefreshTokenService
 }
 
 func NewRouter(c *RouterConfig) *gin.Engine {
@@ -45,6 +46,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		WalletService:          c.WalletService,
 		SeaLabsPayAccServ:      c.UserSeaLabsPayAccServ,
 		OrderItemService:       c.OrderItemService,
+		RefreshTokenService:    c.RefreshTokenService,
 	})
 
 	r.Use(middleware.ErrorHandler)
@@ -54,10 +56,16 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.POST("/register", middleware.RequestValidator(func() any {
 		return &dto.RegisterRequest{}
 	}), h.Register)
-
 	r.POST("/google/sign-in", middleware.RequestValidator(func() any {
 		return &dto.GoogleLogin{}
 	}), h.SignInWithGoogleEmail)
+	r.GET("/refresh/access_token", h.RefreshAccessToken)
+	r.POST("/sign_in", middleware.RequestValidator(func() any {
+		return &dto.SignInReq{}
+	}), h.SignIn)
+	r.POST("/sign_out", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
+		return &dto.SignOutReq{}
+	}), h.SignOut)
 
 	// ADDRESS
 	r.GET("/provinces", h.GetProvinces)
