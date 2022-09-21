@@ -84,6 +84,7 @@ func (o *orderItemService) GetOrderItem(query *repository.Query, userID uint) ([
 			Quantity:     item.Quantity,
 			Subtotal:     subtotal,
 			PricePerItem: pricePerItem,
+			SellerID:     item.ProductVariantDetail.Product.SellerID,
 			ProductName:  item.ProductVariantDetail.Product.Name,
 		}
 		cartItems = append(cartItems, cartItem)
