@@ -16,6 +16,18 @@ func NewProductRepository() ProductRepository {
 	return &productRepository{}
 }
 
+type SearchQuery struct {
+	SortBy     string
+	Sort       string
+	Limit      string
+	Page       string
+	Search     string
+	FilterTime string
+	MinAmount  string
+	MaxAmount  string
+	Type       string
+}
+
 func (r *productRepository) FindProductDetailByID(tx *gorm.DB, id uint) (*model.Product, error) {
 	var product *model.Product
 	result := tx.Preload("ProductPhotos", "product_id = ?", id).Preload("ProductDetail", "product_id = ?", id).First(&product, id)
