@@ -5,7 +5,7 @@ import "gorm.io/gorm"
 type City struct {
 	gorm.Model `json:"-"`
 	ID         uint      `json:"id" gorm:"primaryKey"`
-	ProvinceID string    `json:"province_id"`
+	ProvinceID uint      `json:"province_id"`
 	Province   *Province `json:"province"`
 	Name       string    `json:"name"`
 }

@@ -20,6 +20,7 @@ type RouterConfig struct {
 	WalletService         service.WalletService
 	ProductService        service.ProductService
 	ProductVariantService service.ProductVariantService
+	SellerService         service.SellerService
 	UserSeaLabsPayAccServ service.UserSeaPayAccountServ
 	OrderItemService      service.OrderItemService
 }
@@ -38,9 +39,10 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		AddressService:        c.AddressService,
 		ProductService:        c.ProductService,
 		ProductVariantService: c.ProductVariantService,
+		SellerService:         c.SellerService,
 		WalletService:         c.WalletService,
 		SeaLabsPayAccServ:     c.UserSeaLabsPayAccServ,
-		OrderItemService:   c.OrderItemService,
+		OrderItemService:      c.OrderItemService,
 	})
 
 	r.Use(middleware.ErrorHandler)
@@ -71,6 +73,9 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	// PRODUCTS
 	r.GET("/products/:id/variant", h.FindAllProductVariantByProductID)
 	//r.GET("/products/:slug", h.FindProductDetailBySlug)
+
+	// SELLER
+	r.GET("/sellers/:id", h.FindSellerByID)
 
 	// WALLET
 	r.GET("/user-wallet", middleware.AuthorizeJWTFor("user"), h.WalletDataTransactions)

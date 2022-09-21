@@ -13,8 +13,9 @@ type Handler struct {
 	walletService         service.WalletService
 	productService        service.ProductService
 	productVariantService service.ProductVariantService
+	sellerService         service.SellerService
 	seaLabsPayAccServ     service.UserSeaPayAccountServ
-	orderItemService   service.OrderItemService
+	orderItemService      service.OrderItemService
 }
 
 type Config struct {
@@ -27,9 +28,10 @@ type Config struct {
 	AddressService        service.AddressService
 	ProductService        service.ProductService
 	ProductVariantService service.ProductVariantService
+	SellerService         service.SellerService
 	WalletService         service.WalletService
 	SeaLabsPayAccServ     service.UserSeaPayAccountServ
-	OrderItemService   service.OrderItemService
+	OrderItemService      service.OrderItemService
 }
 
 func New(config *Config) *Handler {
@@ -44,7 +46,8 @@ func New(config *Config) *Handler {
 		addressService:        config.AddressService,
 		productService:        config.ProductService,
 		productVariantService: config.ProductVariantService,
+		sellerService:         config.SellerService,
 		seaLabsPayAccServ:     config.SeaLabsPayAccServ,
-		orderItemService:   config.OrderItemService,
+		orderItemService:      config.OrderItemService,
 	}
 }
