@@ -15,6 +15,7 @@ type ProductRepository interface {
 	SearchMinMaxPrice(tx *gorm.DB, productID uint) (uint, uint, error)
 	SearchPromoPrice(tx *gorm.DB, productID uint) (float64, error)
 	SearchRating(tx *gorm.DB, productID uint) ([]int, error)
+	SearchCity(tx *gorm.DB, productID uint) (string, error)
 }
 
 type productRepository struct{}
@@ -112,4 +113,13 @@ func (r *productRepository) SearchRating(tx *gorm.DB, productID uint) ([]int, er
 	}
 
 	return rating, nil
+}
+
+func (r *productRepository) SearchCity(tx *gorm.DB, productID uint) (string, error) {
+	var city string
+	result := tx.Raw("SELECT cities.name FROM (SELECT districts.city_id FROM (SELECT sub_districts.district_id FROM (SELECT addresses.sub_district_id FROM (SELECT products.id as product_id, sellers.address_id FROM products JOIN sellers ON products.seller_id = sellers.id WHERE products.id = ?) a JOIN addresses on a.address_id = addresses.id) b JOIN sub_districts on b.sub_district_id = sub_districts.id) c join districts on c.district_id = districts.id) d join cities on d.city_id = cities.id", productID).Scan(&city)
+	if result.Error != nil {
+		return "", apperror.InternalServerError("cannot find image")
+	}
+	return city, nil
 }
