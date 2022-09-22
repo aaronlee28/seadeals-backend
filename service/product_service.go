@@ -108,24 +108,6 @@ func (p *productService) SearchProduct(q *repository.SearchQuery) (*dto.Searched
 	if q.Search == "" {
 		return nil, apperror.BadRequestError("Search required")
 	}
-	if q.SortBy == "" {
-		q.SortBy = "bought"
-	}
-	if q.Sort == "" {
-		q.Sort = "desc"
-	}
-	if q.Limit == "" {
-		q.Limit = "30"
-	}
-	if q.Page == "" {
-		q.Page = "1"
-	}
-	if q.MinAmount == "" {
-		q.MinAmount = "0"
-	}
-	if q.MaxAmount == "" {
-		q.MaxAmount = "999999999999"
-	}
 	products, err := p.productRepo.SearchProduct2(tx, q)
 	if err != nil {
 		tx.Rollback()
