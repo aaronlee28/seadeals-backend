@@ -1,7 +1,6 @@
 package service
 
 import (
-	"fmt"
 	"gorm.io/gorm"
 	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
@@ -72,7 +71,6 @@ func (s *productService) GetProductsBySellerID(query *dto.SellerProductSearchQue
 
 	var productsRes []*dto.ProductRes
 	for _, variantDetail := range variantDetails {
-		fmt.Println(variantDetail.ProductID)
 		avgReview, totalReview, e := s.reviewRepo.GetReviewsAvgAndCountByProductID(tx, variantDetail.ProductID)
 		if e != nil {
 			tx.Rollback()
