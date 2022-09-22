@@ -20,8 +20,8 @@ func (p *productVariantDetailRepository) GetProductsBySellerID(tx *gorm.DB, quer
 	var products []*dto.SellerProductsCustomTable
 
 	result := tx.Model(&dto.SellerProductsCustomTable{})
-	result = result.Select("min(price), max(price), product_id, products.seller_id")
-	result = result.Where("products.seller_id = ?", sellerID).Group("product_id").Group("products.seller_id").Joins("FULL JOIN products on products.id = product_id").Preload("Product.ProductPhotos").Preload("Product.Seller.Address.SubDistrict.District.City")
+	result = result.Select("min(price) as min, max(price) as max, product_id, products.seller_id")
+	result = result.Where("products.seller_id = ?", sellerID).Group("product_id").Group("products.seller_id").Joins("FULL JOIN products on products.id = product_id")
 	if query.Search != "" {
 		result = result.Where("name ILIKE ?", query.Search)
 	}
@@ -53,7 +53,8 @@ func (p *productVariantDetailRepository) GetProductsBySellerID(tx *gorm.DB, quer
 
 	var totalData int64
 	result = result.Order(orderByString).Order("product_id")
-	tx.Table("(?) as s1", result).Count(&totalData)
+	table := tx.Table("(?) as s1", result).Where("min >= ?", query.MinPrice).Where("min <= ?", query.MaxPrice)
+	tx.Table("(?) as s2", table).Count(&totalData)
 	if result.Error != nil {
 		return nil, 0, 0, apperror.InternalServerError("cannot fetch products count")
 	}
@@ -61,14 +62,16 @@ func (p *productVariantDetailRepository) GetProductsBySellerID(tx *gorm.DB, quer
 	limit := 20
 	if query.Limit != 0 {
 		limit = query.Limit
-		result = result.Limit(limit)
+		table = table.Limit(limit)
 	}
 	if query.Page != 0 {
-		result = result.Offset((query.Page - 1) * limit)
+		table = table.Offset((query.Page - 1) * limit)
 	}
 
-	result = result.Find(&products)
-	if result.Error != nil {
+	table = table.Unscoped()
+	table = table.Preload("Product.ProductPhotos").Preload("Product.Seller.Address.SubDistrict.District.City")
+	table = table.Find(&products)
+	if table.Error != nil {
 		return nil, 0, 0, apperror.InternalServerError("cannot fetch products")
 	}
 

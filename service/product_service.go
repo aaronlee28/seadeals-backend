@@ -71,7 +71,7 @@ func (s *productService) GetProductsBySellerID(query *dto.SellerProductSearchQue
 
 	var productsRes []*dto.ProductRes
 	for _, variantDetail := range variantDetails {
-		avgReview, totalReview, e := s.reviewRepo.GetReviewsAvgAndCountByProductID(tx, variantDetail.ID)
+		avgReview, totalReview, e := s.reviewRepo.GetReviewsAvgAndCountByProductID(tx, variantDetail.ProductID)
 		if e != nil {
 			tx.Rollback()
 			return nil, 0, 0, e
