@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"fmt"
 	"gorm.io/gorm"
 	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
@@ -29,16 +30,18 @@ func NewProductRepository() ProductRepository {
 }
 
 type SearchQuery struct {
-	Search    string
-	SortBy    string
-	Sort      string
-	Limit     string
-	Page      string
-	MinAmount string
-	MaxAmount string
-	City      string
-	Rating    string
-	Category  string
+	Search     string
+	SortBy     string
+	Sort       string
+	Limit      string
+	Page       string
+	MinAmount  float64
+	MaxAmount  float64
+	City       string
+	Rating     string
+	Category   string
+	SellerID   uint
+	CategoryID uint
 }
 
 func (r *productRepository) FindProductDetailByID(tx *gorm.DB, id uint) (*model.Product, error) {
@@ -97,10 +100,10 @@ func (r *productRepository) SearchRecommendProduct(tx *gorm.DB, q *SearchQuery) 
 		"left join (SELECT id as category_id, name as category from product_categories) m " +
 		"on l.category_id = m.category_id" +
 		" where min_price >= " +
-		q.MinAmount +
+		fmt.Sprintf("%f", q.MinAmount) +
 		" and " +
 		"max_price <= " +
-		q.MaxAmount +
+		fmt.Sprintf("%f", q.MaxAmount) +
 		" and " +
 		"UPPER(city) like UPPER('" +
 		city +
