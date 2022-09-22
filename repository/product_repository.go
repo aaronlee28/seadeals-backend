@@ -77,9 +77,25 @@ func (r *productRepository) SearchProduct2(tx *gorm.DB, q *SearchQuery) ([]*dto.
 	offset := (limit * page) - limit
 
 	var res []*dto.SearchedProductRes
-	result := tx.Raw("SELECT d.product_id, slug, media_url, min_price, max as max_price, bought, updated_at FROM " +
-		"(SELECT b.product_id, slug, media_url, min as min_price, bought, updated_at FROM (SELECT a.product_id as product_id, seller_id, name, slug, category_id, bought, updated_at, media_url  FROM (SELECT id as product_id, seller_id, name, slug, category_id, sold_count as bought, updated_at FROM Products WHERE UPPER(name) like UPPER('" + search + "') Limit " + strconv.Itoa(limit) + " Offset " + strconv.Itoa(offset) + ") a join (select product_id, min(photo_url) as media_url from product_photos group by product_id) as one_photo_url on a.product_id = one_photo_url.product_id) b join (select min(price), product_id from product_variant_details group by product_id) c on b.product_id = c.product_id) d " +
-		"join (select max(price), product_id from product_variant_details group by product_id) e on d.product_id = e.product_id").Scan(&res)
+	result := tx.Raw("SELECT product_id, slug, media_url, min_price, max_price, bought, promo_price, rating, city, category, updated_at FROM " +
+		"(SELECT j.product_id as product_id, slug, media_url, min_price, max_price, bought, promo_price, rating, name as city, category_id, updated_at FROM " +
+		"(SELECT h.product_id, slug, media_url, min_price, max_price, bought, promo_price, rating, updated_at FROM" +
+		"(SELECT f.product_id, slug, media_url, min_price, max_price, bought, updated_at, min as promo_price FROM " +
+		"(SELECT d.product_id, slug, media_url, min_price, max as max_price, bought, updated_at FROM " +
+		"(SELECT b.product_id, slug, media_url, min as min_price, bought, updated_at FROM (SELECT a.product_id as product_id, seller_id, name, slug, category_id, bought, updated_at, media_url  FROM (SELECT id as product_id, seller_id, name, slug, category_id, sold_count as bought, updated_at FROM Products WHERE UPPER(name) like UPPER('" + search + "') Limit " + strconv.Itoa(limit) + " Offset " + strconv.Itoa(offset) + ") a left join (select product_id, min(photo_url) as media_url from product_photos group by product_id) as one_photo_url on a.product_id = one_photo_url.product_id) b left join (select min(price), product_id from product_variant_details group by product_id) c on b.product_id = c.product_id) d " +
+		"left join (select max(price), product_id from product_variant_details group by product_id) e on d.product_id = e.product_id) f " +
+		"left join (select product_id, min(amount) from promotions group by product_id) g on f.product_id = g.product_id) h " +
+		"left join (select avg(rating) as rating, product_id from reviews group by product_id) i on h.product_id = i.product_id) j " +
+		"left join (SELECT product_id, cities.name, category_id FROM (SELECT product_id, districts.city_id, category_id FROM (SELECT product_id, sub_districts.district_id, category_id FROM (SELECT product_id, addresses.sub_district_id, category_id FROM (SELECT products.id as product_id, sellers.address_id, products.category_id as category_id FROM products JOIN sellers ON products.seller_id = sellers.id) aa JOIN addresses on aa.address_id = addresses.id) bb JOIN sub_districts on bb.sub_district_id = sub_districts.id) cc join districts on cc.district_id = districts.id) dd join cities on dd.city_id = cities.id) k " +
+		"on j.product_id = k.product_id) l " +
+		"left join (SELECT id as category_id, name as category from product_categories) m " +
+		"on l.category_id = m.category_id" +
+		" where min_price >= " +
+		q.MinAmount +
+		" and " +
+		"max_price <= " +
+		q.MaxAmount +
+		"").Scan(&res)
 
 	if result.Error != nil {
 		return nil, apperror.InternalServerError("cannot find product")
@@ -135,7 +151,7 @@ func (r *productRepository) SearchRating(tx *gorm.DB, productID uint) ([]int, er
 
 func (r *productRepository) SearchCity(tx *gorm.DB, productID uint) (string, error) {
 	var city string
-	result := tx.Raw("SELECT cities.name FROM (SELECT districts.city_id FROM (SELECT sub_districts.district_id FROM (SELECT addresses.sub_district_id FROM (SELECT products.id as product_id, sellers.address_id FROM products JOIN sellers ON products.seller_id = sellers.id WHERE products.id = ?) a JOIN addresses on a.address_id = addresses.id) b JOIN sub_districts on b.sub_district_id = sub_districts.id) c join districts on c.district_id = districts.id) d join cities on d.city_id = cities.id", productID).Scan(&city)
+	result := tx.Raw("SELECT cities.name FROM (SELECT districts.city_id FROM (SELECT sub_districts.district_id FROM (SELECT addresses.sub_district_id FROM (SELECT products.id as product_id, sellers.address_id FROM products JOIN sellers ON products.seller_id = sellers.id WHERE products.id = ?) aa JOIN addresses on aa.address_id = addresses.id) bb JOIN sub_districts on bb.sub_district_id = sub_districts.id) cc join districts on cc.district_id = districts.id) dd join cities on dd.city_id = cities.id", productID).Scan(&city)
 	if result.Error != nil {
 		return "", apperror.InternalServerError("cannot find city")
 	}
