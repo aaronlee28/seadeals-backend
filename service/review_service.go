@@ -1,7 +1,9 @@
 package service
 
 import (
+	"errors"
 	"gorm.io/gorm"
+	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
 	"seadeals-backend/model"
 	"seadeals-backend/repository"
@@ -48,6 +50,9 @@ func (s *reviewService) FindReviewByProductID(productID uint, qp *model.ReviewQu
 	tx := s.db.Begin()
 	reviews, err := s.reviewRepo.FindReviewByProductID(tx, productID, qp)
 	if err != nil {
+		if errors.Is(err, &apperror.ReviewNotFoundError{}) {
+			return nil, apperror.NotFoundError(err.Error())
+		}
 		return nil, err
 	}
 

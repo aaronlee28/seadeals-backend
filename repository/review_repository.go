@@ -65,6 +65,9 @@ func (r *reviewRepository) FindReviewByProductID(tx *gorm.DB, productID uint, qp
 	if result.Error != nil {
 		return nil, result.Error
 	}
+	if result.RowsAffected == 0 {
+		return nil, &apperror.ReviewNotFoundError{}
+	}
 
 	return reviews, nil
 }
