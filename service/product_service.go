@@ -154,7 +154,7 @@ func (p *productService) SearchProduct(q *repository.SearchQuery) (*dto.Searched
 	}
 
 	searchedSortFilterProducts := dto.SearchedSortFilterProduct{
-		TotalLength:     1,
+		TotalLength:     len(products),
 		SearchedProduct: products,
 	}
 
