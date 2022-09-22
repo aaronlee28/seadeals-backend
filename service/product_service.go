@@ -37,16 +37,16 @@ func NewProductService(config *ProductConfig) ProductService {
 	}
 }
 
-func (s *productService) FindProductDetailBySlug(slug string) (*model.Product, error) {
-	tx := s.db.Begin()
+func (p *productService) FindProductDetailBySlug(slug string) (*model.Product, error) {
+	tx := p.db.Begin()
 
-	product, err := s.productRepo.FindProductBySlug(tx, slug)
+	product, err := p.productRepo.FindProductBySlug(tx, slug)
 	if err != nil {
 		tx.Rollback()
 		return nil, err
 	}
 
-	product, err = s.productRepo.FindProductDetailByID(tx, product.ID)
+	product, err = p.productRepo.FindProductDetailByID(tx, product.ID)
 	if err != nil {
 		tx.Rollback()
 		return nil, err
@@ -56,10 +56,10 @@ func (s *productService) FindProductDetailBySlug(slug string) (*model.Product, e
 	return product, nil
 }
 
-func (s *productService) GetProductsBySellerID(query *dto.SellerProductSearchQuery, sellerID uint) ([]*dto.ProductRes, int64, int64, error) {
-	tx := s.db.Begin()
+func (p *productService) GetProductsBySellerID(query *dto.SellerProductSearchQuery, sellerID uint) ([]*dto.ProductRes, int64, int64, error) {
+	tx := p.db.Begin()
 
-	variantDetails, totalPage, totalData, err := s.productVarDetRepo.GetProductsBySellerID(tx, query, sellerID)
+	variantDetails, totalPage, totalData, err := p.productVarDetRepo.GetProductsBySellerID(tx, query, sellerID)
 	if err != nil {
 		tx.Rollback()
 		return nil, 0, 0, err
@@ -71,7 +71,7 @@ func (s *productService) GetProductsBySellerID(query *dto.SellerProductSearchQue
 
 	var productsRes []*dto.ProductRes
 	for _, variantDetail := range variantDetails {
-		avgReview, totalReview, e := s.reviewRepo.GetReviewsAvgAndCountByProductID(tx, variantDetail.ProductID)
+		avgReview, totalReview, e := p.reviewRepo.GetReviewsAvgAndCountByProductID(tx, variantDetail.ProductID)
 		if e != nil {
 			tx.Rollback()
 			return nil, 0, 0, e
