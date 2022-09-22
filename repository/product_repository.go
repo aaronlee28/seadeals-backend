@@ -13,7 +13,7 @@ type ProductRepository interface {
 	FindProductBySlug(tx *gorm.DB, slug string) (*model.Product, error)
 
 	SearchProduct(tx *gorm.DB, q *SearchQuery) (*[]model.Product, error)
-	SearchProduct2(tx *gorm.DB, q *SearchQuery) ([]*dto.SearchedProductRes, error)
+	SearchRecommendProduct(tx *gorm.DB, q *SearchQuery) ([]*dto.SearchedProductRes, error)
 	SearchImageURL(tx *gorm.DB, productID uint) (string, error)
 	SearchMinMaxPrice(tx *gorm.DB, productID uint) (uint, uint, error)
 	SearchPromoPrice(tx *gorm.DB, productID uint) (float64, error)
@@ -74,7 +74,7 @@ func (r *productRepository) SearchProduct(tx *gorm.DB, q *SearchQuery) (*[]model
 	return p, nil
 }
 
-func (r *productRepository) SearchProduct2(tx *gorm.DB, q *SearchQuery) ([]*dto.SearchedProductRes, error) {
+func (r *productRepository) SearchRecommendProduct(tx *gorm.DB, q *SearchQuery) ([]*dto.SearchedProductRes, error) {
 	search := "%" + q.Search + "%"
 	city := "%" + q.City + "%"
 	category := "%" + q.Category + "%"
@@ -83,16 +83,16 @@ func (r *productRepository) SearchProduct2(tx *gorm.DB, q *SearchQuery) ([]*dto.
 	offset := (limit * page) - limit
 
 	var res []*dto.SearchedProductRes
-	result := tx.Raw("SELECT product_id, slug, media_url, min_price, max_price, bought, promo_price, rating, city, category, updated_at FROM " +
-		"(SELECT j.product_id as product_id, slug, media_url, min_price, max_price, bought, promo_price, rating, name as city, category_id, updated_at FROM " +
+	result := tx.Raw("SELECT product_id, slug, media_url, min_price, max_price, bought, views_count as views, promo_price, rating, city, category, updated_at FROM " +
+		"(SELECT j.product_id as product_id, slug, media_url, min_price, max_price, bought, promo_price, rating, name as city, category_id, views_count, updated_at FROM " +
 		"(SELECT h.product_id, slug, media_url, min_price, max_price, bought, promo_price, rating, updated_at FROM" +
 		"(SELECT f.product_id, slug, media_url, min_price, max_price, bought, updated_at, min as promo_price FROM " +
 		"(SELECT d.product_id, slug, media_url, min_price, max as max_price, bought, updated_at FROM " +
-		"(SELECT b.product_id, slug, media_url, min as min_price, bought, updated_at FROM (SELECT a.product_id as product_id, seller_id, name, slug, category_id, bought, updated_at, media_url  FROM (SELECT id as product_id, seller_id, name, slug, category_id, sold_count as bought, updated_at FROM Products WHERE UPPER(name) like UPPER('" + search + "') Limit " + strconv.Itoa(limit) + " Offset " + strconv.Itoa(offset) + ") a left join (select product_id, min(photo_url) as media_url from product_photos group by product_id) as one_photo_url on a.product_id = one_photo_url.product_id) b left join (select min(price), product_id from product_variant_details group by product_id) c on b.product_id = c.product_id) d " +
+		"(SELECT b.product_id, slug, media_url, min as min_price, bought, updated_at FROM (SELECT a.product_id as product_id, seller_id, name, slug, category_id, views_count, bought, updated_at, media_url  FROM (SELECT id as product_id, seller_id, name, slug, category_id, views_count, sold_count as bought, updated_at FROM Products WHERE UPPER(name) like UPPER('" + search + "') Limit " + strconv.Itoa(limit) + " Offset " + strconv.Itoa(offset) + ") a left join (select product_id, min(photo_url) as media_url from product_photos group by product_id) as one_photo_url on a.product_id = one_photo_url.product_id) b left join (select min(price), product_id from product_variant_details group by product_id) c on b.product_id = c.product_id) d " +
 		"left join (select max(price), product_id from product_variant_details group by product_id) e on d.product_id = e.product_id) f " +
 		"left join (select product_id, min(amount) from promotions group by product_id) g on f.product_id = g.product_id) h " +
 		"left join (select avg(rating) as rating, product_id from reviews group by product_id) i on h.product_id = i.product_id) j " +
-		"left join (SELECT product_id, cities.name, category_id FROM (SELECT product_id, districts.city_id, category_id FROM (SELECT product_id, sub_districts.district_id, category_id FROM (SELECT product_id, addresses.sub_district_id, category_id FROM (SELECT products.id as product_id, sellers.address_id, products.category_id as category_id FROM products JOIN sellers ON products.seller_id = sellers.id) aa JOIN addresses on aa.address_id = addresses.id) bb JOIN sub_districts on bb.sub_district_id = sub_districts.id) cc join districts on cc.district_id = districts.id) dd join cities on dd.city_id = cities.id) k " +
+		"left join (SELECT product_id, cities.name, category_id, views_count FROM (SELECT product_id, districts.city_id, category_id, views_count FROM (SELECT product_id, sub_districts.district_id, category_id, views_count FROM (SELECT product_id, addresses.sub_district_id, category_id, views_count FROM (SELECT products.id as product_id, sellers.address_id, products.category_id as category_id, products.views_count FROM products JOIN sellers ON products.seller_id = sellers.id) aa JOIN addresses on aa.address_id = addresses.id) bb JOIN sub_districts on bb.sub_district_id = sub_districts.id) cc join districts on cc.district_id = districts.id) dd join cities on dd.city_id = cities.id) k " +
 		"on j.product_id = k.product_id) l " +
 		"left join (SELECT id as category_id, name as category from product_categories) m " +
 		"on l.category_id = m.category_id" +
