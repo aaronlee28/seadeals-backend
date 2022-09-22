@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
+	"seadeals-backend/helper"
 	"seadeals-backend/repository"
 	"strconv"
 )
@@ -95,22 +96,21 @@ func (h *Handler) GetProductsByCategoryID(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, dto.StatusOKResponse(gin.H{"products": res, "total_data": totalData, "total_page": totalPage, "current_page": productQuery.Page, "limit": productQuery.Limit}))
 }
 
-func (a *Handler) SearchProduct(c *gin.Context) {
-
+func (h *Handler) SearchRecommendProduct(c *gin.Context) {
 	query := &repository.SearchQuery{
-		Search:    c.Query("search"),
-		SortBy:    c.Query("sortBy"),
-		Sort:      c.Query("sort"),
-		Limit:     c.Query("limit"),
-		Page:      c.Query("page"),
-		MinAmount: c.Query("minAmount"),
-		MaxAmount: c.Query("maxAmount"),
-		City:      c.Query("city"),
-		Rating:    c.Query("rating"),
-		Category:  c.Query("category"),
+		Search:    helper.GetQuery(c, "sortBy", ""),
+		SortBy:    helper.GetQuery(c, "sortBy", "bought"),
+		Sort:      helper.GetQuery(c, "sort", SortByReviewDefault),
+		Limit:     helper.GetQuery(c, "limit", "30"),
+		Page:      helper.GetQuery(c, "page", "1"),
+		MinAmount: helper.GetQuery(c, "minAmount", "0"),
+		MaxAmount: helper.GetQuery(c, "maxAmount", "99999999999"),
+		City:      helper.GetQuery(c, "city", ""),
+		Rating:    helper.GetQuery(c, "rating", "0"),
+		Category:  helper.GetQuery(c, "category", ""),
 	}
 
-	result, err := a.productService.SearchProduct(query)
+	result, err := h.productService.SearchRecommendProduct(query)
 	if err != nil {
 		e := c.Error(err)
 		c.JSON(http.StatusBadRequest, e)

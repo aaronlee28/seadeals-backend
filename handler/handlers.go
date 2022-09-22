@@ -14,6 +14,7 @@ type Handler struct {
 	productCategoryService service.ProductCategoryService
 	productService         service.ProductService
 	productVariantService  service.ProductVariantService
+	reviewService          service.ReviewService
 	sellerService          service.SellerService
 	seaLabsPayAccServ      service.UserSeaPayAccountServ
 	orderItemService       service.OrderItemService
@@ -31,6 +32,7 @@ type Config struct {
 	ProductCategoryService service.ProductCategoryService
 	ProductService         service.ProductService
 	ProductVariantService  service.ProductVariantService
+	ReviewService          service.ReviewService
 	SellerService          service.SellerService
 	WalletService          service.WalletService
 	SeaLabsPayAccServ      service.UserSeaPayAccountServ
@@ -51,6 +53,7 @@ func New(config *Config) *Handler {
 		productCategoryService: config.ProductCategoryService,
 		productService:         config.ProductService,
 		productVariantService:  config.ProductVariantService,
+		reviewService:          config.ReviewService,
 		sellerService:          config.SellerService,
 		seaLabsPayAccServ:      config.SeaLabsPayAccServ,
 		orderItemService:       config.OrderItemService,

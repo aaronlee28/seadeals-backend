@@ -10,7 +10,7 @@ import (
 
 type ProductService interface {
 	FindProductDetailBySlug(slug string) (*model.Product, error)
-	SearchProduct(q *repository.SearchQuery) (*dto.SearchedSortFilterProduct, error)
+	SearchRecommendProduct(q *repository.SearchQuery) (*dto.SearchedSortFilterProduct, error)
 	GetProductsBySellerID(query *dto.SellerProductSearchQuery, sellerID uint) ([]*dto.ProductRes, int64, int64, error)
 	GetProductsByCategoryID(query *dto.SellerProductSearchQuery, categoryID uint) ([]*dto.ProductRes, int64, int64, error)
 }
@@ -38,16 +38,16 @@ func NewProductService(config *ProductConfig) ProductService {
 	}
 }
 
-func (s *productService) FindProductDetailBySlug(slug string) (*model.Product, error) {
-	tx := s.db.Begin()
+func (p *productService) FindProductDetailBySlug(slug string) (*model.Product, error) {
+	tx := p.db.Begin()
 
-	product, err := s.productRepo.FindProductBySlug(tx, slug)
+	product, err := p.productRepo.FindProductBySlug(tx, slug)
 	if err != nil {
 		tx.Rollback()
 		return nil, err
 	}
 
-	product, err = s.productRepo.FindProductDetailByID(tx, product.ID)
+	product, err = p.productRepo.FindProductDetailByID(tx, product.ID)
 	if err != nil {
 		tx.Rollback()
 		return nil, err
@@ -57,10 +57,10 @@ func (s *productService) FindProductDetailBySlug(slug string) (*model.Product, e
 	return product, nil
 }
 
-func (s *productService) GetProductsBySellerID(query *dto.SellerProductSearchQuery, sellerID uint) ([]*dto.ProductRes, int64, int64, error) {
-	tx := s.db.Begin()
+func (p *productService) GetProductsBySellerID(query *dto.SellerProductSearchQuery, sellerID uint) ([]*dto.ProductRes, int64, int64, error) {
+	tx := p.db.Begin()
 
-	variantDetails, totalPage, totalData, err := s.productVarDetRepo.GetProductsBySellerID(tx, query, sellerID)
+	variantDetails, totalPage, totalData, err := p.productVarDetRepo.GetProductsBySellerID(tx, query, sellerID)
 	if err != nil {
 		tx.Rollback()
 		return nil, 0, 0, err
@@ -141,31 +141,10 @@ func (s *productService) GetProductsByCategoryID(query *dto.SellerProductSearchQ
 	return productsRes, totalPage, totalData, nil
 }
 
-func (p *productService) SearchProduct(q *repository.SearchQuery) (*dto.SearchedSortFilterProduct, error) {
+func (p *productService) SearchRecommendProduct(q *repository.SearchQuery) (*dto.SearchedSortFilterProduct, error) {
 	tx := p.db.Begin()
 
-	if q.Search == "" {
-		return nil, apperror.BadRequestError("Search required")
-	}
-	if q.SortBy == "" {
-		q.SortBy = "bought"
-	}
-	if q.Sort == "" {
-		q.Sort = "desc"
-	}
-	if q.Limit == "" {
-		q.Limit = "30"
-	}
-	if q.Page == "" {
-		q.Page = "1"
-	}
-	if q.MinAmount == "" {
-		q.MinAmount = "0"
-	}
-	if q.MaxAmount == "" {
-		q.MaxAmount = "999999999999"
-	}
-	products, err := p.productRepo.SearchProduct2(tx, q)
+	products, err := p.productRepo.SearchRecommendProduct(tx, q)
 	if err != nil {
 		tx.Rollback()
 		return nil, err
@@ -176,6 +155,5 @@ func (p *productService) SearchProduct(q *repository.SearchQuery) (*dto.Searched
 		SearchedProduct: products,
 	}
 
-	tx.Commit()
 	return &searchedSortFilterProducts, nil
 }
