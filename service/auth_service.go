@@ -16,6 +16,8 @@ import (
 type AuthService interface {
 	AuthAfterRegister(*model.User, *model.Wallet, *gorm.DB) (string, string, error)
 	SignInWithGoogle(*model.User) (string, string, error)
+	SignIn(*dto.SignInReq) (string, string, error)
+	SignOut(uint) error
 }
 
 type authService struct {
@@ -120,6 +122,7 @@ func (a *authService) SignInWithGoogle(user *model.User) (string, string, error)
 	tx := a.db.Begin()
 	wallet, err := a.walletRepository.GetWalletByUserID(tx, user.ID)
 	if err != nil {
+		tx.Rollback()
 		return "", "", err
 	}
 	userJWT := &dto.UserJWT{
@@ -131,6 +134,7 @@ func (a *authService) SignInWithGoogle(user *model.User) (string, string, error)
 
 	userRoles, err := a.userRoleRepo.GetRolesByUserID(tx, user.ID)
 	if err != nil {
+		tx.Rollback()
 		return "", "", err
 	}
 	var roles []string
@@ -146,8 +150,67 @@ func (a *authService) SignInWithGoogle(user *model.User) (string, string, error)
 	}
 	err = a.refreshTokenRepo.CreateRefreshToken(tx, user.ID, refreshToken)
 	if err != nil {
+		tx.Rollback()
 		return "", "", apperror.InternalServerError("Cannot add refresh token")
 	}
 
+	tx.Commit()
 	return token, refreshToken, err
+}
+
+func (a *authService) SignIn(req *dto.SignInReq) (string, string, error) {
+	tx := a.db.Begin()
+	user, err := a.userRepository.MatchingCredential(tx, req.Email, req.Password)
+	if err != nil || user == nil {
+		tx.Rollback()
+		return "", "", err
+	}
+	wallet, err := a.walletRepository.GetWalletByUserID(tx, user.ID)
+	if err != nil {
+		tx.Rollback()
+		return "", "", err
+	}
+	userJWT := &dto.UserJWT{
+		UserID:   user.ID,
+		Email:    user.Email,
+		Username: user.Username,
+		WalletID: wallet.ID,
+	}
+
+	userRoles, err := a.userRoleRepo.GetRolesByUserID(tx, user.ID)
+	if err != nil {
+		tx.Rollback()
+		return "", "", err
+	}
+	var roles []string
+	for _, role := range userRoles {
+		roles = append(roles, role.Role.Name)
+	}
+	rolesString := strings.Join(roles[:], " ")
+	token, refreshToken, err := a.generateJWTToken(userJWT, rolesString)
+
+	if os.Getenv("ENV") == "testing" {
+		token = "test"
+		refreshToken = "test"
+	}
+	err = a.refreshTokenRepo.CreateRefreshToken(tx, user.ID, refreshToken)
+	if err != nil {
+		tx.Rollback()
+		return "", "", err
+	}
+
+	tx.Commit()
+	return token, refreshToken, err
+}
+
+func (a *authService) SignOut(userID uint) error {
+	tx := a.db.Begin()
+	err := a.refreshTokenRepo.DeleteRefreshToken(tx, userID)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	tx.Commit()
+	return nil
 }

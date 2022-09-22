@@ -10,19 +10,21 @@ import (
 )
 
 type RouterConfig struct {
-	UserService           service.UserService
-	AuthService           service.AuthService
-	ProvinceService       service.ProvinceService
-	CityService           service.CityService
-	DistrictService       service.DistrictService
-	SubDistrictService    service.SubDistrictService
-	AddressService        service.AddressService
-	WalletService         service.WalletService
-	ProductService        service.ProductService
-	ProductVariantService service.ProductVariantService
-	SellerService         service.SellerService
-	UserSeaLabsPayAccServ service.UserSeaPayAccountServ
-	OrderItemService      service.OrderItemService
+	UserService            service.UserService
+	AuthService            service.AuthService
+	ProvinceService        service.ProvinceService
+	CityService            service.CityService
+	DistrictService        service.DistrictService
+	SubDistrictService     service.SubDistrictService
+	AddressService         service.AddressService
+	WalletService          service.WalletService
+	ProductCategoryService service.ProductCategoryService
+	ProductService         service.ProductService
+	ProductVariantService  service.ProductVariantService
+	SellerService          service.SellerService
+	UserSeaLabsPayAccServ  service.UserSeaPayAccountServ
+	OrderItemService       service.OrderItemService
+	RefreshTokenService    service.RefreshTokenService
 }
 
 func NewRouter(c *RouterConfig) *gin.Engine {
@@ -30,19 +32,21 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.NoRoute()
 
 	h := handler.New(&handler.Config{
-		UserService:           c.UserService,
-		AuthService:           c.AuthService,
-		ProvinceService:       c.ProvinceService,
-		CityService:           c.CityService,
-		DistrictService:       c.DistrictService,
-		SubDistrictService:    c.SubDistrictService,
-		AddressService:        c.AddressService,
-		ProductService:        c.ProductService,
-		ProductVariantService: c.ProductVariantService,
-		SellerService:         c.SellerService,
-		WalletService:         c.WalletService,
-		SeaLabsPayAccServ:     c.UserSeaLabsPayAccServ,
-		OrderItemService:      c.OrderItemService,
+		UserService:            c.UserService,
+		AuthService:            c.AuthService,
+		ProvinceService:        c.ProvinceService,
+		CityService:            c.CityService,
+		DistrictService:        c.DistrictService,
+		SubDistrictService:     c.SubDistrictService,
+		AddressService:         c.AddressService,
+		ProductCategoryService: c.ProductCategoryService,
+		ProductService:         c.ProductService,
+		ProductVariantService:  c.ProductVariantService,
+		SellerService:          c.SellerService,
+		WalletService:          c.WalletService,
+		SeaLabsPayAccServ:      c.UserSeaLabsPayAccServ,
+		OrderItemService:       c.OrderItemService,
+		RefreshTokenService:    c.RefreshTokenService,
 	})
 
 	r.Use(middleware.ErrorHandler)
@@ -52,6 +56,13 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.POST("/register", middleware.RequestValidator(func() any {
 		return &dto.RegisterRequest{}
 	}), h.Register)
+	r.GET("/refresh/access_token", h.RefreshAccessToken)
+	r.POST("/sign_in", middleware.RequestValidator(func() any {
+		return &dto.SignInReq{}
+	}), h.SignIn)
+	r.POST("/sign_out", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
+		return &dto.SignOutReq{}
+	}), h.SignOut)
 
 	// GOOGLE AUTH
 	r.GET("/google/sign-in", h.GoogleSignIn)
@@ -70,9 +81,15 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	}), h.UpdateAddress)
 	r.GET("/user/profiles/addresses", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetAddressesByUserID)
 
+	// CATEGORIES
+	r.GET("/categories", h.FindAllProductCategories)
+
 	// PRODUCTS
 	r.GET("/products/:id/variant", h.FindAllProductVariantByProductID)
 	//r.GET("/products/:slug", h.FindProductDetailBySlug)
+	r.GET("/search-product/", h.SearchProduct)
+	r.GET("/products/detail/:slug", h.FindProductDetailBySlug)
+	r.GET("/sellers/:id/products", h.GetProductsBySellerID)
 
 	// SELLER
 	r.GET("/sellers/:id", h.FindSellerByID)

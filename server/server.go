@@ -18,11 +18,15 @@ func Init() {
 	districtRepository := repository.NewDistrictRepository()
 	provinceRepository := repository.NewProvinceRepository()
 	subDistrictRepository := repository.NewSubDistrictRepository()
+	productCategoryRepository := repository.NewProductCategoryRepository()
 	productRepository := repository.NewProductRepository()
 	productVariantRepository := repository.NewProductVariantRepository()
 	sellerRepository := repository.NewSellerRepository()
 	userSeaLabsPayAccountRepo := repository.NewSeaPayAccountRepo()
 	orderItemRepository := repository.NewOrderItemRepository()
+	reviewRepository := repository.NewReviewRepository()
+	socialGraphRepo := repository.NewSocialGraphRepository()
+	productVarDetRepo := repository.NewProductVariantDetailRepository()
 
 	userService := service.NewUserService(&service.UserServiceConfig{
 		DB:               db.Get(),
@@ -65,9 +69,16 @@ func Init() {
 		AddressRepository: addressRepository,
 	})
 
+	productCategoryService := service.NewProductCategoryService(&service.ProductCategoryServiceConfig{
+		DB:                        db.Get(),
+		ProductCategoryRepository: productCategoryRepository,
+	})
+
 	productService := service.NewProductService(&service.ProductConfig{
-		DB:          db.Get(),
-		ProductRepo: productRepository,
+		DB:                db.Get(),
+		ProductRepo:       productRepository,
+		ReviewRepo:        reviewRepository,
+		ProductVarDetRepo: productVarDetRepo,
 	})
 
 	productVariantService := service.NewProductVariantService(&service.ProductVariantServiceConfig{
@@ -76,8 +87,10 @@ func Init() {
 	})
 
 	sellerService := service.NewSellerService(&service.SellerServiceConfig{
-		DB:         db.Get(),
-		SellerRepo: sellerRepository,
+		DB:              db.Get(),
+		SellerRepo:      sellerRepository,
+		ReviewRepo:      reviewRepository,
+		SocialGraphRepo: socialGraphRepo,
 	})
 
 	walletService := service.NewWalletService(&service.WalletServiceConfig{
@@ -95,20 +108,27 @@ func Init() {
 		OrderItemRepository: orderItemRepository,
 	})
 
+	refreshTokenService := service.NewRefreshTokenService(&service.RefreshTokenServiceConfig{
+		DB:               db.Get(),
+		RefreshTokenRepo: refreshTokenRepository,
+	})
+
 	router := NewRouter(&RouterConfig{
-		UserService:           userService,
-		AuthService:           authService,
-		ProvinceService:       provinceService,
-		CityService:           cityService,
-		DistrictService:       districtService,
-		SubDistrictService:    subDistrictService,
-		AddressService:        addressService,
-		WalletService:         walletService,
-		ProductService:        productService,
-		ProductVariantService: productVariantService,
-		SellerService:         sellerService,
-		UserSeaLabsPayAccServ: userSeaLabsPayAccountServ,
-		OrderItemService:      orderItemService,
+		UserService:            userService,
+		AuthService:            authService,
+		ProvinceService:        provinceService,
+		CityService:            cityService,
+		DistrictService:        districtService,
+		SubDistrictService:     subDistrictService,
+		AddressService:         addressService,
+		WalletService:          walletService,
+		ProductCategoryService: productCategoryService,
+		ProductService:         productService,
+		ProductVariantService:  productVariantService,
+		SellerService:          sellerService,
+		UserSeaLabsPayAccServ:  userSeaLabsPayAccountServ,
+		OrderItemService:       orderItemService,
+		RefreshTokenService:    refreshTokenService,
 	})
 	log.Fatalln(router.Run(":" + config.Config.Port))
 }
