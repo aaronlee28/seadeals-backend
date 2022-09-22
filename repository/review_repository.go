@@ -10,6 +10,7 @@ import (
 type ReviewRepository interface {
 	GetReviewsAvgAndCountBySellerID(tx *gorm.DB, sellerID uint) (float64, int64, error)
 	GetReviewsAvgAndCountByProductID(tx *gorm.DB, productID uint) (float64, int64, error)
+	FindReviewByProductID(tx *gorm.DB, productID uint, qp *model.ReviewQueryParam) ([]*model.Review, error)
 }
 
 type reviewRepository struct{}
@@ -53,4 +54,16 @@ func (r *reviewRepository) GetReviewsAvgAndCountByProductID(tx *gorm.DB, product
 	}
 
 	return average, totalReview, nil
+}
+
+func (r *reviewRepository) FindReviewByProductID(tx *gorm.DB, productID uint, qp *model.ReviewQueryParam) ([]*model.Review, error) {
+	var reviews []*model.Review
+	orderStmt := fmt.Sprintf("%s %s", qp.SortBy, qp.Sort)
+
+	result := tx.Where("product_id = ?", productID).Order(orderStmt).Preload("User").Find(&reviews)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return reviews, nil
 }

@@ -21,10 +21,10 @@ func Init() {
 	productCategoryRepository := repository.NewProductCategoryRepository()
 	productRepository := repository.NewProductRepository()
 	productVariantRepository := repository.NewProductVariantRepository()
+	reviewRepository := repository.NewReviewRepository()
 	sellerRepository := repository.NewSellerRepository()
 	userSeaLabsPayAccountRepo := repository.NewSeaPayAccountRepo()
 	orderItemRepository := repository.NewOrderItemRepository()
-	reviewRepository := repository.NewReviewRepository()
 	socialGraphRepo := repository.NewSocialGraphRepository()
 	productVarDetRepo := repository.NewProductVariantDetailRepository()
 
@@ -86,6 +86,11 @@ func Init() {
 		ProductVariantRepo: productVariantRepository,
 	})
 
+	reviewService := service.NewReviewService(&service.ReviewServiceConfig{
+		DB:         db.Get(),
+		ReviewRepo: reviewRepository,
+	})
+
 	sellerService := service.NewSellerService(&service.SellerServiceConfig{
 		DB:              db.Get(),
 		SellerRepo:      sellerRepository,
@@ -125,6 +130,7 @@ func Init() {
 		ProductCategoryService: productCategoryService,
 		ProductService:         productService,
 		ProductVariantService:  productVariantService,
+		ReviewService:          reviewService,
 		SellerService:          sellerService,
 		UserSeaLabsPayAccServ:  userSeaLabsPayAccountServ,
 		OrderItemService:       orderItemService,

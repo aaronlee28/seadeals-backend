@@ -21,6 +21,7 @@ type RouterConfig struct {
 	ProductCategoryService service.ProductCategoryService
 	ProductService         service.ProductService
 	ProductVariantService  service.ProductVariantService
+	ReviewService          service.ReviewService
 	SellerService          service.SellerService
 	UserSeaLabsPayAccServ  service.UserSeaPayAccountServ
 	OrderItemService       service.OrderItemService
@@ -42,6 +43,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		ProductCategoryService: c.ProductCategoryService,
 		ProductService:         c.ProductService,
 		ProductVariantService:  c.ProductVariantService,
+		ReviewService:          c.ReviewService,
 		SellerService:          c.SellerService,
 		WalletService:          c.WalletService,
 		SeaLabsPayAccServ:      c.UserSeaLabsPayAccServ,
@@ -90,6 +92,9 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.GET("/search-product/", h.SearchProduct)
 	r.GET("/products/detail/:slug", h.FindProductDetailBySlug)
 	r.GET("/sellers/:id/products", h.GetProductsBySellerID)
+
+	// REVIEWS
+	r.GET("/products/:id/reviews", h.FindReviewByProductID)
 
 	// SELLER
 	r.GET("/sellers/:id", h.FindSellerByID)
