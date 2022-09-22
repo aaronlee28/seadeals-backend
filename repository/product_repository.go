@@ -13,7 +13,7 @@ type ProductRepository interface {
 	FindProductBySlug(tx *gorm.DB, slug string) (*model.Product, error)
 
 	SearchProduct(tx *gorm.DB, q *SearchQuery) (*[]model.Product, error)
-	SearchProduct2(tx *gorm.DB, q *SearchQuery) ([]*dto.SearchedProductRes, error)
+	SearchRecommendProduct(tx *gorm.DB, q *SearchQuery) ([]*dto.SearchedProductRes, error)
 	SearchImageURL(tx *gorm.DB, productID uint) (string, error)
 	SearchMinMaxPrice(tx *gorm.DB, productID uint) (uint, uint, error)
 	SearchPromoPrice(tx *gorm.DB, productID uint) (float64, error)
@@ -74,7 +74,7 @@ func (r *productRepository) SearchProduct(tx *gorm.DB, q *SearchQuery) (*[]model
 	return p, nil
 }
 
-func (r *productRepository) SearchProduct2(tx *gorm.DB, q *SearchQuery) ([]*dto.SearchedProductRes, error) {
+func (r *productRepository) SearchRecommendProduct(tx *gorm.DB, q *SearchQuery) ([]*dto.SearchedProductRes, error) {
 	search := "%" + q.Search + "%"
 	city := "%" + q.City + "%"
 	category := "%" + q.Category + "%"

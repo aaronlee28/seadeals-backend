@@ -126,7 +126,7 @@ func (p *productService) SearchRecommendProduct(q *repository.SearchQuery) (*dto
 	if q.Rating == "" {
 		q.Rating = "0"
 	}
-	products, err := p.productRepo.SearchProduct2(tx, q)
+	products, err := p.productRepo.SearchRecommendProduct(tx, q)
 	if err != nil {
 		tx.Rollback()
 		return nil, err
