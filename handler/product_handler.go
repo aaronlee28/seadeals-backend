@@ -23,11 +23,13 @@ func (h *Handler) FindProductDetailBySlug(ctx *gin.Context) {
 
 func (h *Handler) GetProductsBySellerID(ctx *gin.Context) {
 	query := map[string]string{
-		"page":   ctx.Query("page"),
-		"s":      ctx.Query("s"),
-		"sortBy": ctx.Query("sortBy"),
-		"sort":   ctx.Query("sort"),
-		"limit":  ctx.Query("limit"),
+		"page":     ctx.Query("page"),
+		"s":        ctx.Query("s"),
+		"sortBy":   ctx.Query("sortBy"),
+		"sort":     ctx.Query("sort"),
+		"limit":    ctx.Query("limit"),
+		"minPrice": ctx.Query("minPrice"),
+		"maxPrice": ctx.Query("maxPrice"),
 	}
 	productQuery, err := new(dto.SellerProductSearchQuery).FromQuery(query)
 	if err != nil {
