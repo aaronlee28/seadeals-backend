@@ -58,11 +58,11 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.POST("/register", middleware.RequestValidator(func() any {
 		return &dto.RegisterRequest{}
 	}), h.Register)
-	r.GET("/refresh/access_token", h.RefreshAccessToken)
-	r.POST("/sign_in", middleware.RequestValidator(func() any {
+	r.GET("/refresh/access-token", h.RefreshAccessToken)
+	r.POST("/sign-in", middleware.RequestValidator(func() any {
 		return &dto.SignInReq{}
 	}), h.SignIn)
-	r.POST("/sign_out", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
+	r.POST("/sign-out", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.SignOutReq{}
 	}), h.SignOut)
 
