@@ -44,9 +44,16 @@ func (w *walletService) UserWalletData(id uint) (*dto.WalletDataRes, error) {
 		return nil, err
 	}
 	transactions, err := w.walletRepository.GetTransactionsByUserID(tx, id)
+	var status string
+	if wallet.Pin == nil {
+		status = "Pin has not been set"
+	} else {
+		status = "Pin has been set"
+	}
 	walletData := &dto.WalletDataRes{
 		UserID:       2,
 		Balance:      wallet.Balance,
+		Status:       &status,
 		Transactions: transactions,
 	}
 
