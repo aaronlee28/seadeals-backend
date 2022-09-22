@@ -8,6 +8,7 @@ type Product struct {
 	gorm.Model           `json:"-"`
 	ID                   uint                    `json:"id" gorm:"primaryKey"`
 	CategoryID           uint                    `json:"category_id"`
+	Category             *ProductCategory        `json:"category"`
 	SellerID             uint                    `json:"seller_id"`
 	Seller               *Seller                 `json:"seller"`
 	Name                 string                  `json:"name"`

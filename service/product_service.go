@@ -12,6 +12,7 @@ type ProductService interface {
 	FindProductDetailBySlug(slug string) (*model.Product, error)
 	SearchProduct(q *repository.SearchQuery) (*dto.SearchedSortFilterProduct, error)
 	GetProductsBySellerID(query *dto.SellerProductSearchQuery, sellerID uint) ([]*dto.ProductRes, int64, int64, error)
+	GetProductsByCategoryID(query *dto.SellerProductSearchQuery, categoryID uint) ([]*dto.ProductRes, int64, int64, error)
 }
 
 type productService struct {
@@ -66,16 +67,11 @@ func (s *productService) GetProductsBySellerID(query *dto.SellerProductSearchQue
 	}
 	if totalData == 0 {
 		tx.Rollback()
-		return nil, 0, 0, apperror.NotFoundError("No variantDetails were found")
+		return nil, 0, 0, apperror.NotFoundError("No Products were found")
 	}
 
 	var productsRes []*dto.ProductRes
 	for _, variantDetail := range variantDetails {
-		avgReview, totalReview, e := s.reviewRepo.GetReviewsAvgAndCountByProductID(tx, variantDetail.ProductID)
-		if e != nil {
-			tx.Rollback()
-			return nil, 0, 0, e
-		}
 		var photoURL string
 		if len(variantDetail.Product.ProductPhotos) > 0 {
 			photoURL = variantDetail.Product.ProductPhotos[0].PhotoURL
@@ -91,14 +87,57 @@ func (s *productService) GetProductsBySellerID(query *dto.SellerProductSearchQue
 				Slug:          variantDetail.Product.Slug,
 				PictureURL:    photoURL,
 				City:          variantDetail.Product.Seller.Address.SubDistrict.District.City.Name,
-				Rating:        avgReview,
-				TotalReviewer: totalReview,
+				Rating:        variantDetail.Avg,
+				TotalReviewer: variantDetail.Count,
 				TotalSold:     uint(variantDetail.Product.SoldCount),
 			},
 		}
 		productsRes = append(productsRes, dtoProduct)
 	}
 
+	tx.Commit()
+	return productsRes, totalPage, totalData, nil
+}
+
+func (s *productService) GetProductsByCategoryID(query *dto.SellerProductSearchQuery, categoryID uint) ([]*dto.ProductRes, int64, int64, error) {
+	tx := s.db.Begin()
+
+	variantDetails, totalPage, totalData, err := s.productVarDetRepo.GetProductsByCategoryID(tx, query, categoryID)
+	if err != nil {
+		tx.Rollback()
+		return nil, 0, 0, err
+	}
+	if totalData == 0 {
+		tx.Rollback()
+		return nil, 0, 0, apperror.NotFoundError("No Products were found")
+	}
+
+	var productsRes []*dto.ProductRes
+	for _, variantDetail := range variantDetails {
+		var photoURL string
+		if len(variantDetail.Product.ProductPhotos) > 0 {
+			photoURL = variantDetail.Product.ProductPhotos[0].PhotoURL
+		}
+
+		dtoProduct := &dto.ProductRes{
+			MinPrice: variantDetail.Min,
+			MaxPrice: variantDetail.Max,
+			Product: &dto.GetProductRes{
+				ID:            variantDetail.ID,
+				Price:         variantDetail.Min,
+				Name:          variantDetail.Product.Name,
+				Slug:          variantDetail.Product.Slug,
+				PictureURL:    photoURL,
+				City:          variantDetail.Product.Seller.Address.SubDistrict.District.City.Name,
+				Rating:        variantDetail.Avg,
+				TotalReviewer: variantDetail.Count,
+				TotalSold:     uint(variantDetail.Product.SoldCount),
+			},
+		}
+		productsRes = append(productsRes, dtoProduct)
+	}
+
+	tx.Commit()
 	return productsRes, totalPage, totalData, nil
 }
 
@@ -137,5 +176,6 @@ func (p *productService) SearchProduct(q *repository.SearchQuery) (*dto.Searched
 		SearchedProduct: products,
 	}
 
+	tx.Commit()
 	return &searchedSortFilterProducts, nil
 }

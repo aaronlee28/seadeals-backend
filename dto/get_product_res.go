@@ -21,12 +21,14 @@ type GetProductRes struct {
 }
 
 type SellerProductsCustomTable struct {
-	Min                        float64 `json:"min"`
-	Max                        float64 `json:"max"`
-	ProductID                  uint    `json:"product_id"`
-	model.ProductVariantDetail `json:"product_variant_detail"`
+	Min           float64 `json:"min"`
+	Max           float64 `json:"max"`
+	Avg           float64 `json:"review_avg"`
+	Count         int64   `json:"review_count"`
+	ProductID     uint    `json:"product_id"`
+	model.Product `json:"product"`
 }
 
 func (_ SellerProductsCustomTable) TableName() string {
-	return "product_variant_details"
+	return "products"
 }
