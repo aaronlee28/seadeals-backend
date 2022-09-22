@@ -120,7 +120,7 @@ func (u *userService) CheckGoogleAccount(req *dto.GoogleLogin) (*model.User, err
 	}
 
 	if !isEmailExist {
-		return nil, nil
+		return nil, apperror.NotFoundError("email doesn't exist")
 	}
 
 	user, err := u.userRepository.GetUserByEmail(tx, req.Email)

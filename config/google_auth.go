@@ -6,7 +6,6 @@ import (
 )
 
 const googleSignInRedirectURL = "http://localhost:8080/google/callback"
-const RandomState = "random_state"
 
 func SetupGoogleAuthConfig() *oauth2.Config {
 	return &oauth2.Config{
