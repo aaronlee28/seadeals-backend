@@ -45,7 +45,10 @@ func (p *productVariantDetailRepository) GetProductsBySellerID(tx *gorm.DB, quer
 		if query.SortBy == "" {
 			orderByString = "sold_count"
 		} else {
-			orderByString = query.SortBy
+			orderByString = "sold_count"
+			if query.SortBy == "date" {
+				orderByString = "products.created_at"
+			}
 		}
 	}
 
@@ -116,7 +119,10 @@ func (p *productVariantDetailRepository) GetProductsByCategoryID(tx *gorm.DB, qu
 		if query.SortBy == "" {
 			orderByString = "sold_count"
 		} else {
-			orderByString = query.SortBy
+			orderByString = "sold_count"
+			if query.SortBy == "date" {
+				orderByString = "products.created_at"
+			}
 		}
 	}
 
