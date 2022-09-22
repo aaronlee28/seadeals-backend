@@ -34,7 +34,7 @@ func NewUserRepository() UserRepository {
 func (u *userRepository) Register(tx *gorm.DB, user *model.User) (*model.User, error) {
 	var err error
 
-	sameEmail := tx.Model(&model.User{}).Where("email LIKE ?", user.Email).First(&model.User{})
+	sameEmail := tx.Model(&model.User{}).Unscoped().Where("email LIKE ?", user.Email).First(&model.User{})
 	if sameEmail.Error == nil {
 		return nil, apperror.BadRequestError("Email has already exists")
 	}
