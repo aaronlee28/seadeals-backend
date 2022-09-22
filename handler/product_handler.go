@@ -64,7 +64,7 @@ func (a *Handler) SearchProduct(c *gin.Context) {
 	query := &repository.SearchQuery{
 		Search:    helper.GetQuery(c, "sortBy", ""),
 		SortBy:    helper.GetQuery(c, "sortBy", "bought"),
-		Sort:      helper.GetQuery(c, "sort", sortByReviewDefault),
+		Sort:      helper.GetQuery(c, "sort", SortByReviewDefault),
 		Limit:     helper.GetQuery(c, "limit", "30"),
 		Page:      helper.GetQuery(c, "page", "1"),
 		MinAmount: helper.GetQuery(c, "minAmount", "0"),

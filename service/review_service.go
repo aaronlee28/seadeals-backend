@@ -8,7 +8,7 @@ import (
 )
 
 type ReviewService interface {
-	FindReviewByProductID(productID uint, qp *model.ReviewQueryParam) ([]*dto.GetReviewRes, error)
+	FindReviewByProductID(productID uint, qp *model.ReviewQueryParam) (*dto.GetReviewsRes, error)
 }
 
 type reviewService struct {
@@ -33,9 +33,16 @@ func validateReviewQueryParam(qp *model.ReviewQueryParam) {
 		qp.Sort = "desc"
 	}
 	qp.SortBy = "created_at"
+
+	if qp.Page == 0 {
+		qp.Page = 1
+	}
+	if qp.Limit == 0 {
+		qp.Limit = 6
+	}
 }
 
-func (s *reviewService) FindReviewByProductID(productID uint, qp *model.ReviewQueryParam) ([]*dto.GetReviewRes, error) {
+func (s *reviewService) FindReviewByProductID(productID uint, qp *model.ReviewQueryParam) (*dto.GetReviewsRes, error) {
 	validateReviewQueryParam(qp)
 
 	tx := s.db.Begin()
@@ -44,9 +51,24 @@ func (s *reviewService) FindReviewByProductID(productID uint, qp *model.ReviewQu
 		return nil, err
 	}
 
-	var res []*dto.GetReviewRes
+	totalReviews := len(reviews)
+	totalPages := (totalReviews + qp.Limit - 1) / qp.Limit
+
+	var reviewsRes []*dto.GetReviewRes
+	var avgRating float64
 	for _, review := range reviews {
-		res = append(res, new(dto.GetReviewRes).From(review))
+		reviewsRes = append(reviewsRes, new(dto.GetReviewRes).From(review))
+		avgRating += float64(review.Rating)
+	}
+	avgRating = avgRating / float64(totalReviews)
+
+	res := &dto.GetReviewsRes{
+		Limit:         uint(qp.Limit),
+		Page:          uint(qp.Page),
+		TotalPages:    uint(totalPages),
+		TotalReviews:  uint(totalReviews),
+		AverageRating: avgRating,
+		Reviews:       reviewsRes,
 	}
 
 	return res, nil

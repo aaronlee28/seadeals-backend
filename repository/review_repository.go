@@ -58,9 +58,10 @@ func (r *reviewRepository) GetReviewsAvgAndCountByProductID(tx *gorm.DB, product
 
 func (r *reviewRepository) FindReviewByProductID(tx *gorm.DB, productID uint, qp *model.ReviewQueryParam) ([]*model.Review, error) {
 	var reviews []*model.Review
+	offset := (qp.Page - 1) * qp.Limit
 	orderStmt := fmt.Sprintf("%s %s", qp.SortBy, qp.Sort)
 
-	result := tx.Where("product_id = ?", productID).Order(orderStmt).Preload("User").Find(&reviews)
+	result := tx.Limit(qp.Limit).Offset(offset).Where("product_id = ?", productID).Order(orderStmt).Preload("User").Find(&reviews)
 	if result.Error != nil {
 		return nil, result.Error
 	}

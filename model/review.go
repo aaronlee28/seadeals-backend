@@ -3,8 +3,10 @@ package model
 import "gorm.io/gorm"
 
 type ReviewQueryParam struct {
-	Sort   string `json:"sort"`
-	SortBy string `json:"sort_by"`
+	Sort   string
+	SortBy string
+	Limit  int
+	Page   int
 }
 
 type Review struct {

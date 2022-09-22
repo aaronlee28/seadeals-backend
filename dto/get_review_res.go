@@ -5,6 +5,15 @@ import (
 	"time"
 )
 
+type GetReviewsRes struct {
+	Limit         uint            `json:"limit"`
+	Page          uint            `json:"page"`
+	TotalPages    uint            `json:"total_pages"`
+	TotalReviews  uint            `json:"total_reviews"`
+	AverageRating float64         `json:"average_rating"`
+	Reviews       []*GetReviewRes `json:"reviews"`
+}
+
 type GetReviewRes struct {
 	ID            uint      `json:"id" gorm:"primaryKey"`
 	UserID        uint      `json:"user_id"`
