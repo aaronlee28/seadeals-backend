@@ -56,9 +56,6 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.POST("/register", middleware.RequestValidator(func() any {
 		return &dto.RegisterRequest{}
 	}), h.Register)
-	r.POST("/google/sign-in", middleware.RequestValidator(func() any {
-		return &dto.GoogleLogin{}
-	}), h.SignInWithGoogleEmail)
 	r.GET("/refresh/access_token", h.RefreshAccessToken)
 	r.POST("/sign_in", middleware.RequestValidator(func() any {
 		return &dto.SignInReq{}
@@ -66,6 +63,10 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.POST("/sign_out", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.SignOutReq{}
 	}), h.SignOut)
+
+	// GOOGLE AUTH
+	r.GET("/google/sign-in", h.GoogleSignIn)
+	r.GET("/google/callback", h.GoogleCallback)
 
 	// ADDRESS
 	r.GET("/provinces", h.GetProvinces)
