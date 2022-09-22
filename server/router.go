@@ -92,6 +92,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.GET("/products/detail/:slug", h.FindProductDetailBySlug)
 	r.GET("/sellers/:id/products", h.GetProductsBySellerID)
 	r.GET("/categories/:id/products", h.GetProductsByCategoryID)
+	r.GET("/products", h.SearchProducts)
 
 	// REVIEWS
 	r.GET("/products/:id/reviews", h.FindReviewByProductID)

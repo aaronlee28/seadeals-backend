@@ -5,11 +5,13 @@ import (
 	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
 	"seadeals-backend/model"
+	"strconv"
 )
 
 type ProductVariantDetailRepository interface {
 	GetProductsBySellerID(tx *gorm.DB, query *dto.SellerProductSearchQuery, sellerID uint) ([]*dto.SellerProductsCustomTable, int64, int64, error)
 	GetProductsByCategoryID(tx *gorm.DB, query *dto.SellerProductSearchQuery, sellerID uint) ([]*dto.SellerProductsCustomTable, int64, int64, error)
+	SearchProducts(tx *gorm.DB, query *SearchQuery) ([]*dto.SellerProductsCustomTable, int64, int64, error)
 }
 
 type productVariantDetailRepository struct{}
@@ -152,6 +154,94 @@ func (p *productVariantDetailRepository) GetProductsByCategoryID(tx *gorm.DB, qu
 	if query.Page != 0 {
 		table = table.Offset((query.Page - 1) * limit)
 	}
+
+	table = table.Preload("ProductPhotos").Preload("Seller.Address.SubDistrict.District.City")
+	table = table.Unscoped().Find(&products)
+	if table.Error != nil {
+		return nil, 0, 0, apperror.InternalServerError("cannot fetch products")
+	}
+
+	totalPage := totalData / int64(limit)
+	if totalData%int64(limit) != 0 {
+		totalPage += 1
+	}
+	return products, totalPage, totalData, nil
+}
+
+func (p *productVariantDetailRepository) SearchProducts(tx *gorm.DB, query *SearchQuery) ([]*dto.SellerProductsCustomTable, int64, int64, error) {
+	var products []*dto.SellerProductsCustomTable
+
+	s1 := tx.Model(&model.ProductVariantDetail{})
+	s1 = s1.Select("min(price), max(price), product_id")
+	s1 = s1.Group("product_id")
+
+	s2 := tx.Model(&model.Review{})
+	s2 = s2.Select("count(*), AVG(rating), product_id")
+	s2 = s2.Group("product_id")
+
+	result := tx.Model(&dto.SellerProductsCustomTable{})
+	result = result.Select("*")
+	result = result.Joins("JOIN product_categories as c ON products.category_id = c.id")
+	result = result.Joins("JOIN (?) as s1 ON products.id = s1.product_id", s1)
+	result = result.Joins("LEFT JOIN (?) as s2 ON products.id = s2.product_id", s2)
+
+	// CHANGE THIS CODE BELLOW TO CHANGE LIST OF PRODUCT BY...
+	if query.CategoryID != 0 {
+		result = result.Where("(category_id = ? OR parent_id = ?)", query.CategoryID, query.CategoryID)
+	}
+	if query.SellerID != 0 {
+		result = result.Where("seller_id = ?", query.SellerID)
+	}
+
+	orderByString := query.SortBy
+	if query.SortBy == "price" {
+		orderByString = "min"
+	} else {
+		if query.SortBy == "" {
+			orderByString = "sold_count"
+		} else {
+			orderByString = "sold_count"
+			if query.SortBy == "date" {
+				orderByString = "products.created_at"
+			}
+		}
+	}
+
+	if query.SortBy == "" {
+		if query.Sort != "asc" {
+			orderByString += " desc"
+		}
+	} else {
+		if query.Sort == "desc" {
+			orderByString += " desc"
+		}
+	}
+
+	var totalData int64
+	result = result.Order(orderByString).Order("products.id")
+	result = result.Where("min >= ?", query.MinAmount).Where("min <= ?", query.MaxAmount)
+
+	rating, _ := strconv.Atoi(query.Rating)
+	if rating != 0 {
+		result = result.Where("avg >= ? AND avg IS NOT NULL", rating)
+	}
+
+	table := tx.Table("(?) as s3", result).Count(&totalData)
+	if table.Error != nil {
+		return nil, 0, 0, apperror.InternalServerError("cannot fetch products count")
+	}
+
+	limit, _ := strconv.Atoi(query.Limit)
+	if limit == 0 {
+		limit = 20
+	}
+	table = table.Limit(limit)
+
+	page, _ := strconv.Atoi(query.Page)
+	if page == 0 {
+		page = 1
+	}
+	table = table.Offset((page - 1) * limit)
 
 	table = table.Preload("ProductPhotos").Preload("Seller.Address.SubDistrict.District.City")
 	table = table.Unscoped().Find(&products)
