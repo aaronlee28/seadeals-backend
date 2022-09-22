@@ -21,6 +21,7 @@ type RouterConfig struct {
 	ProductCategoryService service.ProductCategoryService
 	ProductService         service.ProductService
 	ProductVariantService  service.ProductVariantService
+	ReviewService          service.ReviewService
 	SellerService          service.SellerService
 	UserSeaLabsPayAccServ  service.UserSeaPayAccountServ
 	OrderItemService       service.OrderItemService
@@ -42,6 +43,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		ProductCategoryService: c.ProductCategoryService,
 		ProductService:         c.ProductService,
 		ProductVariantService:  c.ProductVariantService,
+		ReviewService:          c.ReviewService,
 		SellerService:          c.SellerService,
 		WalletService:          c.WalletService,
 		SeaLabsPayAccServ:      c.UserSeaLabsPayAccServ,
@@ -56,11 +58,11 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.POST("/register", middleware.RequestValidator(func() any {
 		return &dto.RegisterRequest{}
 	}), h.Register)
-	r.GET("/refresh/access_token", h.RefreshAccessToken)
-	r.POST("/sign_in", middleware.RequestValidator(func() any {
+	r.GET("/refresh/access-token", h.RefreshAccessToken)
+	r.POST("/sign-in", middleware.RequestValidator(func() any {
 		return &dto.SignInReq{}
 	}), h.SignIn)
-	r.POST("/sign_out", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
+	r.POST("/sign-out", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.SignOutReq{}
 	}), h.SignOut)
 
@@ -89,6 +91,9 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.GET("/search-recommend-product/", h.SearchRecommendProduct)
 	r.GET("/products/detail/:slug", h.FindProductDetailBySlug)
 	r.GET("/sellers/:id/products", h.GetProductsBySellerID)
+
+	// REVIEWS
+	r.GET("/products/:id/reviews", h.FindReviewByProductID)
 
 	// SELLER
 	r.GET("/sellers/:id", h.FindSellerByID)
