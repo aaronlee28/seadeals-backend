@@ -36,6 +36,9 @@ type SearchQuery struct {
 	Page      string
 	MinAmount string
 	MaxAmount string
+	City      string
+	Rating    string
+	Category  string
 }
 
 func (r *productRepository) FindProductDetailByID(tx *gorm.DB, id uint) (*model.Product, error) {
@@ -59,6 +62,7 @@ func (r *productRepository) FindProductBySlug(tx *gorm.DB, slug string) (*model.
 func (r *productRepository) SearchProduct(tx *gorm.DB, q *SearchQuery) (*[]model.Product, error) {
 	var p *[]model.Product
 	search := "%" + q.Search + "%"
+
 	limit, _ := strconv.Atoi(q.Limit)
 	page, _ := strconv.Atoi(q.Page)
 	offset := (limit * page) - limit
@@ -72,6 +76,8 @@ func (r *productRepository) SearchProduct(tx *gorm.DB, q *SearchQuery) (*[]model
 
 func (r *productRepository) SearchProduct2(tx *gorm.DB, q *SearchQuery) ([]*dto.SearchedProductRes, error) {
 	search := "%" + q.Search + "%"
+	city := "%" + q.City + "%"
+	category := "%" + q.Category + "%"
 	limit, _ := strconv.Atoi(q.Limit)
 	page, _ := strconv.Atoi(q.Page)
 	offset := (limit * page) - limit
@@ -95,7 +101,21 @@ func (r *productRepository) SearchProduct2(tx *gorm.DB, q *SearchQuery) ([]*dto.
 		" and " +
 		"max_price <= " +
 		q.MaxAmount +
-		"").Scan(&res)
+		" and " +
+		"UPPER(city) like UPPER('" +
+		city +
+		"')" +
+		" and " +
+		"rating >= " +
+		q.Rating +
+		" and " +
+		"UPPER(category) like UPPER('" +
+		category +
+		"')" +
+		" order by " +
+		q.SortBy +
+		" " +
+		q.Sort).Scan(&res)
 
 	if result.Error != nil {
 		return nil, apperror.InternalServerError("cannot find product")

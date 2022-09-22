@@ -29,6 +29,9 @@ func (a *Handler) SearchProduct(c *gin.Context) {
 		Page:      c.Query("page"),
 		MinAmount: c.Query("minAmount"),
 		MaxAmount: c.Query("maxAmount"),
+		City:      c.Query("city"),
+		Rating:    c.Query("rating"),
+		Category:  c.Query("category"),
 	}
 
 	result, err := a.productService.SearchProduct(query)
