@@ -59,7 +59,7 @@ func (h *Handler) GetProductsBySellerID(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, dto.StatusOKResponse(gin.H{"products": res, "total_data": totalData, "total_page": totalPage, "current_page": productQuery.Page, "limit": productQuery.Limit}))
 }
 
-func (a *Handler) SearchProduct(c *gin.Context) {
+func (a *Handler) SearchRecommendProduct(c *gin.Context) {
 
 	query := &repository.SearchQuery{
 		Search:    helper.GetQuery(c, "sortBy", ""),
@@ -74,7 +74,7 @@ func (a *Handler) SearchProduct(c *gin.Context) {
 		Category:  helper.GetQuery(c, "category", ""),
 	}
 
-	result, err := a.productService.SearchProduct(query)
+	result, err := a.productService.SearchRecommendProduct(query)
 	if err != nil {
 		e := c.Error(err)
 		c.JSON(http.StatusBadRequest, e)

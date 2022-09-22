@@ -10,7 +10,7 @@ import (
 
 type ProductService interface {
 	FindProductDetailBySlug(slug string) (*model.Product, error)
-	SearchProduct(q *repository.SearchQuery) (*dto.SearchedSortFilterProduct, error)
+	SearchRecommendProduct(q *repository.SearchQuery) (*dto.SearchedSortFilterProduct, error)
 	GetProductsBySellerID(query *dto.SellerProductSearchQuery, sellerID uint) ([]*dto.ProductRes, int64, int64, error)
 }
 
@@ -102,13 +102,10 @@ func (s *productService) GetProductsBySellerID(query *dto.SellerProductSearchQue
 	return productsRes, totalPage, totalData, nil
 }
 
-func (p *productService) SearchProduct(q *repository.SearchQuery) (*dto.SearchedSortFilterProduct, error) {
+func (p *productService) SearchRecommendProduct(q *repository.SearchQuery) (*dto.SearchedSortFilterProduct, error) {
 	tx := p.db.Begin()
 
-	if q.Search == "" {
-		return nil, apperror.BadRequestError("Search required")
-	}
-	products, err := p.productRepo.SearchProduct2(tx, q)
+	products, err := p.productRepo.SearchRecommendProduct(tx, q)
 	if err != nil {
 		tx.Rollback()
 		return nil, err
