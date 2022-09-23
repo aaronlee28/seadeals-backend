@@ -1,7 +1,6 @@
 package service
 
 import (
-	"fmt"
 	"github.com/mailjet/mailjet-apiv3-go"
 	"gorm.io/gorm"
 	"math"
@@ -170,7 +169,6 @@ func (w *walletService) RequestPinChangeWithEmail(userID uint) (*mailjet.Results
 	mailjetClient := mailjet.NewMailjetClient(config.Config.MailJetPublicKey, config.Config.MailJetSecretKey)
 	html := "<p>Here are the code to reset your pin:</p><h3>" + code + "</h3>" +
 		"<p>you can open the link <a href=\"http://localhost:3000/check?userID=" + strconv.FormatUint(uint64(user.ID), 10) + "&key=" + randomString + "\">here</a></p>"
-	fmt.Println(html)
 	messagesInfo := []mailjet.InfoMessagesV31{
 		{
 			From: &mailjet.RecipientV31{
