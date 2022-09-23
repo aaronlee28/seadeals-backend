@@ -117,7 +117,9 @@ func Init() {
 		DB:               db.Get(),
 		RefreshTokenRepo: refreshTokenRepository,
 	})
-
+	sealabsPayService := service.NewSealabsPayService(&service.SealabsServiceConfig{
+		DB: db.Get(),
+	})
 	router := NewRouter(&RouterConfig{
 		UserService:            userService,
 		AuthService:            authService,
@@ -135,6 +137,7 @@ func Init() {
 		UserSeaLabsPayAccServ:  userSeaLabsPayAccountServ,
 		OrderItemService:       orderItemService,
 		RefreshTokenService:    refreshTokenService,
+		SealabsPayService:      sealabsPayService,
 	})
 	log.Fatalln(router.Run(":" + config.Config.Port))
 }

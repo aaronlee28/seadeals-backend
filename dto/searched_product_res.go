@@ -14,7 +14,7 @@ type SearchedProductRes struct {
 	PromoPrice float64   `json:"promo_price" binding:"required"`
 	Rating     float64   `json:"rating" binding:"required"`
 	Views      int       `json:"views" binding:"required"`
-	Bought     int       `json:"Bought" binding:"required"`
+	Bought     int       `json:"bought" binding:"required"`
 	City       string    `json:"city" binding:"required"`
 	Category   string    `json:"category" binding:"required"`
 	UpdatedAt  time.Time `json:"updated_at" binding:"required"`
