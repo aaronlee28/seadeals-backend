@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"gorm.io/gorm"
 	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
@@ -10,6 +11,7 @@ import (
 
 type ProductVariantService interface {
 	FindAllProductVariantByProductID(productID uint) (*dto.ProductVariantRes, error)
+	GetVariantPriceAfterPromotionByProductID(productID int) (*dto.ProductVariantPriceRes, error)
 }
 
 type productVariantService struct {
@@ -71,14 +73,18 @@ func (s *productVariantService) FindAllProductVariantByProductID(productID uint)
 	return res, nil
 }
 
-func (s *productVariantService) GetVariantPriceAfterPromotionByProductID(productID uint) (*dto.ProductVariantPriceRes, error) {
-
+func (s *productVariantService) GetVariantPriceAfterPromotionByProductID(productID int) (*dto.ProductVariantPriceRes, error) {
 	tx := s.db.Begin()
-	product, err := s.productRepo.FindProductDetailByID(tx, productID)
+	id := uint(productID)
+
+	product, err := s.productRepo.GetProductDetail(tx, id)
+	fmt.Println("prodssss", product.Name)
+
 	if err != nil {
 		tx.Rollback()
 		return nil, err
 	}
+
 	var variants []*dto.ProductVariantPromotionRes
 	for _, variant := range product.ProductVariantDetail {
 		vr := new(dto.ProductVariantPromotionRes).FromProductVariantDetail(variant)
