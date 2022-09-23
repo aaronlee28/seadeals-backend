@@ -5,6 +5,7 @@ import (
 	"github.com/go-redis/redis/v8"
 	"gorm.io/gorm"
 	"seadeals-backend/apperror"
+	"seadeals-backend/dto"
 	"seadeals-backend/model"
 	"seadeals-backend/redisutils"
 	"strconv"
@@ -18,7 +19,12 @@ type WalletRepository interface {
 	TransactionDetails(tx *gorm.DB, transactionID uint) (*model.Transaction, error)
 	PaginatedTransactions(tx *gorm.DB, q *Query, userID uint) (int, *[]model.Transaction, error)
 	WalletPin(tx *gorm.DB, userID uint, pin string) error
-	RequestChangePinByEmail(userID uint, key string, code string)
+
+	RequestChangePinByEmail(userID uint, key string, code string) error
+	ValidateRequestIsValid(userID uint, key string) error
+	ValidateRequestByEmailCodeIsValid(userID uint, req *dto.CodeKeyRequestByEmailReq) error
+	ChangeWalletPinByEmail(tx *gorm.DB, userID uint, sellerID uint, req *dto.ChangePinByEmailReq) (*model.Wallet, error)
+
 	ValidateWalletPin(tx *gorm.DB, userID uint, pin string) error
 	GetWalletStatus(tx *gorm.DB, userID uint) (string, error)
 	StepUpPassword(tx *gorm.DB, userID uint, password string) error
@@ -110,14 +116,130 @@ func (w *walletRepository) WalletPin(tx *gorm.DB, userID uint, pin string) error
 	return nil
 }
 
-func (w *walletRepository) RequestChangePinByEmail(userID uint, key string, code string) {
+func (w *walletRepository) RequestChangePinByEmail(userID uint, key string, code string) error {
 	rds := redisutils.Use()
 	ctx := context.Background()
+	keyTries := "user:" + strconv.Itoa(int(userID)) + ":wallet:tries"
+
+	tries, err := rds.Get(ctx, keyTries).Int()
+	if err != nil && err != redis.Nil {
+		return apperror.InternalServerError("Cannot get data in redis")
+	}
+	if tries >= 3 {
+		return apperror.BadRequestError("Wallet is blocked because too many wrong attempts")
+	}
+
 	keyWallet := "user:" + strconv.FormatUint(uint64(userID), 10) + ":wallet:pin:request:key"
 	codeWallet := "user:" + strconv.FormatUint(uint64(userID), 10) + ":wallet:pin:request:code"
 
 	rds.Set(ctx, keyWallet, key, 5*time.Minute)
 	rds.Set(ctx, codeWallet, code, 5*time.Minute)
+	return nil
+}
+
+func (w *walletRepository) ValidateRequestIsValid(userID uint, key string) error {
+	rds := redisutils.Use()
+	ctx := context.Background()
+	keyTries := "user:" + strconv.Itoa(int(userID)) + ":wallet:tries"
+
+	tries, err := rds.Get(ctx, keyTries).Int()
+	if err != nil && err != redis.Nil {
+		return apperror.InternalServerError("Cannot get data in redis")
+	}
+	if tries >= 3 {
+		return apperror.BadRequestError("Wallet is blocked because too many wrong attempts")
+	}
+
+	keyWallet := "user:" + strconv.FormatUint(uint64(userID), 10) + ":wallet:pin:request:key"
+
+	keyRedis, err := rds.Get(ctx, keyWallet).Result()
+	if err != nil && err != redis.Nil {
+		return apperror.InternalServerError("Cannot get data in redis")
+	}
+
+	if key != keyRedis {
+		return apperror.BadRequestError("Request is invalid or expired")
+	}
+
+	return nil
+}
+
+func (w *walletRepository) ValidateRequestByEmailCodeIsValid(userID uint, req *dto.CodeKeyRequestByEmailReq) error {
+	rds := redisutils.Use()
+	ctx := context.Background()
+	keyTries := "user:" + strconv.Itoa(int(userID)) + ":wallet:tries"
+
+	tries, err := rds.Get(ctx, keyTries).Int()
+	if err != nil && err != redis.Nil {
+		return apperror.InternalServerError("Cannot get data in redis")
+	}
+	if tries >= 3 {
+		return apperror.BadRequestError("Wallet is blocked because too many wrong attempts")
+	}
+
+	keyWallet := "user:" + strconv.FormatUint(uint64(userID), 10) + ":wallet:pin:request:key"
+	codeWallet := "user:" + strconv.FormatUint(uint64(userID), 10) + ":wallet:pin:request:code"
+
+	keyRedis, err := rds.Get(ctx, keyWallet).Result()
+	if err != nil && err != redis.Nil {
+		return apperror.InternalServerError("Cannot get data in redis")
+	}
+	if req.Key != keyRedis {
+		return apperror.BadRequestError("Request is invalid or expired")
+	}
+
+	codeRedis, err := rds.Get(ctx, codeWallet).Result()
+	if err != nil && err != redis.Nil {
+		return apperror.InternalServerError("Cannot get data in redis")
+	}
+	if req.Code != codeRedis {
+		return apperror.BadRequestError("Code is invalid")
+	}
+
+	return nil
+}
+
+func (w *walletRepository) ChangeWalletPinByEmail(tx *gorm.DB, userID uint, walletID uint, req *dto.ChangePinByEmailReq) (*model.Wallet, error) {
+	rds := redisutils.Use()
+	ctx := context.Background()
+	keyTries := "user:" + strconv.Itoa(int(userID)) + ":wallet:tries"
+
+	tries, err := rds.Get(ctx, keyTries).Int()
+	if err != nil && err != redis.Nil {
+		return nil, apperror.InternalServerError("Cannot get data in redis")
+	}
+	if tries >= 3 {
+		return nil, apperror.BadRequestError("Wallet is blocked because too many wrong attempts")
+	}
+
+	keyWallet := "user:" + strconv.FormatUint(uint64(userID), 10) + ":wallet:pin:request:key"
+	codeWallet := "user:" + strconv.FormatUint(uint64(userID), 10) + ":wallet:pin:request:code"
+
+	keyRedis, err := rds.Get(ctx, keyWallet).Result()
+	if err != nil && err != redis.Nil {
+		return nil, apperror.InternalServerError("Cannot get data in redis")
+	}
+	if req.Key != keyRedis {
+		return nil, apperror.BadRequestError("Request is invalid or expired")
+	}
+
+	codeRedis, err := rds.Get(ctx, codeWallet).Result()
+	if req.Code != codeRedis {
+		return nil, apperror.InternalServerError("Cannot get data in redis")
+	}
+	if req.Key != keyRedis {
+		return nil, apperror.BadRequestError("Code is invalid")
+	}
+
+	wallet := &model.Wallet{ID: walletID}
+	result := tx.Model(&wallet).Update("pin", req.Pin)
+	if result.Error != nil {
+		return nil, apperror.InternalServerError("failed to update pin")
+	}
+
+	rds.Del(ctx, keyWallet)
+	rds.Del(ctx, codeWallet)
+	return wallet, nil
 }
 
 func (w *walletRepository) ValidateWalletPin(tx *gorm.DB, userID uint, pin string) error {

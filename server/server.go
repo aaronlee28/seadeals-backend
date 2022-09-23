@@ -101,6 +101,7 @@ func Init() {
 	walletService := service.NewWalletService(&service.WalletServiceConfig{
 		DB:               db.Get(),
 		WalletRepository: walletRepository,
+		UserRepository:   userRepository,
 	})
 
 	userSeaLabsPayAccountServ := service.NewUserSeaPayAccountServ(&service.UserSeaPayAccountServConfig{
