@@ -7,6 +7,7 @@ import (
 
 type SearchedProductRes struct {
 	ProductID  uint      `json:"product_id" binding:"required"`
+	Name       string    `json:"name"`
 	Slug       string    `json:"slug" binding:"required"`
 	MediaURL   string    `json:"media_url" binding:"required"`
 	MinPrice   uint      `json:"min_price" binding:"required"`
@@ -23,6 +24,7 @@ type SearchedProductRes struct {
 func (_ *SearchedProductRes) FromProduct(t *model.Product) *SearchedProductRes {
 	return &SearchedProductRes{
 		ProductID:  t.ID,
+		Name:       t.Name,
 		Slug:       t.Slug,
 		MediaURL:   "",
 		MinPrice:   0,
