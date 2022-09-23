@@ -56,7 +56,7 @@ func (r *productRepository) FindProductDetailByID(tx *gorm.DB, id uint) (*model.
 
 func (r *productRepository) GetProductDetail(tx *gorm.DB, id uint) (*model.Product, error) {
 	var product *model.Product
-	result := tx.Model(&product).Where("id = ?", id).First(&product)
+	result := tx.Preload("ProductVariantDetail", "product_id = ?", id).Preload("Promotion", "product_id = ?", id).Where("id = ?", id).First(&product, id)
 	if result.Error != nil {
 		return nil, result.Error
 	}

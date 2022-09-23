@@ -84,6 +84,8 @@ func Init() {
 	productVariantService := service.NewProductVariantService(&service.ProductVariantServiceConfig{
 		DB:                 db.Get(),
 		ProductVariantRepo: productVariantRepository,
+		ProductRepo:        productRepository,
+		ProductVarDetRepo:  productVarDetRepo,
 	})
 
 	reviewService := service.NewReviewService(&service.ReviewServiceConfig{

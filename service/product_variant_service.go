@@ -2,7 +2,6 @@ package service
 
 import (
 	"errors"
-	"fmt"
 	"gorm.io/gorm"
 	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
@@ -78,7 +77,6 @@ func (s *productVariantService) GetVariantPriceAfterPromotionByProductID(product
 	id := uint(productID)
 
 	product, err := s.productRepo.GetProductDetail(tx, id)
-	fmt.Println("prodssss", product.Name)
 
 	if err != nil {
 		tx.Rollback()
@@ -87,7 +85,8 @@ func (s *productVariantService) GetVariantPriceAfterPromotionByProductID(product
 
 	var variants []*dto.ProductVariantPromotionRes
 	for _, variant := range product.ProductVariantDetail {
-		vr := new(dto.ProductVariantPromotionRes).FromProductVariantDetail(variant)
+
+		vr := new(dto.ProductVariantPromotionRes).FromProductVariantDetail(*variant)
 		vr.PriceAfterPromotion = vr.Price - product.Promotion.Amount
 		variants = append(variants, vr)
 	}

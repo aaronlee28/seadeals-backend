@@ -10,7 +10,7 @@ type ProductVariantPromotionRes struct {
 	PriceAfterPromotion float64 `json:"price_after_promotion" binding:"required"`
 }
 
-func (_ *ProductVariantPromotionRes) FromProductVariantDetail(t *model.ProductVariantDetail) *ProductVariantPromotionRes {
+func (_ *ProductVariantPromotionRes) FromProductVariantDetail(t model.ProductVariantDetail) *ProductVariantPromotionRes {
 	return &ProductVariantPromotionRes{
 		VariantID:           t.ID,
 		Variant1Name:        t.Variant1Value,
