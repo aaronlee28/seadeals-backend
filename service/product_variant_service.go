@@ -15,17 +15,20 @@ type ProductVariantService interface {
 type productVariantService struct {
 	db                 *gorm.DB
 	productVariantRepo repository.ProductVariantRepository
+	productVarDetRepo  repository.ProductVariantDetailRepository
 }
 
 type ProductVariantServiceConfig struct {
 	DB                 *gorm.DB
 	ProductVariantRepo repository.ProductVariantRepository
+	ProductVarDetRepo  repository.ProductVariantDetailRepository
 }
 
 func NewProductVariantService(c *ProductVariantServiceConfig) ProductVariantService {
 	return &productVariantService{
 		db:                 c.DB,
 		productVariantRepo: c.ProductVariantRepo,
+		productVarDetRepo:  c.ProductVarDetRepo,
 	}
 }
 
