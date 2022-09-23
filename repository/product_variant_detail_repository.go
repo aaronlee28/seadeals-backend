@@ -66,7 +66,7 @@ func (p *productVariantDetailRepository) GetProductsBySellerID(tx *gorm.DB, quer
 
 	var totalData int64
 	result = result.Order(orderByString).Order("products.id")
-	result = result.Where("min >= ?", query.MinPrice).Where("min <= ?", query.MaxPrice)
+	result = result.Where("min >= ?", query.MinAmount).Where("min <= ?", query.MaxAmount)
 	table := tx.Table("(?) as s3", result).Count(&totalData)
 	if table.Error != nil {
 		return nil, 0, 0, apperror.InternalServerError("cannot fetch products count")
@@ -140,7 +140,7 @@ func (p *productVariantDetailRepository) GetProductsByCategoryID(tx *gorm.DB, qu
 
 	var totalData int64
 	result = result.Order(orderByString).Order("products.id")
-	result = result.Where("min >= ?", query.MinPrice).Where("min <= ?", query.MaxPrice)
+	result = result.Where("min >= ?", query.MinAmount).Where("min <= ?", query.MaxAmount)
 	table := tx.Table("(?) as s3", result).Count(&totalData)
 	if table.Error != nil {
 		return nil, 0, 0, apperror.InternalServerError("cannot fetch products count")

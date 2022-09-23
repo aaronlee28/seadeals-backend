@@ -26,13 +26,13 @@ func (h *Handler) FindProductDetailBySlug(ctx *gin.Context) {
 
 func (h *Handler) GetProductsBySellerID(ctx *gin.Context) {
 	query := map[string]string{
-		"page":     ctx.Query("page"),
-		"s":        ctx.Query("s"),
-		"sortBy":   ctx.Query("sortBy"),
-		"sort":     ctx.Query("sort"),
-		"limit":    ctx.Query("limit"),
-		"minPrice": ctx.Query("minPrice"),
-		"maxPrice": ctx.Query("maxPrice"),
+		"page":      ctx.Query("page"),
+		"s":         ctx.Query("s"),
+		"sortBy":    ctx.Query("sortBy"),
+		"sort":      ctx.Query("sort"),
+		"limit":     ctx.Query("limit"),
+		"minAmount": ctx.Query("minAmount"),
+		"maxAmount": ctx.Query("maxAmount"),
 	}
 	productQuery, err := new(dto.SellerProductSearchQuery).FromQuery(query)
 	if err != nil {
@@ -63,13 +63,13 @@ func (h *Handler) GetProductsBySellerID(ctx *gin.Context) {
 
 func (h *Handler) GetProductsByCategoryID(ctx *gin.Context) {
 	query := map[string]string{
-		"page":     ctx.Query("page"),
-		"s":        ctx.Query("s"),
-		"sortBy":   ctx.Query("sortBy"),
-		"sort":     ctx.Query("sort"),
-		"limit":    ctx.Query("limit"),
-		"minPrice": ctx.Query("minPrice"),
-		"maxPrice": ctx.Query("maxPrice"),
+		"page":      ctx.Query("page"),
+		"s":         ctx.Query("s"),
+		"sortBy":    ctx.Query("sortBy"),
+		"sort":      ctx.Query("sort"),
+		"limit":     ctx.Query("limit"),
+		"minAmount": ctx.Query("minAmount"),
+		"maxAmount": ctx.Query("maxAmount"),
 	}
 	productQuery, err := new(dto.SellerProductSearchQuery).FromQuery(query)
 	if err != nil {
@@ -133,7 +133,7 @@ func (h *Handler) SearchProducts(ctx *gin.Context) {
 func (h *Handler) SearchRecommendProduct(c *gin.Context) {
 	query := &repository.SearchQuery{
 		Search:     helper.GetQuery(c, "s", ""),
-		SortBy:     helper.GetQuery(c, "sortBy", "bought"),
+		SortBy:     helper.GetQuery(c, "sortBy", "total_sold"),
 		Sort:       helper.GetQuery(c, "sort", model.SortByReviewDefault),
 		Limit:      helper.GetQuery(c, "limit", "30"),
 		Page:       helper.GetQuery(c, "page", "1"),
