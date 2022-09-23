@@ -224,10 +224,10 @@ func (w *walletRepository) ChangeWalletPinByEmail(tx *gorm.DB, userID uint, wall
 	}
 
 	codeRedis, err := rds.Get(ctx, codeWallet).Result()
-	if req.Code != codeRedis {
+	if err != nil && err != redis.Nil {
 		return nil, apperror.InternalServerError("Cannot get data in redis")
 	}
-	if req.Key != keyRedis {
+	if req.Code != codeRedis {
 		return nil, apperror.BadRequestError("Code is invalid")
 	}
 
