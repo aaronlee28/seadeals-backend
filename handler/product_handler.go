@@ -100,7 +100,7 @@ func (h *Handler) GetProductsByCategoryID(ctx *gin.Context) {
 func (h *Handler) SearchProducts(ctx *gin.Context) {
 	query := &repository.SearchQuery{
 		Search:     helper.GetQuery(ctx, "s", ""),
-		SortBy:     helper.GetQuery(ctx, "sortBy", "bought"),
+		SortBy:     helper.GetQuery(ctx, "sortBy", ""),
 		Sort:       helper.GetQuery(ctx, "sort", SortByReviewDefault),
 		Limit:      helper.GetQuery(ctx, "limit", "20"),
 		Page:       helper.GetQuery(ctx, "page", "1"),
