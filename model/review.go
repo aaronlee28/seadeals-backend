@@ -3,10 +3,12 @@ package model
 import "gorm.io/gorm"
 
 type ReviewQueryParam struct {
-	Sort   string
-	SortBy string
-	Limit  int
-	Page   int
+	Sort                string
+	SortBy              string
+	Limit               int
+	Page                int
+	WithImageOnly       bool
+	WithDescriptionOnly bool
 }
 
 type Review struct {

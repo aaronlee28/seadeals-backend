@@ -26,11 +26,15 @@ func (h *Handler) FindReviewByProductID(ctx *gin.Context) {
 
 	limit, _ := strconv.Atoi(helper.GetQuery(ctx, "limit", LimitReviewDefault))
 	page, _ := strconv.Atoi(helper.GetQuery(ctx, "page", PageReviewDefault))
+	withImgOnly, _ := strconv.ParseBool(helper.GetQuery(ctx, "withImgOnly", "false"))
+	withDescOnly, _ := strconv.ParseBool(helper.GetQuery(ctx, "withDescOnly", "false"))
 	queryParam := &model.ReviewQueryParam{
-		SortBy: helper.GetQuery(ctx, "sortBy", SortByReviewDefault),
-		Sort:   helper.GetQuery(ctx, "sort", SortReviewDefault),
-		Limit:  limit,
-		Page:   page,
+		SortBy:              helper.GetQuery(ctx, "sortBy", SortByReviewDefault),
+		Sort:                helper.GetQuery(ctx, "sort", SortReviewDefault),
+		Limit:               limit,
+		Page:                page,
+		WithImageOnly:       withImgOnly,
+		WithDescriptionOnly: withDescOnly,
 	}
 
 	res, err := h.reviewService.FindReviewByProductID(uint(idParam), queryParam)
