@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"github.com/mailjet/mailjet-apiv3-go"
 	"gorm.io/gorm"
 	"math"
@@ -8,6 +9,7 @@ import (
 	"seadeals-backend/config"
 	"seadeals-backend/dto"
 	"seadeals-backend/helper"
+	"seadeals-backend/model"
 	"seadeals-backend/repository"
 	"strconv"
 )
@@ -17,7 +19,10 @@ type WalletService interface {
 	TransactionDetails(id uint) (*dto.TransactionDetailsRes, error)
 	PaginatedTransactions(q *repository.Query, userID uint) (*dto.PaginatedTransactionsRes, error)
 	WalletPin(userID uint, pin string) error
-	RequestPinChangeWithEmail(userID uint) (*mailjet.ResultsV31, error)
+	RequestPinChangeWithEmail(userID uint) (*mailjet.ResultsV31, string, error)
+	ValidateRequestIsValid(userID uint, key string) (string, error)
+	ValidateCodeToRequestByEmail(userID uint, req *dto.CodeKeyRequestByEmailReq) (string, error)
+	ChangeWalletPinByEmail(userID uint, req *dto.ChangePinByEmailReq) (*model.Wallet, error)
 	ValidateWalletPin(userID uint, pin string) (bool, error)
 	GetWalletStatus(userID uint) (string, error)
 }
@@ -136,22 +141,40 @@ func (w *walletService) WalletPin(userID uint, pin string) error {
 	return nil
 }
 
-func (w *walletService) RequestPinChangeWithEmail(userID uint) (*mailjet.ResultsV31, error) {
+func (w *walletService) RequestPinChangeWithEmail(userID uint) (*mailjet.ResultsV31, string, error) {
 	tx := w.db.Begin()
 	user, err := w.userRepository.GetUserByID(tx, userID)
 	if err != nil {
-		return nil, err
+		tx.Rollback()
+		return nil, "", err
+	}
+
+	wallet, err := w.walletRepository.GetWalletByUserID(tx, userID)
+	if err != nil {
+		tx.Rollback()
+		return nil, "", err
+	}
+
+	if wallet.Pin == nil {
+		return nil, "", apperror.NotFoundError("Pin is not setup yet")
 	}
 
 	randomString := helper.RandomString(12)
 	code := helper.RandomString(6)
-	w.walletRepository.RequestChangePinByEmail(user.ID, randomString, code)
+	err = w.walletRepository.RequestChangePinByEmail(user.ID, randomString, code)
+	if err != nil {
+		tx.Rollback()
+		return nil, "", err
+	}
 
 	mailjetClient := mailjet.NewMailjetClient(config.Config.MailJetPublicKey, config.Config.MailJetSecretKey)
+	html := "<p>Here are the code to reset your pin:</p><h3>" + code + "</h3>" +
+		"<p>you can open the link <a href=\"http://localhost:3000/check?userID=" + strconv.FormatUint(uint64(user.ID), 10) + "&key=" + randomString + "\">here</a></p>"
+	fmt.Println(html)
 	messagesInfo := []mailjet.InfoMessagesV31{
 		{
 			From: &mailjet.RecipientV31{
-				Email: "SeaDeals-noreply@seadeals.com",
+				Email: "juliantovaldo@gmail.com",
 				Name:  "SeaDeals No Reply",
 			},
 			To: &mailjet.RecipientsV31{
@@ -162,8 +185,7 @@ func (w *walletService) RequestPinChangeWithEmail(userID uint) (*mailjet.Results
 			},
 			Subject:  "Wallet Pin Reset Request",
 			TextPart: "request password for user" + user.FullName,
-			HTMLPart: "<p>Here are the code to reset your pin:</p><h3>" + code + "</h3>" +
-				"<p>you can open the link <a href=\"localhost:3000\\check?userID=" + strconv.FormatUint(uint64(user.ID), 10) + "key=" + randomString + "\">here</a></p>",
+			HTMLPart: html,
 			Priority: 0,
 			CustomID: config.Config.AppName,
 		},
@@ -174,10 +196,55 @@ func (w *walletService) RequestPinChangeWithEmail(userID uint) (*mailjet.Results
 
 	res, err := mailjetClient.SendMailV31(&messages)
 	if err != nil {
-		return nil, err
+		tx.Rollback()
+		return nil, "", err
 	}
 	tx.Commit()
-	return res, nil
+	return res, randomString, nil
+}
+
+func (w *walletService) ValidateRequestIsValid(userID uint, key string) (string, error) {
+	err := w.walletRepository.ValidateRequestIsValid(userID, key)
+	if err != nil {
+		return "Request is invalid", err
+	}
+
+	return "Request is valid", nil
+}
+
+func (w *walletService) ValidateCodeToRequestByEmail(userID uint, req *dto.CodeKeyRequestByEmailReq) (string, error) {
+	err := w.walletRepository.ValidateRequestByEmailCodeIsValid(userID, req)
+	if err != nil {
+		return "Request is invalid", err
+	}
+
+	return "Request is valid", nil
+}
+
+func (w *walletService) ChangeWalletPinByEmail(userID uint, req *dto.ChangePinByEmailReq) (*model.Wallet, error) {
+	tx := w.db.Begin()
+	if len(req.Pin) != 6 {
+		return nil, apperror.BadRequestError("Pin has to be 6 digits long")
+	}
+
+	wallet, err := w.walletRepository.GetWalletByUserID(tx, userID)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	if wallet.Pin == nil {
+		return nil, apperror.NotFoundError("Pin is not setup yet")
+	}
+
+	result, err := w.walletRepository.ChangeWalletPinByEmail(tx, userID, wallet.ID, req)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	tx.Commit()
+	return result, nil
 }
 
 func (w *walletService) ValidateWalletPin(userID uint, pin string) (bool, error) {
