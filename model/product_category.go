@@ -10,3 +10,11 @@ type ProductCategory struct {
 	IconURL    string `json:"icon_url"`
 	ParentID   uint   `json:"parent_id" gorm:"foreignKey:ID"`
 }
+
+type CategoryQuery struct {
+	Search   string
+	Limit    string
+	Page     string
+	SellerID uint
+	ParentID uint
+}

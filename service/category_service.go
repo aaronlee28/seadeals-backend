@@ -8,7 +8,7 @@ import (
 )
 
 type ProductCategoryService interface {
-	FindAllProductCategories() ([]*model.ProductCategory, error)
+	FindAllProductCategories(query *model.CategoryQuery) ([]*model.ProductCategory, int64, int64, error)
 }
 
 type productCategoryService struct {
@@ -28,14 +28,14 @@ func NewProductCategoryService(c *ProductCategoryServiceConfig) ProductCategoryS
 	}
 }
 
-func (s *productCategoryService) FindAllProductCategories() ([]*model.ProductCategory, error) {
+func (s *productCategoryService) FindAllProductCategories(query *model.CategoryQuery) ([]*model.ProductCategory, int64, int64, error) {
 	tx := s.db.Begin()
 
-	categories, err := s.productCategoryRepository.FindAllProductCategories(tx)
+	categories, totalPage, totalData, err := s.productCategoryRepository.FindAllProductCategories(tx, query)
 	if err != nil {
-		return nil, apperror.InternalServerError(err.Error())
+		return nil, 0, 0, apperror.InternalServerError(err.Error())
 	}
 
 	tx.Commit()
-	return categories, nil
+	return categories, totalPage, totalData, nil
 }
