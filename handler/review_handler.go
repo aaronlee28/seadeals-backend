@@ -10,13 +10,6 @@ import (
 	"strconv"
 )
 
-const (
-	SortReviewDefault   = "desc"
-	SortByReviewDefault = ""
-	LimitReviewDefault  = "6"
-	PageReviewDefault   = "1"
-)
-
 func (h *Handler) FindReviewByProductID(ctx *gin.Context) {
 	idParam, err := strconv.Atoi(ctx.Param("id"))
 	if err != nil {
@@ -24,13 +17,16 @@ func (h *Handler) FindReviewByProductID(ctx *gin.Context) {
 		return
 	}
 
-	limit, _ := strconv.Atoi(helper.GetQuery(ctx, "limit", LimitReviewDefault))
-	page, _ := strconv.Atoi(helper.GetQuery(ctx, "page", PageReviewDefault))
+	withImgOnly, _ := strconv.ParseBool(helper.GetQuery(ctx, "withImgOnly", "false"))
+	withDescOnly, _ := strconv.ParseBool(helper.GetQuery(ctx, "withDescOnly", "false"))
 	queryParam := &model.ReviewQueryParam{
-		SortBy: helper.GetQuery(ctx, "sortBy", SortByReviewDefault),
-		Sort:   helper.GetQuery(ctx, "sort", SortReviewDefault),
-		Limit:  limit,
-		Page:   page,
+		SortBy:              helper.GetQuery(ctx, "sortBy", model.SortByReviewDefault),
+		Sort:                helper.GetQuery(ctx, "sort", model.SortReviewDefault),
+		Limit:               helper.GetQueryToUint(ctx, "limit", model.LimitReviewDefault),
+		Page:                helper.GetQueryToUint(ctx, "page", model.PageReviewDefault),
+		Rating:              helper.GetQueryToUint(ctx, "rating", 0),
+		WithImageOnly:       withImgOnly,
+		WithDescriptionOnly: withDescOnly,
 	}
 
 	res, err := h.reviewService.FindReviewByProductID(uint(idParam), queryParam)

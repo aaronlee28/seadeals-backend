@@ -61,7 +61,18 @@ func (r *reviewRepository) FindReviewByProductID(tx *gorm.DB, productID uint, qp
 	offset := (qp.Page - 1) * qp.Limit
 	orderStmt := fmt.Sprintf("%s %s", qp.SortBy, qp.Sort)
 
-	result := tx.Limit(qp.Limit).Offset(offset).Where("product_id = ?", productID).Order(orderStmt).Preload("User").Find(&reviews)
+	queryDB := tx
+	if qp.Rating != 0 {
+		queryDB = queryDB.Where("rating = ?", qp.Rating)
+	}
+	if qp.WithImageOnly == true {
+		queryDB = queryDB.Where("image_url IS NOT NULL")
+	}
+	if qp.WithDescriptionOnly == true {
+		queryDB = queryDB.Where("description IS NOT NULL")
+	}
+
+	result := queryDB.Limit(int(qp.Limit)).Offset(int(offset)).Where("product_id = ?", productID).Order(orderStmt).Preload("Images").Preload("User").Find(&reviews)
 	if result.Error != nil {
 		return nil, result.Error
 	}
