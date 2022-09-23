@@ -2,11 +2,19 @@ package model
 
 import "gorm.io/gorm"
 
+const (
+	SortReviewDefault   = "desc"
+	SortByReviewDefault = ""
+	LimitReviewDefault  = 6
+	PageReviewDefault   = 1
+)
+
 type ReviewQueryParam struct {
 	Sort                string
 	SortBy              string
-	Limit               int
-	Page                int
+	Limit               uint
+	Page                uint
+	Rating              uint
 	WithImageOnly       bool
 	WithDescriptionOnly bool
 }

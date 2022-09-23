@@ -7,6 +7,7 @@ import (
 	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
 	"seadeals-backend/helper"
+	"seadeals-backend/model"
 	"seadeals-backend/repository"
 	"strconv"
 )
@@ -101,7 +102,7 @@ func (h *Handler) SearchProducts(ctx *gin.Context) {
 	query := &repository.SearchQuery{
 		Search:     helper.GetQuery(ctx, "s", ""),
 		SortBy:     helper.GetQuery(ctx, "sortBy", ""),
-		Sort:       helper.GetQuery(ctx, "sort", SortByReviewDefault),
+		Sort:       helper.GetQuery(ctx, "sort", model.SortByReviewDefault),
 		Limit:      helper.GetQuery(ctx, "limit", "20"),
 		Page:       helper.GetQuery(ctx, "page", "1"),
 		MinAmount:  helper.GetQueryToFloat64(ctx, "minAmount", 0),
@@ -133,7 +134,7 @@ func (h *Handler) SearchRecommendProduct(c *gin.Context) {
 	query := &repository.SearchQuery{
 		Search:     helper.GetQuery(c, "s", ""),
 		SortBy:     helper.GetQuery(c, "sortBy", "bought"),
-		Sort:       helper.GetQuery(c, "sort", SortByReviewDefault),
+		Sort:       helper.GetQuery(c, "sort", model.SortByReviewDefault),
 		Limit:      helper.GetQuery(c, "limit", "30"),
 		Page:       helper.GetQuery(c, "page", "1"),
 		MinAmount:  helper.GetQueryToFloat64(c, "minAmount", 0),

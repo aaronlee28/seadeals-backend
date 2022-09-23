@@ -37,10 +37,13 @@ func validateReviewQueryParam(qp *model.ReviewQueryParam) {
 	qp.SortBy = "created_at"
 
 	if qp.Page == 0 {
-		qp.Page = 1
+		qp.Page = model.PageReviewDefault
 	}
 	if qp.Limit == 0 {
-		qp.Limit = 6
+		qp.Limit = model.LimitReviewDefault
+	}
+	if qp.Rating < 0 && qp.Rating > 5 {
+		qp.Rating = 0
 	}
 }
 
@@ -56,7 +59,7 @@ func (s *reviewService) FindReviewByProductID(productID uint, qp *model.ReviewQu
 		return nil, err
 	}
 
-	totalReviews := len(reviews)
+	totalReviews := uint(len(reviews))
 	totalPages := (totalReviews + qp.Limit - 1) / qp.Limit
 
 	var reviewsRes []*dto.GetReviewRes
