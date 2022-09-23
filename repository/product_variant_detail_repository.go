@@ -180,7 +180,7 @@ func (p *productVariantDetailRepository) SearchProducts(tx *gorm.DB, query *Sear
 	s2 = s2.Group("product_id")
 
 	result := tx.Model(&dto.SellerProductsCustomTable{})
-	result = result.Select("*")
+	result = result.Select("products.name, min, max, products.id, products.slug, products.category_id, products.seller_id, products.sold_count, avg, count, parent_id, products.created_at")
 	result = result.Joins("JOIN product_categories as c ON products.category_id = c.id")
 	result = result.Joins("JOIN (?) as s1 ON products.id = s1.product_id", s1)
 	result = result.Joins("LEFT JOIN (?) as s2 ON products.id = s2.product_id", s2)

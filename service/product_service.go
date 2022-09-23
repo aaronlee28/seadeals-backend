@@ -158,8 +158,8 @@ func (s *productService) GetProducts(query *repository.SearchQuery) ([]*dto.Prod
 	var productsRes []*dto.ProductRes
 	for _, variantDetail := range variantDetails {
 		var photoURL string
-		if len(variantDetail.Product.ProductPhotos) > 0 {
-			photoURL = variantDetail.Product.ProductPhotos[0].PhotoURL
+		if len(variantDetail.ProductPhotos) > 0 {
+			photoURL = variantDetail.ProductPhotos[0].PhotoURL
 		}
 
 		dtoProduct := &dto.ProductRes{
@@ -168,10 +168,10 @@ func (s *productService) GetProducts(query *repository.SearchQuery) ([]*dto.Prod
 			Product: &dto.GetProductRes{
 				ID:            variantDetail.ID,
 				Price:         variantDetail.Min,
-				Name:          variantDetail.Product.Name,
-				Slug:          variantDetail.Product.Slug,
+				Name:          variantDetail.Name,
+				Slug:          variantDetail.Slug,
 				PictureURL:    photoURL,
-				City:          variantDetail.Product.Seller.Address.SubDistrict.District.City.Name,
+				City:          variantDetail.Seller.Address.SubDistrict.District.City.Name,
 				Rating:        variantDetail.Avg,
 				TotalReviewer: variantDetail.Count,
 				TotalSold:     uint(variantDetail.Product.SoldCount),
