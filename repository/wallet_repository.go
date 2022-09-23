@@ -18,6 +18,7 @@ type WalletRepository interface {
 	TransactionDetails(tx *gorm.DB, transactionID uint) (*model.Transaction, error)
 	PaginatedTransactions(tx *gorm.DB, q *Query, userID uint) (int, *[]model.Transaction, error)
 	WalletPin(tx *gorm.DB, userID uint, pin string) error
+	RequestChangePinByEmail(userID uint, key string, code string)
 	ValidateWalletPin(tx *gorm.DB, userID uint, pin string) error
 	GetWalletStatus(tx *gorm.DB, userID uint) (string, error)
 	StepUpPassword(tx *gorm.DB, userID uint, password string) error
@@ -107,6 +108,16 @@ func (w *walletRepository) WalletPin(tx *gorm.DB, userID uint, pin string) error
 		return apperror.InternalServerError("failed to update pin")
 	}
 	return nil
+}
+
+func (w *walletRepository) RequestChangePinByEmail(userID uint, key string, code string) {
+	rds := redisutils.Use()
+	ctx := context.Background()
+	keyWallet := "user:" + strconv.FormatUint(uint64(userID), 10) + ":wallet:pin:request:key"
+	codeWallet := "user:" + strconv.FormatUint(uint64(userID), 10) + ":wallet:pin:request:code"
+
+	rds.Set(ctx, keyWallet, key, 5*time.Minute)
+	rds.Set(ctx, codeWallet, code, 5*time.Minute)
 }
 
 func (w *walletRepository) ValidateWalletPin(tx *gorm.DB, userID uint, pin string) error {

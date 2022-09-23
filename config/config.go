@@ -24,6 +24,8 @@ type AppConfig struct {
 	JWTExpiredInMinuteTime int64
 	DBConfig               dbConfig
 	DatabaseURL            string
+	MailJetPublicKey       string
+	MailJetSecretKey       string
 }
 
 var Config = AppConfig{
@@ -58,7 +60,9 @@ func Reset() {
 			DBName:   getEnv("DB_NAME", "seadeals_db"),
 			Port:     getEnv("DB_PORT", "5432"),
 		},
-		DatabaseURL: getEnv("DATABASE_URL", ""),
+		DatabaseURL:      getEnv("DATABASE_URL", ""),
+		MailJetPublicKey: getEnv("MAILJET_PUBLIC_KEY", "e3403f5226b6e72fbe3a51e8566fc642"),
+		MailJetSecretKey: getEnv("MAILJET_SECRET_KEY", "87a9670892fd95913b1cdec7b3bb06c1"),
 	}
 }
 

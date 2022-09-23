@@ -1,10 +1,13 @@
 package service
 
 import (
+	"github.com/mailjet/mailjet-apiv3-go"
 	"gorm.io/gorm"
 	"math"
 	"seadeals-backend/apperror"
+	"seadeals-backend/config"
 	"seadeals-backend/dto"
+	"seadeals-backend/helper"
 	"seadeals-backend/repository"
 	"strconv"
 )
@@ -14,6 +17,7 @@ type WalletService interface {
 	TransactionDetails(id uint) (*dto.TransactionDetailsRes, error)
 	PaginatedTransactions(q *repository.Query, userID uint) (*dto.PaginatedTransactionsRes, error)
 	WalletPin(userID uint, pin string) error
+	RequestPinChangeWithEmail(userID uint) (*mailjet.ResultsV31, error)
 	ValidateWalletPin(userID uint, pin string) (bool, error)
 	GetWalletStatus(userID uint) (string, error)
 }
@@ -21,17 +25,20 @@ type WalletService interface {
 type walletService struct {
 	db               *gorm.DB
 	walletRepository repository.WalletRepository
+	userRepository   repository.UserRepository
 }
 
 type WalletServiceConfig struct {
 	DB               *gorm.DB
 	WalletRepository repository.WalletRepository
+	UserRepository   repository.UserRepository
 }
 
 func NewWalletService(c *WalletServiceConfig) WalletService {
 	return &walletService{
 		db:               c.DB,
 		walletRepository: c.WalletRepository,
+		userRepository:   c.UserRepository,
 	}
 }
 
@@ -127,6 +134,50 @@ func (w *walletService) WalletPin(userID uint, pin string) error {
 
 	tx.Commit()
 	return nil
+}
+
+func (w *walletService) RequestPinChangeWithEmail(userID uint) (*mailjet.ResultsV31, error) {
+	tx := w.db.Begin()
+	user, err := w.userRepository.GetUserByID(tx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	randomString := helper.RandomString(12)
+	code := helper.RandomString(6)
+	w.walletRepository.RequestChangePinByEmail(user.ID, randomString, code)
+
+	mailjetClient := mailjet.NewMailjetClient(config.Config.MailJetPublicKey, config.Config.MailJetSecretKey)
+	messagesInfo := []mailjet.InfoMessagesV31{
+		{
+			From: &mailjet.RecipientV31{
+				Email: "SeaDeals-noreply@seadeals.com",
+				Name:  "SeaDeals No Reply",
+			},
+			To: &mailjet.RecipientsV31{
+				mailjet.RecipientV31{
+					Email: user.Email,
+					Name:  user.FullName,
+				},
+			},
+			Subject:  "Wallet Pin Reset Request",
+			TextPart: "request password for user" + user.FullName,
+			HTMLPart: "<p>Here are the code to reset your pin:</p><h3>" + code + "</h3>" +
+				"<p>you can open the link <a href=\"localhost:3000\\check?userID=" + strconv.FormatUint(uint64(user.ID), 10) + "key=" + randomString + "\">here</a></p>",
+			Priority: 0,
+			CustomID: config.Config.AppName,
+		},
+	}
+	messages := mailjet.MessagesV31{
+		Info: messagesInfo,
+	}
+
+	res, err := mailjetClient.SendMailV31(&messages)
+	if err != nil {
+		return nil, err
+	}
+	tx.Commit()
+	return res, nil
 }
 
 func (w *walletService) ValidateWalletPin(userID uint, pin string) (bool, error) {

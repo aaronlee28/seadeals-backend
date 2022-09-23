@@ -12,7 +12,7 @@ import (
 func main() {
 	err := godotenv.Load(".env")
 	if err != nil {
-		fmt.Println("Error cannot load file local.env")
+		fmt.Println("Error cannot load file .env")
 	}
 	config.Reset()
 
