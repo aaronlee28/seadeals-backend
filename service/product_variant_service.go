@@ -14,12 +14,14 @@ type ProductVariantService interface {
 
 type productVariantService struct {
 	db                 *gorm.DB
+	productRepo        repository.ProductRepository
 	productVariantRepo repository.ProductVariantRepository
 	productVarDetRepo  repository.ProductVariantDetailRepository
 }
 
 type ProductVariantServiceConfig struct {
 	DB                 *gorm.DB
+	ProductRepo        repository.ProductRepository
 	ProductVariantRepo repository.ProductVariantRepository
 	ProductVarDetRepo  repository.ProductVariantDetailRepository
 }
@@ -27,6 +29,7 @@ type ProductVariantServiceConfig struct {
 func NewProductVariantService(c *ProductVariantServiceConfig) ProductVariantService {
 	return &productVariantService{
 		db:                 c.DB,
+		productRepo:        c.ProductRepo,
 		productVariantRepo: c.ProductVariantRepo,
 		productVarDetRepo:  c.ProductVarDetRepo,
 	}
@@ -68,4 +71,27 @@ func (s *productVariantService) FindAllProductVariantByProductID(productID uint)
 	return res, nil
 }
 
-//func (s *productVariantService) GetVariantPriceAfterPromotionByProductID(productID uint) (*dto.ProductVariantRes, error){}
+func (s *productVariantService) GetVariantPriceAfterPromotionByProductID(productID uint) (*dto.ProductVariantPriceRes, error) {
+
+	tx := s.db.Begin()
+	product, err := s.productRepo.FindProductDetailByID(tx, productID)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+	var variants []*dto.ProductVariantPromotionRes
+	for _, variant := range product.ProductVariantDetail {
+		vr := new(dto.ProductVariantPromotionRes).FromProductVariantDetail(variant)
+		vr.PriceAfterPromotion = vr.Price - product.Promotion.Amount
+		variants = append(variants, vr)
+	}
+	res := dto.ProductVariantPriceRes{
+		ProductID:        product.ID,
+		ProductName:      product.Name,
+		ProductPromotion: product.Promotion.Amount,
+		ProductVariant:   variants,
+	}
+
+	return &res, nil
+
+}
