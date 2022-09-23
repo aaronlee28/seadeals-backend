@@ -67,3 +67,5 @@ func (s *productVariantService) FindAllProductVariantByProductID(productID uint)
 	tx.Commit()
 	return res, nil
 }
+
+//func (s *productVariantService) GetVariantPriceAfterPromotionByProductID(productID uint) (*dto.ProductVariantRes, error){}
