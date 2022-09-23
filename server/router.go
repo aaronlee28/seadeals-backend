@@ -26,6 +26,7 @@ type RouterConfig struct {
 	UserSeaLabsPayAccServ  service.UserSeaPayAccountServ
 	OrderItemService       service.OrderItemService
 	RefreshTokenService    service.RefreshTokenService
+	SealabsPayService      service.SealabsPayService
 }
 
 func NewRouter(c *RouterConfig) *gin.Engine {
@@ -49,6 +50,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		SeaLabsPayAccServ:      c.UserSeaLabsPayAccServ,
 		OrderItemService:       c.OrderItemService,
 		RefreshTokenService:    c.RefreshTokenService,
+		SealabsPayService:      c.SealabsPayService,
 	})
 
 	r.Use(middleware.ErrorHandler)
@@ -122,6 +124,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.PATCH("/user/sea-labs-pay", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.UpdateSeaLabsPayToMainReq{}
 	}), h.UpdateSeaLabsPayToMain)
+	r.POST("create-signature", middleware.RequestValidator(func() any { return &dto.SeaDealspayReq{} }), h.CreateSignature)
 
 	// ORDER ITEM
 	r.GET("/user/cart", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetOrderItem)
