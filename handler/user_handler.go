@@ -88,3 +88,21 @@ func (h *Handler) SignOut(ctx *gin.Context) {
 	}
 	ctx.JSON(http.StatusOK, dto.StatusOKResponse(gin.H{"logout_user": user}))
 }
+
+func (h *Handler) StepUpPassword(ctx *gin.Context) {
+	value, _ := ctx.Get("payload")
+	json, _ := value.(*dto.StepUpPasswordRes)
+
+	userPayload, _ := ctx.Get("user")
+	user, _ := userPayload.(dto.UserJWT)
+	userID := user.UserID
+
+	err := h.authService.StepUpPassword(userID, json)
+	if err != nil {
+		e := ctx.Error(err)
+		ctx.JSON(http.StatusBadRequest, e)
+		return
+	}
+	successResponse := dto.StatusOKResponse(err)
+	ctx.JSON(http.StatusOK, successResponse)
+}
