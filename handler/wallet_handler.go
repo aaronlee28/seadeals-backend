@@ -78,6 +78,21 @@ func (h *Handler) WalletPin(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, successResponse)
 }
 
+func (h *Handler) RequestWalletChangeByEmail(ctx *gin.Context) {
+	payload, _ := ctx.Get("user")
+	user, _ := payload.(dto.UserJWT)
+	userID := user.UserID
+
+	res, err := h.walletService.RequestPinChangeWithEmail(userID)
+	if err != nil {
+		e := ctx.Error(err)
+		ctx.JSON(http.StatusBadRequest, e)
+		return
+	}
+	successResponse := dto.StatusOKResponse(res)
+	ctx.JSON(http.StatusOK, successResponse)
+}
+
 func (h *Handler) ValidateWalletPin(ctx *gin.Context) {
 	user, exists := ctx.Get("user")
 	if !exists {

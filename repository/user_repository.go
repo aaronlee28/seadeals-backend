@@ -12,6 +12,7 @@ type UserRepository interface {
 	Register(*gorm.DB, *model.User) (*model.User, error)
 	HasExistEmail(*gorm.DB, string) (bool, error)
 	GetUserByEmail(*gorm.DB, string) (*model.User, error)
+	GetUserByID(tx *gorm.DB, userID uint) (*model.User, error)
 	MatchingCredential(*gorm.DB, string, string) (*model.User, error)
 }
 
@@ -71,6 +72,16 @@ func (u *userRepository) HasExistEmail(tx *gorm.DB, email string) (bool, error) 
 func (u *userRepository) GetUserByEmail(tx *gorm.DB, email string) (*model.User, error) {
 	var user = &model.User{}
 	result := tx.Model(&user).Where("email LIKE ?", email).First(&user)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return user, nil
+}
+
+func (u *userRepository) GetUserByID(tx *gorm.DB, userID uint) (*model.User, error) {
+	var user = &model.User{ID: userID}
+	result := tx.Model(&user).First(&user)
 	if result.Error != nil {
 		return nil, result.Error
 	}
