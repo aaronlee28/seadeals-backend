@@ -1,6 +1,7 @@
 package server
 
 import (
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"seadeals-backend/dto"
 	"seadeals-backend/handler"
@@ -26,10 +27,23 @@ type RouterConfig struct {
 	UserSeaLabsPayAccServ  service.UserSeaPayAccountServ
 	OrderItemService       service.OrderItemService
 	RefreshTokenService    service.RefreshTokenService
+	SealabsPayService      service.SealabsPayService
 }
 
 func NewRouter(c *RouterConfig) *gin.Engine {
 	r := gin.Default()
+	config := cors.DefaultConfig()
+	config.AllowAllOrigins = true
+	config.AllowHeaders = []string{
+		"Access-Control-Allow-Headers",
+		"Authorization",
+		"Origin",
+		"Accept",
+		"X-Requested-With",
+		"Content-Type",
+		"Access-Control-Request-Method",
+	}
+	r.Use(cors.New(config))
 	r.NoRoute()
 
 	h := handler.New(&handler.Config{
@@ -49,6 +63,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		SeaLabsPayAccServ:      c.UserSeaLabsPayAccServ,
 		OrderItemService:       c.OrderItemService,
 		RefreshTokenService:    c.RefreshTokenService,
+		SealabsPayService:      c.SealabsPayService,
 	})
 
 	r.Use(middleware.ErrorHandler)
@@ -90,6 +105,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 
 	// PRODUCTS
 	r.GET("/products/:id/variant", h.FindAllProductVariantByProductID)
+	r.GET("/products/:id/promotion-price", h.GetVariantPriceAfterPromotionByProductID)
 	r.GET("/search-recommend-product/", h.SearchRecommendProduct)
 	r.GET("/products/detail/:slug", h.FindProductDetailBySlug)
 	r.GET("/sellers/:id/products", h.GetProductsBySellerID)
@@ -132,6 +148,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.PATCH("/user/sea-labs-pay", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.UpdateSeaLabsPayToMainReq{}
 	}), h.UpdateSeaLabsPayToMain)
+	r.POST("create-signature", middleware.RequestValidator(func() any { return &dto.SeaDealspayReq{} }), h.CreateSignature)
 
 	// ORDER ITEM
 	r.GET("/user/cart", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetOrderItem)
