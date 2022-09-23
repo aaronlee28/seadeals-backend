@@ -20,6 +20,7 @@ type WalletRepository interface {
 	WalletPin(tx *gorm.DB, userID uint, pin string) error
 	ValidateWalletPin(tx *gorm.DB, userID uint, pin string) error
 	GetWalletStatus(tx *gorm.DB, userID uint) (string, error)
+	StepUpPassword(tx *gorm.DB, userID uint, password string) error
 }
 
 type walletRepository struct{}
@@ -167,4 +168,19 @@ func (w *walletRepository) GetWalletStatus(tx *gorm.DB, userID uint) (string, er
 	}
 
 	return WalletActive, nil
+}
+
+func (w *walletRepository) StepUpPassword(tx *gorm.DB, userID uint, password string) error {
+	var user *model.User
+	result1 := tx.Model(&user).Where("id = ?", userID).First(&user)
+	if result1.Error != nil {
+		return apperror.InternalServerError("cannot find wallet")
+	}
+
+	match := checkPasswordHash(password, user.Password)
+	if !match {
+		return apperror.BadRequestError("Invalid email or password")
+	}
+
+	return nil
 }

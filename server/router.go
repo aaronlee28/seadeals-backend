@@ -65,7 +65,9 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.POST("/sign-out", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.SignOutReq{}
 	}), h.SignOut)
-
+	r.POST("/step-up-password", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
+		return &dto.StepUpPasswordRes{}
+	}), h.StepUpPassword)
 	// GOOGLE AUTH
 	r.GET("/google/sign-in", h.GoogleSignIn)
 	r.GET("/google/callback", h.GoogleCallback)

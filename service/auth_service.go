@@ -18,6 +18,7 @@ type AuthService interface {
 	SignInWithGoogle(*model.User) (string, string, error)
 	SignIn(*dto.SignInReq) (string, string, error)
 	SignOut(uint) error
+	StepUpPassword(userID uint, req *dto.StepUpPasswordRes) error
 }
 
 type authService struct {
@@ -206,6 +207,18 @@ func (a *authService) SignIn(req *dto.SignInReq) (string, string, error) {
 func (a *authService) SignOut(userID uint) error {
 	tx := a.db.Begin()
 	err := a.refreshTokenRepo.DeleteRefreshToken(tx, userID)
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	tx.Commit()
+	return nil
+}
+func (a *authService) StepUpPassword(userID uint, req *dto.StepUpPasswordRes) error {
+	tx := a.db.Begin()
+
+	err := a.walletRepository.StepUpPassword(tx, userID, req.Password)
 	if err != nil {
 		tx.Rollback()
 		return err
