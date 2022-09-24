@@ -124,6 +124,15 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.GET("/paginated-transaction", middleware.AuthorizeJWTFor(model.UserRoleName), h.PaginatedTransactions)
 	r.PATCH("/wallet-pin", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any { return &dto.PinReq{} }), h.WalletPin)
 	r.POST("/wallet/pin-by-email/", middleware.AuthorizeJWTFor(model.UserRoleName), h.RequestWalletChangeByEmail)
+	r.POST("/wallet/validator/pin-by-email", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
+		return &dto.KeyRequestByEmailReq{}
+	}), h.ValidateIfRequestByEmailIsValid)
+	r.POST("/wallet/validator/pin-by-email/code", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
+		return &dto.CodeKeyRequestByEmailReq{}
+	}), h.ValidateIfRequestChangeByEmailCodeIsValid)
+	r.PATCH("/wallet/pin-by-email", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
+		return &dto.ChangePinByEmailReq{}
+	}), h.ChangeWalletPinByEmail)
 	r.POST("/user/validator/wallet-pin", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.PinReq{}
 	}), h.ValidateWalletPin)
