@@ -120,7 +120,8 @@ func (r *productRepository) SearchRecommendProduct(tx *gorm.DB, q *SearchQuery) 
 		" and " +
 		"rating >= " +
 		q.Rating +
-		" and " +
+		" or rating is null " +
+		"and " +
 		"UPPER(category) like UPPER('" +
 		category +
 		"')" +
