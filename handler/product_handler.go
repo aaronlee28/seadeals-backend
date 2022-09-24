@@ -127,7 +127,7 @@ func (h *Handler) SearchProducts(ctx *gin.Context) {
 		_ = ctx.Error(err)
 		return
 	}
-	ctx.JSON(http.StatusOK, dto.StatusOKResponse(gin.H{"products": result, "total_data": totalData, "total_page": totalPage, "current_page": page, "limit": limit}))
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(gin.H{"products": result, "total_data": totalData, "total_page": totalPage, "current_data": page, "limit": limit}))
 }
 
 func (h *Handler) SearchRecommendProduct(c *gin.Context) {
