@@ -19,7 +19,7 @@ func (_ *SearchedProductRes) FromProduct(t *model.Product) *SearchedProductRes {
 			Price:         0,
 			Name:          t.Name,
 			Slug:          t.Slug,
-			PictureURL:    "",
+			MediaURL:      "",
 			City:          "",
 			Rating:        0,
 			TotalReviewer: 0,
