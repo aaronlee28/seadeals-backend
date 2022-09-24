@@ -189,10 +189,13 @@ func (p *productService) SearchRecommendProduct(q *repository.SearchQuery) (*dto
 
 	products, err := p.productRepo.SearchRecommendProduct(tx, q)
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
+	if len(products) == 0 {
+		tx.Rollback()
+		return nil, apperror.NotFoundError("No products were found")
 
+	}
 	searchedSortFilterProducts := dto.SearchedSortFilterProduct{
 		TotalLength:     len(products),
 		SearchedProduct: products,

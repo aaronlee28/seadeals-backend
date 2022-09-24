@@ -130,29 +130,30 @@ func (h *Handler) SearchProducts(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, dto.StatusOKResponse(gin.H{"products": result, "total_data": totalData, "total_page": totalPage, "current_data": page, "limit": limit}))
 }
 
-func (h *Handler) SearchRecommendProduct(c *gin.Context) {
+func (h *Handler) SearchRecommendProduct(ctx *gin.Context) {
 	query := &repository.SearchQuery{
-		Search:     helper.GetQuery(c, "s", ""),
-		SortBy:     helper.GetQuery(c, "sortBy", "total_sold"),
-		Sort:       helper.GetQuery(c, "sort", model.SortByReviewDefault),
-		Limit:      helper.GetQuery(c, "limit", "30"),
-		Page:       helper.GetQuery(c, "page", "1"),
-		MinAmount:  helper.GetQueryToFloat64(c, "minAmount", 0),
-		MaxAmount:  helper.GetQueryToFloat64(c, "maxAmount", math.MaxFloat64),
-		City:       helper.GetQuery(c, "city", ""),
-		Rating:     helper.GetQuery(c, "rating", "0"),
-		Category:   helper.GetQuery(c, "category", ""),
-		CategoryID: helper.GetQueryToUint(c, "categoryID", 0),
-		SellerID:   helper.GetQueryToUint(c, "sellerID", 0),
+		Search:     helper.GetQuery(ctx, "s", ""),
+		SortBy:     helper.GetQuery(ctx, "sortBy", "total_sold"),
+		Sort:       helper.GetQuery(ctx, "sort", model.SortByReviewDefault),
+		Limit:      helper.GetQuery(ctx, "limit", "30"),
+		Page:       helper.GetQuery(ctx, "page", "1"),
+		MinAmount:  helper.GetQueryToFloat64(ctx, "minAmount", 0),
+		MaxAmount:  helper.GetQueryToFloat64(ctx, "maxAmount", math.MaxFloat64),
+		City:       helper.GetQuery(ctx, "city", ""),
+		Rating:     helper.GetQuery(ctx, "rating", "0"),
+		Category:   helper.GetQuery(ctx, "category", ""),
+		CategoryID: helper.GetQueryToUint(ctx, "categoryID", 0),
+		SellerID:   helper.GetQueryToUint(ctx, "sellerID", 0),
 	}
 
 	result, err := h.productService.SearchRecommendProduct(query)
 	if err != nil {
-		e := c.Error(err)
-		c.JSON(http.StatusBadRequest, e)
+		e := ctx.Error(err)
+		ctx.JSON(http.StatusBadRequest, e)
 		return
 	}
+
 	successResponse := dto.StatusOKResponse(result)
-	c.JSON(http.StatusOK, successResponse)
+	ctx.JSON(http.StatusOK, successResponse)
 
 }
