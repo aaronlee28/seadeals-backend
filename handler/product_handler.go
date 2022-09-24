@@ -152,6 +152,10 @@ func (h *Handler) SearchRecommendProduct(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, e)
 		return
 	}
+	if result.TotalLength == 0 {
+		_ = ctx.Error(apperror.NotFoundError("No products were found"))
+		return
+	}
 
 	successResponse := dto.StatusOKResponse(result)
 	ctx.JSON(http.StatusOK, successResponse)
