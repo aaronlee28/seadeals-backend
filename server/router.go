@@ -141,6 +141,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		return &dto.UpdateSeaLabsPayToMainReq{}
 	}), h.UpdateSeaLabsPayToMain)
 	r.POST("create-signature", middleware.RequestValidator(func() any { return &dto.SeaDealspayReq{} }), h.CreateSignature)
+	r.GET("/user/sea-labs-pay", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetSeaLabsPayAccount)
 
 	// CART ITEM
 	r.GET("/user/cart", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetCartItem)

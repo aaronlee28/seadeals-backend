@@ -12,6 +12,7 @@ type UserSeaPayAccountRepo interface {
 	HasExistsSeaLabsPayAccountWith(*gorm.DB, uint, string) (bool, error)
 	RegisterSeaLabsPayAccount(tx *gorm.DB, req *dto.RegisterSeaLabsPayReq) (*model.UserSealabsPayAccount, error)
 	UpdateSeaLabsPayAccountToMain(tx *gorm.DB, req *dto.UpdateSeaLabsPayToMainReq) (*model.UserSealabsPayAccount, error)
+	GetSeaLabsPayAccountByUserID(tx *gorm.DB, userID uint) ([]*model.UserSealabsPayAccount, error)
 }
 
 type userSeaPayAccountRepo struct{}
@@ -89,4 +90,13 @@ func (u *userSeaPayAccountRepo) HasExistsSeaLabsPayAccountWith(tx *gorm.DB, user
 	}
 
 	return false, nil
+}
+
+func (u *userSeaPayAccountRepo) GetSeaLabsPayAccountByUserID(tx *gorm.DB, userID uint) ([]*model.UserSealabsPayAccount, error) {
+	var accounts []*model.UserSealabsPayAccount
+	result := tx.Model(&accounts).Where("user_id = ?", userID).Find(&accounts)
+	if result.Error != nil {
+		return nil, apperror.InternalServerError("cannot find accounts")
+	}
+	return accounts, nil
 }
