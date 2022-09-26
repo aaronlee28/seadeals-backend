@@ -8,7 +8,7 @@ import (
 
 type AddressRepository interface {
 	CreateAddress(*gorm.DB, *model.Address) (*model.Address, error)
-	GetAddressesByUserID(*gorm.DB, uint) ([]*model.Address, error)
+	GetAddressesByUserID(*gorm.DB, uint) ([]*model.UserAddress, error)
 	GetAddressDetail(*gorm.DB, uint) (*model.Address, error)
 	UpdateAddress(*gorm.DB, *model.Address) (*model.Address, error)
 }
@@ -28,9 +28,9 @@ func (a *addressRepository) CreateAddress(tx *gorm.DB, newAddress *model.Address
 	return newAddress, result.Error
 }
 
-func (a *addressRepository) GetAddressesByUserID(tx *gorm.DB, userID uint) ([]*model.Address, error) {
-	var addresses []*model.Address
-	result := tx.Where("user_id = ?", userID).Find(&addresses)
+func (a *addressRepository) GetAddressesByUserID(tx *gorm.DB, userID uint) ([]*model.UserAddress, error) {
+	var addresses []*model.UserAddress
+	result := tx.Where("user_id = ?", userID).Preload("Address").Find(&addresses)
 	if result.Error != nil {
 		return nil, apperror.InternalServerError("cannot fetch addresses")
 	}
@@ -41,7 +41,7 @@ func (a *addressRepository) GetAddressesByUserID(tx *gorm.DB, userID uint) ([]*m
 func (a *addressRepository) GetAddressDetail(tx *gorm.DB, id uint) (*model.Address, error) {
 	var address = &model.Address{}
 	address.ID = id
-	result := tx.First(&address)
+	result := tx.Preload("UserAddress").First(&address)
 
 	if result.Error == gorm.ErrRecordNotFound {
 		return nil, apperror.InternalServerError("no record of that id exists")

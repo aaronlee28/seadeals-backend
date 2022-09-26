@@ -4,11 +4,14 @@ go 1.18
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.0
+	github.com/gin-contrib/cors v1.4.0
 	github.com/gin-gonic/gin v1.8.1
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/golang-jwt/jwt/v4 v4.4.2
 	github.com/joho/godotenv v1.4.0
+	github.com/mailjet/mailjet-apiv3-go v0.0.0-20201009050126-c24bc15a9394
 	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
+	golang.org/x/oauth2 v0.0.0-20220909003341-f21342109be1
 	gorm.io/driver/postgres v1.3.9
 	gorm.io/gorm v1.23.9
 )
@@ -41,7 +44,6 @@ require (
 	github.com/pelletier/go-toml/v2 v2.0.1 // indirect
 	github.com/ugorji/go/codec v1.2.7 // indirect
 	golang.org/x/net v0.0.0-20220624214902-1bab6f366d9e // indirect
-	golang.org/x/oauth2 v0.0.0-20220909003341-f21342109be1 // indirect
 	golang.org/x/sys v0.0.0-20220610221304-9f5ed59c137d // indirect
 	golang.org/x/text v0.3.7 // indirect
 	google.golang.org/appengine v1.6.7 // indirect

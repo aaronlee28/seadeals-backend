@@ -24,15 +24,31 @@ func (h *Handler) FindProductDetailBySlug(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, dto.StatusOKResponse(res))
 }
 
+func (h *Handler) FindSimilarProduct(ctx *gin.Context) {
+	id, err := strconv.Atoi(ctx.Param("id"))
+	if err != nil {
+		_ = ctx.Error(apperror.BadRequestError("Invalid id format"))
+		return
+	}
+
+	products, err := h.productService.FindSimilarProducts(uint(id))
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(products))
+}
+
 func (h *Handler) GetProductsBySellerID(ctx *gin.Context) {
 	query := map[string]string{
-		"page":     ctx.Query("page"),
-		"s":        ctx.Query("s"),
-		"sortBy":   ctx.Query("sortBy"),
-		"sort":     ctx.Query("sort"),
-		"limit":    ctx.Query("limit"),
-		"minPrice": ctx.Query("minPrice"),
-		"maxPrice": ctx.Query("maxPrice"),
+		"page":      ctx.Query("page"),
+		"s":         ctx.Query("s"),
+		"sortBy":    ctx.Query("sortBy"),
+		"sort":      ctx.Query("sort"),
+		"limit":     ctx.Query("limit"),
+		"minAmount": ctx.Query("minAmount"),
+		"maxAmount": ctx.Query("maxAmount"),
 	}
 	productQuery, err := new(dto.SellerProductSearchQuery).FromQuery(query)
 	if err != nil {
@@ -63,13 +79,13 @@ func (h *Handler) GetProductsBySellerID(ctx *gin.Context) {
 
 func (h *Handler) GetProductsByCategoryID(ctx *gin.Context) {
 	query := map[string]string{
-		"page":     ctx.Query("page"),
-		"s":        ctx.Query("s"),
-		"sortBy":   ctx.Query("sortBy"),
-		"sort":     ctx.Query("sort"),
-		"limit":    ctx.Query("limit"),
-		"minPrice": ctx.Query("minPrice"),
-		"maxPrice": ctx.Query("maxPrice"),
+		"page":      ctx.Query("page"),
+		"s":         ctx.Query("s"),
+		"sortBy":    ctx.Query("sortBy"),
+		"sort":      ctx.Query("sort"),
+		"limit":     ctx.Query("limit"),
+		"minAmount": ctx.Query("minAmount"),
+		"maxAmount": ctx.Query("maxAmount"),
 	}
 	productQuery, err := new(dto.SellerProductSearchQuery).FromQuery(query)
 	if err != nil {
@@ -127,32 +143,37 @@ func (h *Handler) SearchProducts(ctx *gin.Context) {
 		_ = ctx.Error(err)
 		return
 	}
-	ctx.JSON(http.StatusOK, dto.StatusOKResponse(gin.H{"products": result, "total_data": totalData, "total_page": totalPage, "current_page": page, "limit": limit}))
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(gin.H{"products": result, "total_data": totalData, "total_page": totalPage, "current_data": page, "limit": limit}))
 }
 
-func (h *Handler) SearchRecommendProduct(c *gin.Context) {
+func (h *Handler) SearchRecommendProduct(ctx *gin.Context) {
 	query := &repository.SearchQuery{
-		Search:     helper.GetQuery(c, "s", ""),
-		SortBy:     helper.GetQuery(c, "sortBy", "bought"),
-		Sort:       helper.GetQuery(c, "sort", model.SortByReviewDefault),
-		Limit:      helper.GetQuery(c, "limit", "30"),
-		Page:       helper.GetQuery(c, "page", "1"),
-		MinAmount:  helper.GetQueryToFloat64(c, "minAmount", 0),
-		MaxAmount:  helper.GetQueryToFloat64(c, "maxAmount", math.MaxFloat64),
-		City:       helper.GetQuery(c, "city", ""),
-		Rating:     helper.GetQuery(c, "rating", "0"),
-		Category:   helper.GetQuery(c, "category", ""),
-		CategoryID: helper.GetQueryToUint(c, "categoryID", 0),
-		SellerID:   helper.GetQueryToUint(c, "sellerID", 0),
+		Search:     helper.GetQuery(ctx, "s", ""),
+		SortBy:     helper.GetQuery(ctx, "sortBy", "total_sold"),
+		Sort:       helper.GetQuery(ctx, "sort", model.SortByReviewDefault),
+		Limit:      helper.GetQuery(ctx, "limit", "30"),
+		Page:       helper.GetQuery(ctx, "page", "1"),
+		MinAmount:  helper.GetQueryToFloat64(ctx, "minAmount", 0),
+		MaxAmount:  helper.GetQueryToFloat64(ctx, "maxAmount", math.MaxFloat64),
+		City:       helper.GetQuery(ctx, "city", ""),
+		Rating:     helper.GetQuery(ctx, "rating", "0"),
+		Category:   helper.GetQuery(ctx, "category", ""),
+		CategoryID: helper.GetQueryToUint(ctx, "categoryID", 0),
+		SellerID:   helper.GetQueryToUint(ctx, "sellerID", 0),
 	}
 
 	result, err := h.productService.SearchRecommendProduct(query)
 	if err != nil {
-		e := c.Error(err)
-		c.JSON(http.StatusBadRequest, e)
+		e := ctx.Error(err)
+		ctx.JSON(http.StatusBadRequest, e)
 		return
 	}
+	if result.TotalLength == 0 {
+		_ = ctx.Error(apperror.NotFoundError("No products were found"))
+		return
+	}
+
 	successResponse := dto.StatusOKResponse(result)
-	c.JSON(http.StatusOK, successResponse)
+	ctx.JSON(http.StatusOK, successResponse)
 
 }

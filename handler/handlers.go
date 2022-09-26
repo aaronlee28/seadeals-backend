@@ -19,6 +19,7 @@ type Handler struct {
 	seaLabsPayAccServ      service.UserSeaPayAccountServ
 	orderItemService       service.OrderItemService
 	refreshTokenService    service.RefreshTokenService
+	sealabsPayService      service.SealabsPayService
 }
 
 type Config struct {
@@ -38,6 +39,7 @@ type Config struct {
 	SeaLabsPayAccServ      service.UserSeaPayAccountServ
 	OrderItemService       service.OrderItemService
 	RefreshTokenService    service.RefreshTokenService
+	SealabsPayService      service.SealabsPayService
 }
 
 func New(config *Config) *Handler {
@@ -58,5 +60,6 @@ func New(config *Config) *Handler {
 		seaLabsPayAccServ:      config.SeaLabsPayAccServ,
 		orderItemService:       config.OrderItemService,
 		refreshTokenService:    config.RefreshTokenService,
+		sealabsPayService:      config.SealabsPayService,
 	}
 }

@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"errors"
 	"fmt"
 	"gorm.io/gorm"
 	"seadeals-backend/apperror"
@@ -12,6 +13,7 @@ import (
 type ProductRepository interface {
 	FindProductDetailByID(tx *gorm.DB, id uint) (*model.Product, error)
 	FindProductBySlug(tx *gorm.DB, slug string) (*model.Product, error)
+	FindSimilarProduct(tx *gorm.DB, productID uint) ([]*model.Product, error)
 
 	SearchProduct(tx *gorm.DB, q *SearchQuery) (*[]model.Product, error)
 	SearchRecommendProduct(tx *gorm.DB, q *SearchQuery) ([]*dto.SearchedProductRes, error)
@@ -21,6 +23,7 @@ type ProductRepository interface {
 	SearchRating(tx *gorm.DB, productID uint) ([]int, error)
 	SearchCity(tx *gorm.DB, productID uint) (string, error)
 	SearchCategory(tx *gorm.DB, productID uint) (string, error)
+	GetProductDetail(tx *gorm.DB, id uint) (*model.Product, error)
 }
 
 type productRepository struct{}
@@ -53,6 +56,26 @@ func (r *productRepository) FindProductDetailByID(tx *gorm.DB, id uint) (*model.
 	return product, nil
 }
 
+func (r *productRepository) FindSimilarProduct(tx *gorm.DB, categoryID uint) ([]*model.Product, error) {
+	var products []*model.Product
+	result := tx.Limit(24).Where("category_id = ?", categoryID).Preload("ProductVariantDetail").Preload("ProductPhotos").Find(&products)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return nil, &apperror.ProductNotFoundError{}
+	}
+	return products, nil
+}
+
+func (r *productRepository) GetProductDetail(tx *gorm.DB, id uint) (*model.Product, error) {
+	var product *model.Product
+	result := tx.Preload("ProductVariantDetail", "product_id = ?", id).Preload("Promotion", "product_id = ?", id).Where("id = ?", id).First(&product, id)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return product, nil
+}
 func (r *productRepository) FindProductBySlug(tx *gorm.DB, slug string) (*model.Product, error) {
 	var product *model.Product
 	result := tx.First(&product, "slug = ?", slug)
@@ -86,15 +109,15 @@ func (r *productRepository) SearchRecommendProduct(tx *gorm.DB, q *SearchQuery) 
 	offset := (limit * page) - limit
 
 	var res []*dto.SearchedProductRes
-	result := tx.Raw("SELECT product_id, slug, media_url, min_price, max_price, bought, views_count as views, promo_price, rating, city, category, updated_at FROM " +
-		"(SELECT j.product_id as product_id, slug, media_url, min_price, max_price, bought, promo_price, rating, name as city, category_id, views_count, updated_at FROM " +
-		"(SELECT h.product_id, slug, media_url, min_price, max_price, bought, promo_price, rating, updated_at FROM" +
-		"(SELECT f.product_id, slug, media_url, min_price, max_price, bought, updated_at, min as promo_price FROM " +
-		"(SELECT d.product_id, slug, media_url, min_price, max as max_price, bought, updated_at FROM " +
-		"(SELECT b.product_id, slug, media_url, min as min_price, bought, updated_at FROM (SELECT a.product_id as product_id, seller_id, name, slug, category_id, views_count, bought, updated_at, media_url  FROM (SELECT id as product_id, seller_id, name, slug, category_id, views_count, sold_count as bought, updated_at FROM Products WHERE UPPER(name) like UPPER('" + search + "') Limit " + strconv.Itoa(limit) + " Offset " + strconv.Itoa(offset) + ") a left join (select product_id, min(photo_url) as media_url from product_photos group by product_id) as one_photo_url on a.product_id = one_photo_url.product_id) b left join (select min(price), product_id from product_variant_details group by product_id) c on b.product_id = c.product_id) d " +
+	result := tx.Raw("SELECT product_id as id, product_name as name, slug, media_url, min_price as price, min_price, max_price, total_sold, views_count as views, promo_price, rating, count as total_reviewer, city, category, updated_at FROM " +
+		"(SELECT j.product_id as product_id, product_name, slug, media_url, min_price, max_price, total_sold, promo_price, rating, count, name as city, category_id, views_count, updated_at FROM " +
+		"(SELECT h.product_id, product_name, slug, media_url, min_price, max_price, total_sold, promo_price, rating, count, updated_at FROM" +
+		"(SELECT f.product_id, product_name, slug, media_url, min_price, max_price, total_sold, updated_at, min as promo_price FROM " +
+		"(SELECT d.product_id, product_name, slug, media_url, min_price, max as max_price, total_sold, updated_at FROM " +
+		"(SELECT b.product_id, name as product_name, slug, media_url, min as min_price, total_sold, updated_at FROM (SELECT a.product_id as product_id, seller_id, name, slug, category_id, views_count, total_sold, updated_at, media_url  FROM (SELECT id as product_id, seller_id, name, slug, category_id, views_count, sold_count as total_sold, updated_at FROM Products WHERE UPPER(name) like UPPER('" + search + "') Limit " + strconv.Itoa(limit) + " Offset " + strconv.Itoa(offset) + ") a left join (select ab.product_id, ab.photo_url as media_url FROM (SELECT product_id, min(id) AS First FROM product_photos GROUP BY product_id) foo join product_photos ab on foo.product_id = ab.product_id and foo.First = ab.id) as one_photo_url on a.product_id = one_photo_url.product_id) b left join (select min(price), product_id from product_variant_details group by product_id) c on b.product_id = c.product_id) d " +
 		"left join (select max(price), product_id from product_variant_details group by product_id) e on d.product_id = e.product_id) f " +
 		"left join (select product_id, min(amount) from promotions group by product_id) g on f.product_id = g.product_id) h " +
-		"left join (select avg(rating) as rating, product_id from reviews group by product_id) i on h.product_id = i.product_id) j " +
+		"left join (select avg(rating) as rating, count(rating) as count, product_id from reviews group by product_id) i on h.product_id = i.product_id) j " +
 		"left join (SELECT product_id, cities.name, category_id, views_count FROM (SELECT product_id, districts.city_id, category_id, views_count FROM (SELECT product_id, sub_districts.district_id, category_id, views_count FROM (SELECT product_id, addresses.sub_district_id, category_id, views_count FROM (SELECT products.id as product_id, sellers.address_id, products.category_id as category_id, products.views_count FROM products JOIN sellers ON products.seller_id = sellers.id) aa JOIN addresses on aa.address_id = addresses.id) bb JOIN sub_districts on bb.sub_district_id = sub_districts.id) cc join districts on cc.district_id = districts.id) dd join cities on dd.city_id = cities.id) k " +
 		"on j.product_id = k.product_id) l " +
 		"left join (SELECT id as category_id, name as category from product_categories) m " +
@@ -111,7 +134,8 @@ func (r *productRepository) SearchRecommendProduct(tx *gorm.DB, q *SearchQuery) 
 		" and " +
 		"rating >= " +
 		q.Rating +
-		" and " +
+		" or rating is null " +
+		"and " +
 		"UPPER(category) like UPPER('" +
 		category +
 		"')" +

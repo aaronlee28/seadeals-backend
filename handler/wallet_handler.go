@@ -15,8 +15,7 @@ func (h *Handler) WalletDataTransactions(ctx *gin.Context) {
 
 	result, err := h.walletService.UserWalletData(userID)
 	if err != nil {
-		e := ctx.Error(err)
-		ctx.JSON(http.StatusBadRequest, e)
+		ctx.JSON(http.StatusBadRequest, err)
 		return
 	}
 	successResponse := dto.StatusOKResponse(result)
@@ -30,8 +29,7 @@ func (h *Handler) TransactionDetails(ctx *gin.Context) {
 
 	result, err := h.walletService.TransactionDetails(transactionID)
 	if err != nil {
-		e := ctx.Error(err)
-		ctx.JSON(http.StatusBadRequest, e)
+		ctx.JSON(http.StatusBadRequest, err)
 		return
 	}
 
@@ -51,8 +49,7 @@ func (h *Handler) PaginatedTransactions(ctx *gin.Context) {
 
 	result, err := h.walletService.PaginatedTransactions(query, userID)
 	if err != nil {
-		e := ctx.Error(err)
-		ctx.JSON(http.StatusBadRequest, e)
+		ctx.JSON(http.StatusBadRequest, err)
 		return
 	}
 	successResponse := dto.StatusOKResponse(result)
@@ -70,11 +67,76 @@ func (h *Handler) WalletPin(ctx *gin.Context) {
 
 	err := h.walletService.WalletPin(userID, pin)
 	if err != nil {
-		e := ctx.Error(err)
-		ctx.JSON(http.StatusBadRequest, e)
+		ctx.JSON(http.StatusBadRequest, err)
 		return
 	}
-	successResponse := dto.StatusOKResponse(err)
+	successResponse := dto.StatusCreatedResponse(err)
+	ctx.JSON(http.StatusCreated, successResponse)
+}
+
+func (h *Handler) RequestWalletChangeByEmail(ctx *gin.Context) {
+	payload, _ := ctx.Get("user")
+	user, _ := payload.(dto.UserJWT)
+	userID := user.UserID
+
+	res, key, err := h.walletService.RequestPinChangeWithEmail(userID)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, err)
+		return
+	}
+	successResponse := dto.StatusOKResponse(gin.H{"mailjet_response": res, "key": key})
+	ctx.JSON(http.StatusOK, successResponse)
+}
+
+func (h *Handler) ValidateIfRequestByEmailIsValid(ctx *gin.Context) {
+	payload, _ := ctx.Get("user")
+	user, _ := payload.(dto.UserJWT)
+	userID := user.UserID
+
+	value, _ := ctx.Get("payload")
+	json, _ := value.(*dto.KeyRequestByEmailReq)
+	key := json.Key
+
+	res, err := h.walletService.ValidateRequestIsValid(userID, key)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, err)
+		return
+	}
+	successResponse := dto.StatusOKResponse(gin.H{"message": res})
+	ctx.JSON(http.StatusOK, successResponse)
+}
+
+func (h *Handler) ValidateIfRequestChangeByEmailCodeIsValid(ctx *gin.Context) {
+	payload, _ := ctx.Get("user")
+	user, _ := payload.(dto.UserJWT)
+	userID := user.UserID
+
+	value, _ := ctx.Get("payload")
+	json, _ := value.(*dto.CodeKeyRequestByEmailReq)
+
+	res, err := h.walletService.ValidateCodeToRequestByEmail(userID, json)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, err)
+		return
+	}
+	successResponse := dto.StatusOKResponse(gin.H{"message": res})
+	ctx.JSON(http.StatusOK, successResponse)
+}
+
+func (h *Handler) ChangeWalletPinByEmail(ctx *gin.Context) {
+	payload, _ := ctx.Get("user")
+	user, _ := payload.(dto.UserJWT)
+	userID := user.UserID
+
+	value, _ := ctx.Get("payload")
+	json, _ := value.(*dto.ChangePinByEmailReq)
+
+	res, err := h.walletService.ChangeWalletPinByEmail(userID, json)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, err)
+		return
+	}
+	successResponse := dto.StatusOKResponse(res)
 	ctx.JSON(http.StatusOK, successResponse)
 }
 

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"seadeals-backend/apperror"
 	"seadeals-backend/model"
 )
@@ -12,7 +13,10 @@ type UserRepository interface {
 	Register(*gorm.DB, *model.User) (*model.User, error)
 	HasExistEmail(*gorm.DB, string) (bool, error)
 	GetUserByEmail(*gorm.DB, string) (*model.User, error)
+	GetUserByID(tx *gorm.DB, userID uint) (*model.User, error)
+	GetUserMainAddress(tx *gorm.DB, userID uint) (*model.Address, error)
 	MatchingCredential(*gorm.DB, string, string) (*model.User, error)
+	RegisterAsSeller(db *gorm.DB, model *model.Seller) (*model.Seller, error)
 }
 
 type userRepository struct{}
@@ -78,6 +82,32 @@ func (u *userRepository) GetUserByEmail(tx *gorm.DB, email string) (*model.User,
 	return user, nil
 }
 
+func (u *userRepository) GetUserByID(tx *gorm.DB, userID uint) (*model.User, error) {
+	var user = &model.User{ID: userID}
+	result := tx.Model(&user).First(&user)
+	if result.Error != nil && result.Error != gorm.ErrRecordNotFound {
+		return nil, apperror.InternalServerError("Cannot use database to find user")
+	}
+	if result.Error == gorm.ErrRecordNotFound {
+		return nil, apperror.NotFoundError("Cannot found user")
+	}
+
+	return user, nil
+}
+
+func (u *userRepository) GetUserMainAddress(tx *gorm.DB, userID uint) (*model.Address, error) {
+	var userAddress = &model.UserAddress{}
+	result := tx.Model(&userAddress).Where("user_id = ? AND is_main IS TRUE", userID).Preload("Address").First(&userAddress)
+	if result.Error != nil && result.Error != gorm.ErrRecordNotFound {
+		return nil, apperror.InternalServerError("Cannot use database to find Address")
+	}
+	if result.Error == gorm.ErrRecordNotFound {
+		return nil, apperror.NotFoundError("Please create address first before register as seller")
+	}
+
+	return userAddress.Address, nil
+}
+
 func (u *userRepository) MatchingCredential(tx *gorm.DB, email string, password string) (*model.User, error) {
 	var user model.User
 	query := tx.Model(&user).Where("email = ?", email).First(&user)
@@ -96,4 +126,28 @@ func (u *userRepository) MatchingCredential(tx *gorm.DB, email string, password 
 	// do not show hashed password to service
 	user.Password = ""
 	return &user, err
+}
+
+func (u *userRepository) RegisterAsSeller(tx *gorm.DB, seller *model.Seller) (*model.Seller, error) {
+	result := tx.Model(&model.Seller{}).Where("user_id = ?", seller.UserID).First(&model.Seller{})
+	if result.Error != nil && result.Error != gorm.ErrRecordNotFound {
+		return nil, apperror.InternalServerError("Cannot search database for seller")
+	}
+	if result.Error == nil {
+		return nil, apperror.BadRequestError("This user already registered as seller")
+	}
+
+	result = tx.Model(&model.Seller{}).Where("name ILIKE ?", seller.Name).First(&model.Seller{})
+	if result.Error != nil && result.Error != gorm.ErrRecordNotFound {
+		return nil, apperror.InternalServerError("Cannot search database for seller")
+	}
+	if result.Error == nil {
+		return nil, apperror.BadRequestError("Shop name is already registered, please choose another name for the shop")
+	}
+
+	result = tx.Clauses(clause.Returning{}).Preload("Address").Preload("User").Create(&seller)
+	if result.Error != nil {
+		return nil, apperror.InternalServerError("Cannot register user as seller")
+	}
+	return seller, nil
 }

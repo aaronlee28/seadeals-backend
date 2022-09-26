@@ -13,11 +13,11 @@ type GetProductRes struct {
 	Price         float64 `json:"price"`
 	Name          string  `json:"name"`
 	Slug          string  `json:"slug"`
-	PictureURL    string  `json:"picture_url"`
+	MediaURL      string  `json:"media_url"`
 	City          string  `json:"city"`
 	Rating        float64 `json:"rating"`
 	TotalReviewer int64   `json:"total_reviewer"`
-	TotalSold     uint    `json:"totalSold"`
+	TotalSold     uint    `json:"total_sold"`
 }
 
 type SellerProductsCustomTable struct {

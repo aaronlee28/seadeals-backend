@@ -27,6 +27,7 @@ func Init() {
 	orderItemRepository := repository.NewOrderItemRepository()
 	socialGraphRepo := repository.NewSocialGraphRepository()
 	productVarDetRepo := repository.NewProductVariantDetailRepository()
+	userAddressRepo := repository.NewUserAddressRepository()
 
 	userService := service.NewUserService(&service.UserServiceConfig{
 		DB:               db.Get(),
@@ -67,6 +68,7 @@ func Init() {
 	addressService := service.NewAddressService(&service.AddressServiceConfig{
 		DB:                db.Get(),
 		AddressRepository: addressRepository,
+		UserAddressRepo:   userAddressRepo,
 	})
 
 	productCategoryService := service.NewProductCategoryService(&service.ProductCategoryServiceConfig{
@@ -84,6 +86,8 @@ func Init() {
 	productVariantService := service.NewProductVariantService(&service.ProductVariantServiceConfig{
 		DB:                 db.Get(),
 		ProductVariantRepo: productVariantRepository,
+		ProductRepo:        productRepository,
+		ProductVarDetRepo:  productVarDetRepo,
 	})
 
 	reviewService := service.NewReviewService(&service.ReviewServiceConfig{
@@ -101,6 +105,7 @@ func Init() {
 	walletService := service.NewWalletService(&service.WalletServiceConfig{
 		DB:               db.Get(),
 		WalletRepository: walletRepository,
+		UserRepository:   userRepository,
 	})
 
 	userSeaLabsPayAccountServ := service.NewUserSeaPayAccountServ(&service.UserSeaPayAccountServConfig{
@@ -117,7 +122,9 @@ func Init() {
 		DB:               db.Get(),
 		RefreshTokenRepo: refreshTokenRepository,
 	})
-
+	sealabsPayService := service.NewSealabsPayService(&service.SealabsServiceConfig{
+		DB: db.Get(),
+	})
 	router := NewRouter(&RouterConfig{
 		UserService:            userService,
 		AuthService:            authService,
@@ -135,6 +142,7 @@ func Init() {
 		UserSeaLabsPayAccServ:  userSeaLabsPayAccountServ,
 		OrderItemService:       orderItemService,
 		RefreshTokenService:    refreshTokenService,
+		SealabsPayService:      sealabsPayService,
 	})
 	log.Fatalln(router.Run(":" + config.Config.Port))
 }
