@@ -84,8 +84,9 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		return &dto.StepUpPasswordRes{}
 	}), h.StepUpPassword)
 	// GOOGLE AUTH
-	r.GET("/google/sign-in", h.GoogleSignIn)
-	r.GET("/google/callback", h.GoogleCallback)
+	r.POST("/google/sign-in", middleware.RequestValidator(func() any {
+		return &dto.GoogleLogin{}
+	}), h.GoogleSignIn)
 
 	// ADDRESS
 	r.GET("/provinces", h.GetProvinces)
