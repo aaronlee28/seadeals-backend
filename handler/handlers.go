@@ -17,7 +17,7 @@ type Handler struct {
 	reviewService          service.ReviewService
 	sellerService          service.SellerService
 	seaLabsPayAccServ      service.UserSeaPayAccountServ
-	orderItemService       service.OrderItemService
+	orderItemService       service.CartItemService
 	refreshTokenService    service.RefreshTokenService
 	sealabsPayService      service.SealabsPayService
 }
@@ -37,7 +37,7 @@ type Config struct {
 	SellerService          service.SellerService
 	WalletService          service.WalletService
 	SeaLabsPayAccServ      service.UserSeaPayAccountServ
-	OrderItemService       service.OrderItemService
+	OrderItemService       service.CartItemService
 	RefreshTokenService    service.RefreshTokenService
 	SealabsPayService      service.SealabsPayService
 }
