@@ -2,38 +2,39 @@ package service
 
 import (
 	"gorm.io/gorm"
+	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
 	"seadeals-backend/model"
 	"seadeals-backend/repository"
 	"time"
 )
 
-type OrderItemService interface {
-	DeleteOrderItem(orderItemID uint, userID uint) (*model.OrderItem, error)
-	AddToCart(req *dto.AddToCartReq) (*model.OrderItem, error)
-	GetOrderItem(query *repository.Query, userID uint) ([]*dto.CartItemRes, int64, int64, error)
+type CartItemService interface {
+	DeleteCartItem(orderItemID uint, userID uint) (*model.CartItem, error)
+	AddToCart(req *dto.AddToCartReq) (*model.CartItem, error)
+	GetCartItems(query *repository.Query, userID uint) ([]*dto.CartItemRes, int64, int64, error)
 }
 
-type orderItemService struct {
-	db                  *gorm.DB
-	orderItemRepository repository.OrderItemRepository
+type cartItemService struct {
+	db                 *gorm.DB
+	cartItemRepository repository.CartItemRepository
 }
 
-type OrderItemServiceConfig struct {
-	DB                  *gorm.DB
-	OrderItemRepository repository.OrderItemRepository
+type CartItemServiceConfig struct {
+	DB                 *gorm.DB
+	CartItemRepository repository.CartItemRepository
 }
 
-func NewOrderItemService(config *OrderItemServiceConfig) OrderItemService {
-	return &orderItemService{
-		db:                  config.DB,
-		orderItemRepository: config.OrderItemRepository,
+func NewCartItemService(config *CartItemServiceConfig) CartItemService {
+	return &cartItemService{
+		db:                 config.DB,
+		cartItemRepository: config.CartItemRepository,
 	}
 }
 
-func (o *orderItemService) DeleteOrderItem(orderItemID uint, userID uint) (*model.OrderItem, error) {
+func (o *cartItemService) DeleteCartItem(orderItemID uint, userID uint) (*model.CartItem, error) {
 	tx := o.db.Begin()
-	deleteOrder, err := o.orderItemRepository.DeleteCartItem(tx, orderItemID, userID)
+	deleteOrder, err := o.cartItemRepository.DeleteCartItem(tx, orderItemID, userID)
 	if err != nil {
 		tx.Rollback()
 		return nil, err
@@ -42,14 +43,14 @@ func (o *orderItemService) DeleteOrderItem(orderItemID uint, userID uint) (*mode
 	return deleteOrder, nil
 }
 
-func (o *orderItemService) AddToCart(req *dto.AddToCartReq) (*model.OrderItem, error) {
+func (o *cartItemService) AddToCart(req *dto.AddToCartReq) (*model.CartItem, error) {
 	tx := o.db.Begin()
-	orderItem := &model.OrderItem{
+	cartItem := &model.CartItem{
 		ProductVariantDetailID: req.ProductVariantDetailID,
 		UserID:                 req.UserID,
 		Quantity:               req.Quantity,
 	}
-	addedItem, err := o.orderItemRepository.AddToCart(tx, orderItem)
+	addedItem, err := o.cartItemRepository.AddToCart(tx, cartItem)
 	if err != nil {
 		tx.Rollback()
 		return nil, err
@@ -58,12 +59,16 @@ func (o *orderItemService) AddToCart(req *dto.AddToCartReq) (*model.OrderItem, e
 	return addedItem, nil
 }
 
-func (o *orderItemService) GetOrderItem(query *repository.Query, userID uint) ([]*dto.CartItemRes, int64, int64, error) {
+func (o *cartItemService) GetCartItems(query *repository.Query, userID uint) ([]*dto.CartItemRes, int64, int64, error) {
 	tx := o.db.Begin()
-	orderItems, totalPage, totalData, err := o.orderItemRepository.GetOrderItem(tx, query, userID)
+	orderItems, totalPage, totalData, err := o.cartItemRepository.GetCartItem(tx, query, userID)
 	if err != nil {
 		tx.Rollback()
 		return nil, 0, 0, err
+	}
+
+	if len(orderItems) == 0 {
+		return nil, 0, 0, apperror.NotFoundError("Cart is empty")
 	}
 
 	var cartItems []*dto.CartItemRes
@@ -81,6 +86,7 @@ func (o *orderItemService) GetOrderItem(query *repository.Query, userID uint) ([
 			}
 		}
 		cartItem := &dto.CartItemRes{
+			ID:           item.ID,
 			Quantity:     item.Quantity,
 			Subtotal:     subtotal,
 			PricePerItem: pricePerItem,

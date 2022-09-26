@@ -12,6 +12,7 @@ type UserSeaPayAccountServ interface {
 	RegisterSeaLabsPayAccount(req *dto.RegisterSeaLabsPayReq) (*dto.RegisterSeaLabsPayRes, error)
 	CheckSeaLabsAccountExists(req *dto.CheckSeaLabsPayReq) (*dto.CheckSeaLabsPayRes, error)
 	UpdateSeaLabsAccountToMain(req *dto.UpdateSeaLabsPayToMainReq) (*model.UserSealabsPayAccount, error)
+	GetSeaLabsAccountByUserID(userID uint) ([]*model.UserSealabsPayAccount, error)
 }
 
 type userSeaPayAccountServ struct {
@@ -86,4 +87,17 @@ func (u *userSeaPayAccountServ) UpdateSeaLabsAccountToMain(req *dto.UpdateSeaLab
 
 	tx.Commit()
 	return updatedData, nil
+}
+
+func (u *userSeaPayAccountServ) GetSeaLabsAccountByUserID(userID uint) ([]*model.UserSealabsPayAccount, error) {
+	tx := u.db.Begin()
+
+	accounts, err := u.userSeaPayAccountRepo.GetSeaLabsPayAccountByUserID(tx, userID)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	tx.Commit()
+	return accounts, nil
 }

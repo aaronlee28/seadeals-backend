@@ -119,11 +119,11 @@ func (h *Handler) RegisterAsSeller(ctx *gin.Context) {
 		return
 	}
 
-	seller, err := h.userService.RegisterAsSeller(json)
+	seller, accessToken, err := h.userService.RegisterAsSeller(json)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, err)
 		return
 	}
-	successResponse := dto.StatusOKResponse(seller)
+	successResponse := dto.StatusOKResponse(gin.H{"seller": seller, "id_token": accessToken})
 	ctx.JSON(http.StatusOK, successResponse)
 }

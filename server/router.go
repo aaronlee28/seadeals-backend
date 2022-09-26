@@ -24,7 +24,7 @@ type RouterConfig struct {
 	ReviewService          service.ReviewService
 	SellerService          service.SellerService
 	UserSeaLabsPayAccServ  service.UserSeaPayAccountServ
-	OrderItemService       service.OrderItemService
+	OrderItemService       service.CartItemService
 	RefreshTokenService    service.RefreshTokenService
 	SealabsPayService      service.SealabsPayService
 }
@@ -141,15 +141,16 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		return &dto.UpdateSeaLabsPayToMainReq{}
 	}), h.UpdateSeaLabsPayToMain)
 	r.POST("create-signature", middleware.RequestValidator(func() any { return &dto.SeaDealspayReq{} }), h.CreateSignature)
+	r.GET("/user/sea-labs-pay", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetSeaLabsPayAccount)
 
-	// ORDER ITEM
-	r.GET("/user/cart", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetOrderItem)
+	// CART ITEM
+	r.GET("/user/cart", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetCartItem)
 	r.POST("/user/cart", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.AddToCartReq{}
 	}), h.AddToCart)
 	r.DELETE("/user/cart", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.DeleteFromCartReq{}
-	}), h.DeleteOrderItem)
+	}), h.DeleteCartItem)
 
 	return r
 }
