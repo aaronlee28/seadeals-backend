@@ -1,20 +1,23 @@
 package service
 
 import (
+	"github.com/golang-jwt/jwt/v4"
 	"gorm.io/gorm"
 	"net/mail"
 	"regexp"
 	"seadeals-backend/apperror"
+	"seadeals-backend/config"
 	"seadeals-backend/dto"
 	"seadeals-backend/model"
 	"seadeals-backend/repository"
+	"strings"
 	"time"
 )
 
 type UserService interface {
 	Register(req *dto.RegisterRequest) (*dto.RegisterResponse, *gorm.DB, error)
 	CheckGoogleAccount(email string) (*model.User, error)
-	RegisterAsSeller(req *dto.RegisterAsSellerReq) (*model.Seller, error)
+	RegisterAsSeller(req *dto.RegisterAsSellerReq) (*model.Seller, string, error)
 }
 
 type userService struct {
@@ -22,6 +25,7 @@ type userService struct {
 	userRepository   repository.UserRepository
 	userRoleRepo     repository.UserRoleRepository
 	walletRepository repository.WalletRepository
+	appConfig        config.AppConfig
 }
 
 type UserServiceConfig struct {
@@ -29,6 +33,7 @@ type UserServiceConfig struct {
 	UserRepository   repository.UserRepository
 	UserRoleRepo     repository.UserRoleRepository
 	WalletRepository repository.WalletRepository
+	AppConfig        config.AppConfig
 }
 
 func NewUserService(c *UserServiceConfig) UserService {
@@ -37,7 +42,31 @@ func NewUserService(c *UserServiceConfig) UserService {
 		userRepository:   c.UserRepository,
 		userRoleRepo:     c.UserRoleRepo,
 		walletRepository: c.WalletRepository,
+		appConfig:        c.AppConfig,
 	}
+}
+
+func (u *userService) generateJWTToken(user *dto.UserJWT, role string, idExp int64, jwtType string) (string, error) {
+	// 1 minutes times JWTExpireInMinutes
+	unixTime := time.Now().Unix()
+	tokenExp := unixTime + idExp
+
+	timeExpire := jwt.NumericDate{Time: time.Unix(tokenExp, 0)}
+	timeNow := jwt.NumericDate{Time: time.Now()}
+	accessClaims := &idTokenClaims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: &timeExpire,
+			IssuedAt:  &timeNow,
+			Issuer:    u.appConfig.AppName,
+		},
+		User:  user,
+		Scope: role,
+		Type:  jwtType,
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims)
+	tokenString, _ := token.SignedString(u.appConfig.JWTSecret)
+
+	return tokenString, nil
 }
 
 func (u *userService) Register(req *dto.RegisterRequest) (*dto.RegisterResponse, *gorm.DB, error) {
@@ -134,19 +163,19 @@ func (u *userService) CheckGoogleAccount(email string) (*model.User, error) {
 	return user, nil
 }
 
-func (u *userService) RegisterAsSeller(req *dto.RegisterAsSellerReq) (*model.Seller, error) {
+func (u *userService) RegisterAsSeller(req *dto.RegisterAsSellerReq) (*model.Seller, string, error) {
 	tx := u.db.Begin()
 
 	user, err := u.userRepository.GetUserByID(tx, req.UserID)
 	if err != nil {
 		tx.Rollback()
-		return nil, err
+		return nil, "", err
 	}
 
 	address, err := u.userRepository.GetUserMainAddress(tx, user.ID)
 	if err != nil {
 		tx.Rollback()
-		return nil, err
+		return nil, "", err
 	}
 
 	newUserRole := &model.UserRole{
@@ -156,7 +185,7 @@ func (u *userService) RegisterAsSeller(req *dto.RegisterAsSellerReq) (*model.Sel
 	_, err = u.userRoleRepo.CreateRoleToUser(tx, newUserRole)
 	if err != nil {
 		tx.Rollback()
-		return nil, err
+		return nil, "", err
 	}
 
 	newSeller := &model.Seller{
@@ -172,9 +201,33 @@ func (u *userService) RegisterAsSeller(req *dto.RegisterAsSellerReq) (*model.Sel
 	createdSeller, err := u.userRepository.RegisterAsSeller(tx, newSeller)
 	if err != nil {
 		tx.Rollback()
-		return nil, err
+		return nil, "", err
 	}
 
+	wallet, err := u.walletRepository.GetWalletByUserID(tx, user.ID)
+	if err != nil {
+		tx.Rollback()
+		return nil, "", err
+	}
+	userJWT := &dto.UserJWT{
+		UserID:   user.ID,
+		Email:    user.Email,
+		Username: user.Username,
+		WalletID: wallet.ID,
+	}
+
+	userRoles, err := u.userRoleRepo.GetRolesByUserID(tx, user.ID)
+	if err != nil {
+		tx.Rollback()
+		return nil, "", err
+	}
+	var roles []string
+	for _, role := range userRoles {
+		roles = append(roles, role.Role.Name)
+	}
+	rolesString := strings.Join(roles[:], " ")
+	accessToken, err := u.generateJWTToken(userJWT, rolesString, config.Config.JWTExpiredInMinuteTime*60, dto.JWTAccessToken)
+
 	tx.Commit()
-	return createdSeller, nil
+	return createdSeller, accessToken, nil
 }
