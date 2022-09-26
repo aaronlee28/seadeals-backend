@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"errors"
 	"fmt"
 	"gorm.io/gorm"
 	"seadeals-backend/apperror"
@@ -12,6 +13,7 @@ import (
 type ProductRepository interface {
 	FindProductDetailByID(tx *gorm.DB, id uint) (*model.Product, error)
 	FindProductBySlug(tx *gorm.DB, slug string) (*model.Product, error)
+	FindSimilarProduct(tx *gorm.DB, productID uint) ([]*model.Product, error)
 
 	SearchProduct(tx *gorm.DB, q *SearchQuery) (*[]model.Product, error)
 	SearchRecommendProduct(tx *gorm.DB, q *SearchQuery) ([]*dto.SearchedProductRes, error)
@@ -52,6 +54,18 @@ func (r *productRepository) FindProductDetailByID(tx *gorm.DB, id uint) (*model.
 		return nil, result.Error
 	}
 	return product, nil
+}
+
+func (r *productRepository) FindSimilarProduct(tx *gorm.DB, categoryID uint) ([]*model.Product, error) {
+	var products []*model.Product
+	result := tx.Limit(24).Where("category_id = ?", categoryID).Preload("ProductVariantDetail").Preload("ProductPhotos").Find(&products)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return nil, &apperror.ProductNotFoundError{}
+	}
+	return products, nil
 }
 
 func (r *productRepository) GetProductDetail(tx *gorm.DB, id uint) (*model.Product, error) {

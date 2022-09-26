@@ -1,15 +1,18 @@
 package service
 
 import (
+	"errors"
 	"gorm.io/gorm"
 	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
+	"seadeals-backend/helper"
 	"seadeals-backend/model"
 	"seadeals-backend/repository"
 )
 
 type ProductService interface {
 	FindProductDetailBySlug(slug string) (*model.Product, error)
+	FindSimilarProducts(productID uint) ([]*dto.ProductRes, error)
 	SearchRecommendProduct(q *repository.SearchQuery) (*dto.SearchedSortFilterProduct, error)
 	GetProductsBySellerID(query *dto.SellerProductSearchQuery, sellerID uint) ([]*dto.ProductRes, int64, int64, error)
 	GetProductsByCategoryID(query *dto.SellerProductSearchQuery, categoryID uint) ([]*dto.ProductRes, int64, int64, error)
@@ -140,6 +143,64 @@ func (s *productService) GetProductsByCategoryID(query *dto.SellerProductSearchQ
 
 	tx.Commit()
 	return productsRes, totalPage, totalData, nil
+}
+
+func (s *productService) FindSimilarProducts(productID uint) ([]*dto.ProductRes, error) {
+	tx := s.db.Begin()
+
+	products, err := s.productRepo.FindSimilarProduct(tx, productID)
+	if err != nil {
+		tx.Rollback()
+		if errors.Is(err, &apperror.ProductNotFoundError{}) {
+			return nil, apperror.NotFoundError(err.Error())
+		}
+		return nil, err
+	}
+
+	var productsRes []*dto.ProductRes
+	for _, product := range products {
+		if product.ID == productID {
+			continue
+		}
+
+		var photoURL string
+		if len(product.ProductPhotos) > 0 {
+			photoURL = product.ProductPhotos[0].PhotoURL
+		}
+
+		minPrice, maxPrice, err := s.productRepo.SearchMinMaxPrice(tx, product.ID)
+		if err != nil {
+			tx.Rollback()
+			return nil, err
+		}
+
+		ratings, err := s.productRepo.SearchRating(tx, product.ID)
+		if err != nil {
+			tx.Rollback()
+			return nil, err
+		}
+		reviewCount := len(ratings)
+		avgRating := float64(helper.SumInt(ratings)) / float64(reviewCount)
+
+		dtoProduct := &dto.ProductRes{
+			MinPrice: float64(minPrice),
+			MaxPrice: float64(maxPrice),
+			Product: &dto.GetProductRes{
+				ID:            product.ID,
+				Price:         float64(minPrice),
+				Name:          product.Name,
+				Slug:          product.Slug,
+				MediaURL:      photoURL,
+				Rating:        avgRating,
+				TotalReviewer: int64(reviewCount),
+				TotalSold:     uint(product.SoldCount),
+			},
+		}
+		productsRes = append(productsRes, dtoProduct)
+	}
+
+	tx.Commit()
+	return productsRes, nil
 }
 
 func (s *productService) GetProducts(query *repository.SearchQuery) ([]*dto.ProductRes, int64, int64, error) {
