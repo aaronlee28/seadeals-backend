@@ -14,6 +14,7 @@ import (
 
 type WalletRepository interface {
 	CreateWallet(*gorm.DB, *model.Wallet) (*model.Wallet, error)
+	UpdateWallet(tx *gorm.DB, userID uint, newBalance float64) error
 	GetWalletByUserID(*gorm.DB, uint) (*model.Wallet, error)
 	GetTransactionsByUserID(tx *gorm.DB, userID uint) (*[]model.Transaction, error)
 	TransactionDetails(tx *gorm.DB, transactionID uint) (*model.Transaction, error)
@@ -28,7 +29,7 @@ type WalletRepository interface {
 	ValidateWalletPin(tx *gorm.DB, userID uint, pin string) error
 	GetWalletStatus(tx *gorm.DB, userID uint) (string, error)
 	StepUpPassword(tx *gorm.DB, userID uint, password string) error
-	PayWithWallet(tx *gorm.DB, userID uint) (*model.Transaction, error)
+	GetOrderItems(tx *gorm.DB, userID uint) ([]*model.OrderItem, error)
 }
 
 type walletRepository struct{}
@@ -319,20 +320,27 @@ func (w *walletRepository) StepUpPassword(tx *gorm.DB, userID uint, password str
 	return nil
 }
 
-func (w *walletRepository) PayWithWallet(tx *gorm.DB, userID uint) (*model.Transaction, error) {
+func (w *walletRepository) GetOrderItems(tx *gorm.DB, userID uint) ([]*model.OrderItem, error) {
+	var orderItems []*model.OrderItem
+
+	result := tx.Preload("ProductVariantDetail.Product").Preload("Promotion").Where("user_id = ?", userID).Where("order_id is null").Find(&orderItems)
+	if result.Error != nil {
+		return nil, apperror.InternalServerError("cannot find order")
+	}
+
+	return orderItems, nil
+}
+
+func (w *walletRepository) UpdateWallet(tx *gorm.DB, userID uint, newBalance float64) error {
 	var wallet *model.Wallet
-	var orderItems *model.OrderItem
-	var transaction *model.Transaction
 
-	result1 := tx.Model(&wallet).Where("user_id = ?", userID).First(&wallet)
-	if result1.Error != nil {
-		return nil, apperror.InternalServerError("cannot find wallet")
+	result := tx.Model(&wallet).Where("user_id = ?", userID).First(&wallet)
+	if result.Error != nil {
+		return apperror.InternalServerError("cannot find wallet")
 	}
-
-	result2 := tx.Model(&orderItems).Where("order_id = ?", userID).Where("order_id is null").First(&orderItems)
+	result2 := tx.Model(&wallet).Update("Balance", newBalance)
 	if result2.Error != nil {
-		return nil, apperror.InternalServerError("cannot find wallet")
+		return apperror.InternalServerError("Failed to update wallet")
 	}
-
-	return transaction, nil
+	return nil
 }

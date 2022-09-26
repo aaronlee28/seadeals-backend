@@ -11,7 +11,6 @@ import (
 	"seadeals-backend/model"
 	"seadeals-backend/repository"
 	"strconv"
-	"time"
 )
 
 type WalletService interface {
@@ -270,26 +269,55 @@ func (w *walletService) GetWalletStatus(userID uint) (string, error) {
 	if err != nil {
 		tx.Rollback()
 		return "", err
-	}
+	}v
 
 	tx.Commit()
 	return status, nil
 }
 
-func (w *walletService) PayWithWallet(userID uint) (*dto.WalletTransactionRes, error) {
+func (w *walletService) CreateTransaction(userID uint, req *dto.CreateOrderReq) (*dto.TransactionRes, error) {
 	tx := w.db.Begin()
-	transaction, err := w.walletRepository.PayWithWallet(tx, userID)
-	if err != nil {
+	//wallet, _ := w.walletRepository.GetWalletByUserID(tx, userID)
+	//order_items.subTotal: (harga yang udah di diskon dari promotion id) * quantity
+	//order.total: harga tambahan dari subTotal di atas per toko - voucher id
+	//transaction.total: harga tambahan dari total ytang atas - voucher global
+	//target: bikin sampai buyer - total di wallet nya
+	orderItems, err1 := w.walletRepository.GetOrderItems(tx, userID)
+	if err1 != nil {
 		tx.Rollback()
-		return nil, err
+		return nil, err1
 	}
-	transRes := dto.WalletTransactionRes{
-		UserID:        transaction.UserID,
-		TransactionID: transaction.Id,
-		Total:         transaction.Total,
-		PaymentMethod: transaction.PaymentMethod,
-		CreatedAt:     time.Time{},
+	m := make(map[uint]float64)
+	for _, item := range orderItems {
+		var totalPerOrderItem float64
+		if item.PromotionID != nil {
+			//create map key:seller_id, value: total price before voucher
+			totalPerOrderItem = item.ProductVariantDetail.Price - item.Promotion.Amount
+		} else {
+			riantDetail.Price
+		}
+		totalPerOrderItem = item.ProductVa
+		m[item.ProductVariantDetail.Product.SellerID] += totalPerOrderItem
 	}
+
+	//1. Create Order (Loop map)
+	//1 order id = 1 seller, dimana total
+
+	//2. loop order to get total payment for buyer (total - global voucher)
+
+	//var newBalance float64
+	//newBalance = wallet.Balance - totalPriceOrderBeforeGlobal
+	////
+	//if newBalance < 0 {
+	//	tx.Rollback()
+	//	return nil, apperror.InternalServerError("Insufficient Balance")
+	//}
+	//err2 := w.walletRepository.UpdateWallet(tx, userID, newBalance)
+	//if err2 != nil {
+	//	tx.Rollback()
+	//	return nil, err2
+	//}
+	transRes := dto.WalletTransactionRes{}
 
 	tx.Commit()
 	return &transRes, nil
