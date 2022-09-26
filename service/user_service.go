@@ -14,6 +14,7 @@ import (
 type UserService interface {
 	Register(req *dto.RegisterRequest) (*dto.RegisterResponse, *gorm.DB, error)
 	CheckGoogleAccount(req *dto.GoogleLogin) (*model.User, error)
+	RegisterAsSeller(req *dto.RegisterAsSellerReq) (*model.Seller, error)
 }
 
 type userService struct {
@@ -131,4 +132,39 @@ func (u *userService) CheckGoogleAccount(req *dto.GoogleLogin) (*model.User, err
 
 	tx.Commit()
 	return user, nil
+}
+
+func (u *userService) RegisterAsSeller(req *dto.RegisterAsSellerReq) (*model.Seller, error) {
+	tx := u.db.Begin()
+
+	user, err := u.userRepository.GetUserByID(tx, req.UserID)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	address, err := u.userRepository.GetUserMainAddress(tx, user.ID)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	newSeller := &model.Seller{
+		Name:        req.ShopName,
+		Slug:        "",
+		UserID:      user.ID,
+		Description: req.Description,
+		AddressID:   address.ID,
+		PictureURL:  "",
+		BannerURL:   "",
+	}
+
+	createdSeller, err := u.userRepository.RegisterAsSeller(tx, newSeller)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	tx.Commit()
+	return createdSeller, nil
 }

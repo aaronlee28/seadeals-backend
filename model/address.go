@@ -9,8 +9,7 @@ type Address struct {
 	Zipcode       string       `json:"zipcode"`
 	SubDistrictID uint         `json:"sub_district_id"`
 	SubDistrict   *SubDistrict `json:"sub_district"`
-	UserID        uint         `json:"user_id"`
-	User          *User        `json:"user"`
+	UserAddress   *UserAddress `json:"user_address"`
 }
 
 func (a Address) TableName() string {
