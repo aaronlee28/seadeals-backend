@@ -54,11 +54,11 @@ type idTokenClaims struct {
 	jwt.RegisteredClaims
 	User  *dto.UserJWT `json:"user"`
 	Scope string       `json:"scope"`
+	Type  string       `json:"type"`
 }
 
-func (a *authService) generateJWTToken(user *dto.UserJWT, role string) (string, string, error) {
+func (a *authService) generateJWTToken(user *dto.UserJWT, role string, idExp int64, jwtType string) (string, error) {
 	// 1 minutes times JWTExpireInMinutes
-	var idExp = a.appConfig.JWTExpiredInMinuteTime * 60
 	unixTime := time.Now().Unix()
 	tokenExp := unixTime + idExp
 
@@ -72,28 +72,12 @@ func (a *authService) generateJWTToken(user *dto.UserJWT, role string) (string, 
 		},
 		User:  user,
 		Scope: role,
+		Type:  jwtType,
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims)
 	tokenString, _ := token.SignedString(a.appConfig.JWTSecret)
 
-	// one day
-	idExp = 60 * 60 * 24
-	unixTime = time.Now().Unix()
-	tokenExp = unixTime + idExp
-	timeExpire = jwt.NumericDate{Time: time.Unix(tokenExp, 0)}
-	refreshClaim := &idTokenClaims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: &timeExpire,
-			IssuedAt:  &timeNow,
-			Issuer:    a.appConfig.AppName,
-		},
-		User:  user,
-		Scope: role,
-	}
-	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaim)
-	refreshTokenString, _ := refreshToken.SignedString(a.appConfig.JWTSecret)
-
-	return tokenString, refreshTokenString, nil
+	return tokenString, nil
 }
 
 func (a *authService) AuthAfterRegister(user *model.User, wallet *model.Wallet, tx *gorm.DB) (string, string, error) {
@@ -103,7 +87,8 @@ func (a *authService) AuthAfterRegister(user *model.User, wallet *model.Wallet, 
 		Username: user.Username,
 		WalletID: wallet.ID,
 	}
-	token, refreshToken, err := a.generateJWTToken(userJWT, model.UserRoleName)
+	token, err := a.generateJWTToken(userJWT, model.UserRoleName, config.Config.JWTExpiredInMinuteTime*60, dto.JWTAccessToken)
+	refreshToken, err := a.generateJWTToken(userJWT, model.UserRoleName, 24*60*60, dto.JWTRefreshToken)
 	if os.Getenv("ENV") == "testing" {
 		token = "test"
 		refreshToken = "test"
@@ -144,7 +129,8 @@ func (a *authService) SignInWithGoogle(user *model.User) (string, string, error)
 	}
 	rolesString := strings.Join(roles[:], " ")
 
-	token, refreshToken, err := a.generateJWTToken(userJWT, rolesString)
+	token, err := a.generateJWTToken(userJWT, rolesString, config.Config.JWTExpiredInMinuteTime*60, dto.JWTAccessToken)
+	refreshToken, err := a.generateJWTToken(userJWT, rolesString, 24*60*60, dto.JWTRefreshToken)
 	if os.Getenv("ENV") == "testing" {
 		token = "test"
 		refreshToken = "test"
@@ -188,8 +174,8 @@ func (a *authService) SignIn(req *dto.SignInReq) (string, string, error) {
 		roles = append(roles, role.Role.Name)
 	}
 	rolesString := strings.Join(roles[:], " ")
-	token, refreshToken, err := a.generateJWTToken(userJWT, rolesString)
-
+	token, err := a.generateJWTToken(userJWT, rolesString, config.Config.JWTExpiredInMinuteTime*60, dto.JWTAccessToken)
+	refreshToken, err := a.generateJWTToken(userJWT, rolesString, 24*60*60, dto.JWTRefreshToken)
 	if os.Getenv("ENV") == "testing" {
 		token = "test"
 		refreshToken = "test"
