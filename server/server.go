@@ -34,6 +34,7 @@ func Init() {
 		UserRepository:   userRepository,
 		UserRoleRepo:     userRoleRepository,
 		WalletRepository: walletRepository,
+		AppConfig:        config.Config,
 	})
 
 	authService := service.NewAuthService(&service.AuthSConfig{
