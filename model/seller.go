@@ -1,6 +1,9 @@
 package model
 
-import "gorm.io/gorm"
+import (
+	"gorm.io/gorm"
+	"strconv"
+)
 
 type Seller struct {
 	gorm.Model  `json:"-"`
@@ -14,4 +17,9 @@ type Seller struct {
 	Address     *Address `json:"address"`
 	PictureURL  string   `json:"picture_url"`
 	BannerURL   string   `json:"banner_url"`
+}
+
+func (u *Seller) AfterCreate(tx *gorm.DB) (err error) {
+	tx.Model(u).Update("slug", u.Name+"."+strconv.FormatUint(uint64(u.ID), 10))
+	return
 }

@@ -118,6 +118,9 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 
 	// SELLER
 	r.GET("/sellers/:id", h.FindSellerByID)
+	r.POST("/sellers", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
+		return &dto.RegisterAsSellerReq{}
+	}), h.RegisterAsSeller)
 
 	// WALLET
 	r.GET("/user-wallet", middleware.AuthorizeJWTFor(model.UserRoleName), h.WalletDataTransactions)

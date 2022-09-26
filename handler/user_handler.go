@@ -99,10 +99,31 @@ func (h *Handler) StepUpPassword(ctx *gin.Context) {
 
 	err := h.authService.StepUpPassword(userID, json)
 	if err != nil {
-		e := ctx.Error(err)
-		ctx.JSON(http.StatusBadRequest, e)
+		ctx.JSON(http.StatusBadRequest, err)
 		return
 	}
 	successResponse := dto.StatusOKResponse(err)
+	ctx.JSON(http.StatusOK, successResponse)
+}
+
+func (h *Handler) RegisterAsSeller(ctx *gin.Context) {
+	value, _ := ctx.Get("payload")
+	json, _ := value.(*dto.RegisterAsSellerReq)
+
+	userPayload, _ := ctx.Get("user")
+	user, _ := userPayload.(dto.UserJWT)
+	userID := user.UserID
+
+	if userID != json.UserID {
+		ctx.JSON(http.StatusBadRequest, apperror.BadRequestError("Cannot register another user as seller"))
+		return
+	}
+
+	seller, err := h.userService.RegisterAsSeller(json)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, err)
+		return
+	}
+	successResponse := dto.StatusOKResponse(seller)
 	ctx.JSON(http.StatusOK, successResponse)
 }
