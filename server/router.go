@@ -1,7 +1,6 @@
 package server
 
 import (
-	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"seadeals-backend/dto"
 	"seadeals-backend/handler"
@@ -32,19 +31,6 @@ type RouterConfig struct {
 
 func NewRouter(c *RouterConfig) *gin.Engine {
 	r := gin.Default()
-	config := cors.DefaultConfig()
-	config.AllowAllOrigins = true
-	config.AllowHeaders = []string{
-		"Access-Control-Allow-Headers",
-		"Authorization",
-		"Origin",
-		"Accept",
-		"X-Requested-With",
-		"Content-Type",
-		"Access-Control-Request-Method",
-	}
-	r.Use(cors.New(config))
-	r.NoRoute()
 
 	h := handler.New(&handler.Config{
 		UserService:            c.UserService,
@@ -68,6 +54,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 
 	r.Use(middleware.ErrorHandler)
 	r.Use(middleware.AllowCrossOrigin)
+	r.NoRoute()
 
 	// AUTH
 	r.POST("/register", middleware.RequestValidator(func() any {
