@@ -11,6 +11,7 @@ import (
 	"seadeals-backend/model"
 	"seadeals-backend/repository"
 	"strconv"
+	"time"
 )
 
 type WalletService interface {
@@ -24,6 +25,7 @@ type WalletService interface {
 	ChangeWalletPinByEmail(userID uint, req *dto.ChangePinByEmailReq) (*model.Wallet, error)
 	ValidateWalletPin(userID uint, pin string) (bool, error)
 	GetWalletStatus(userID uint) (string, error)
+	PayWithWallet(userID uint) (*dto.WalletTransactionRes, error)
 }
 
 type walletService struct {
@@ -272,4 +274,23 @@ func (w *walletService) GetWalletStatus(userID uint) (string, error) {
 
 	tx.Commit()
 	return status, nil
+}
+
+func (w *walletService) PayWithWallet(userID uint) (*dto.WalletTransactionRes, error) {
+	tx := w.db.Begin()
+	transaction, err := w.walletRepository.PayWithWallet(tx, userID)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+	transRes := dto.WalletTransactionRes{
+		UserID:        transaction.UserID,
+		TransactionID: transaction.Id,
+		Total:         transaction.Total,
+		PaymentMethod: transaction.PaymentMethod,
+		CreatedAt:     time.Time{},
+	}
+
+	tx.Commit()
+	return &transRes, nil
 }

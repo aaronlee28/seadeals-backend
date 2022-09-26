@@ -28,6 +28,7 @@ type WalletRepository interface {
 	ValidateWalletPin(tx *gorm.DB, userID uint, pin string) error
 	GetWalletStatus(tx *gorm.DB, userID uint) (string, error)
 	StepUpPassword(tx *gorm.DB, userID uint, password string) error
+	PayWithWallet(tx *gorm.DB, userID uint) (*model.Transaction, error)
 }
 
 type walletRepository struct{}
@@ -316,4 +317,22 @@ func (w *walletRepository) StepUpPassword(tx *gorm.DB, userID uint, password str
 	}
 
 	return nil
+}
+
+func (w *walletRepository) PayWithWallet(tx *gorm.DB, userID uint) (*model.Transaction, error) {
+	var wallet *model.Wallet
+	var orderItems *model.OrderItem
+	var transaction *model.Transaction
+
+	result1 := tx.Model(&wallet).Where("user_id = ?", userID).First(&wallet)
+	if result1.Error != nil {
+		return nil, apperror.InternalServerError("cannot find wallet")
+	}
+
+	result2 := tx.Model(&orderItems).Where("order_id = ?", userID).Where("order_id is null").First(&orderItems)
+	if result2.Error != nil {
+		return nil, apperror.InternalServerError("cannot find wallet")
+	}
+
+	return transaction, nil
 }
