@@ -1,7 +1,6 @@
 package server
 
 import (
-	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"seadeals-backend/dto"
 	"seadeals-backend/handler"
@@ -25,26 +24,13 @@ type RouterConfig struct {
 	ReviewService          service.ReviewService
 	SellerService          service.SellerService
 	UserSeaLabsPayAccServ  service.UserSeaPayAccountServ
-	OrderItemService       service.OrderItemService
+	OrderItemService       service.CartItemService
 	RefreshTokenService    service.RefreshTokenService
 	SealabsPayService      service.SealabsPayService
 }
 
 func NewRouter(c *RouterConfig) *gin.Engine {
 	r := gin.Default()
-	config := cors.DefaultConfig()
-	config.AllowAllOrigins = true
-	config.AllowHeaders = []string{
-		"Access-Control-Allow-Headers",
-		"Authorization",
-		"Origin",
-		"Accept",
-		"X-Requested-With",
-		"Content-Type",
-		"Access-Control-Request-Method",
-	}
-	r.Use(cors.New(config))
-	r.NoRoute()
 
 	h := handler.New(&handler.Config{
 		UserService:            c.UserService,
@@ -68,6 +54,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 
 	r.Use(middleware.ErrorHandler)
 	r.Use(middleware.AllowCrossOrigin)
+	r.NoRoute()
 
 	// AUTH
 	r.POST("/register", middleware.RequestValidator(func() any {
@@ -84,8 +71,9 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		return &dto.StepUpPasswordRes{}
 	}), h.StepUpPassword)
 	// GOOGLE AUTH
-	r.GET("/google/sign-in", h.GoogleSignIn)
-	r.GET("/google/callback", h.GoogleCallback)
+	r.POST("/google/sign-in", middleware.RequestValidator(func() any {
+		return &dto.GoogleLogin{}
+	}), h.GoogleSignIn)
 
 	// ADDRESS
 	r.GET("/provinces", h.GetProvinces)
@@ -106,7 +94,8 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	// PRODUCTS
 	r.GET("/products/:id/variant", h.FindAllProductVariantByProductID)
 	r.GET("/products/:id/promotion-price", h.GetVariantPriceAfterPromotionByProductID)
-	r.GET("/search-recommend-product/", h.SearchRecommendProduct)
+	r.GET("/products/:id/similar-products", h.FindSimilarProduct)
+	r.GET("/search-recommend-product", h.SearchRecommendProduct)
 	r.GET("/products/detail/:slug", h.FindProductDetailBySlug)
 	r.GET("/sellers/:id/products", h.GetProductsBySellerID)
 	r.GET("/categories/:id/products", h.GetProductsByCategoryID)
@@ -117,6 +106,9 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 
 	// SELLER
 	r.GET("/sellers/:id", h.FindSellerByID)
+	r.POST("/sellers", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
+		return &dto.RegisterAsSellerReq{}
+	}), h.RegisterAsSeller)
 
 	// WALLET
 	r.GET("/user-wallet", middleware.AuthorizeJWTFor(model.UserRoleName), h.WalletDataTransactions)
@@ -149,15 +141,16 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		return &dto.UpdateSeaLabsPayToMainReq{}
 	}), h.UpdateSeaLabsPayToMain)
 	r.POST("create-signature", middleware.RequestValidator(func() any { return &dto.SeaDealspayReq{} }), h.CreateSignature)
+	r.GET("/user/sea-labs-pay", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetSeaLabsPayAccount)
 
-	// ORDER ITEM
-	r.GET("/user/cart", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetOrderItem)
+	// CART ITEM
+	r.GET("/user/cart", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetCartItem)
 	r.POST("/user/cart", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.AddToCartReq{}
 	}), h.AddToCart)
 	r.DELETE("/user/cart", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.DeleteFromCartReq{}
-	}), h.DeleteOrderItem)
+	}), h.DeleteCartItem)
 
 	//Payment
 	r.POST("/pay-with-wallet", middleware.AuthorizeJWTFor(model.UserRoleName), h.PayWithWallet)

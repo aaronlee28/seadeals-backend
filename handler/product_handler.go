@@ -24,6 +24,22 @@ func (h *Handler) FindProductDetailBySlug(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, dto.StatusOKResponse(res))
 }
 
+func (h *Handler) FindSimilarProduct(ctx *gin.Context) {
+	id, err := strconv.Atoi(ctx.Param("id"))
+	if err != nil {
+		_ = ctx.Error(apperror.BadRequestError("Invalid id format"))
+		return
+	}
+
+	products, err := h.productService.FindSimilarProducts(uint(id))
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(products))
+}
+
 func (h *Handler) GetProductsBySellerID(ctx *gin.Context) {
 	query := map[string]string{
 		"page":      ctx.Query("page"),

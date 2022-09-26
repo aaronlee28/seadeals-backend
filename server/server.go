@@ -24,15 +24,17 @@ func Init() {
 	reviewRepository := repository.NewReviewRepository()
 	sellerRepository := repository.NewSellerRepository()
 	userSeaLabsPayAccountRepo := repository.NewSeaPayAccountRepo()
-	orderItemRepository := repository.NewOrderItemRepository()
+	orderItemRepository := repository.NewCartItemRepository()
 	socialGraphRepo := repository.NewSocialGraphRepository()
 	productVarDetRepo := repository.NewProductVariantDetailRepository()
+	userAddressRepo := repository.NewUserAddressRepository()
 
 	userService := service.NewUserService(&service.UserServiceConfig{
 		DB:               db.Get(),
 		UserRepository:   userRepository,
 		UserRoleRepo:     userRoleRepository,
 		WalletRepository: walletRepository,
+		AppConfig:        config.Config,
 	})
 
 	authService := service.NewAuthService(&service.AuthSConfig{
@@ -67,6 +69,7 @@ func Init() {
 	addressService := service.NewAddressService(&service.AddressServiceConfig{
 		DB:                db.Get(),
 		AddressRepository: addressRepository,
+		UserAddressRepo:   userAddressRepo,
 	})
 
 	productCategoryService := service.NewProductCategoryService(&service.ProductCategoryServiceConfig{
@@ -111,9 +114,9 @@ func Init() {
 		UserSeaPayAccountRepo: userSeaLabsPayAccountRepo,
 	})
 
-	orderItemService := service.NewOrderItemService(&service.OrderItemServiceConfig{
-		DB:                  db.Get(),
-		OrderItemRepository: orderItemRepository,
+	orderItemService := service.NewCartItemService(&service.CartItemServiceConfig{
+		DB:                 db.Get(),
+		CartItemRepository: orderItemRepository,
 	})
 
 	refreshTokenService := service.NewRefreshTokenService(&service.RefreshTokenServiceConfig{

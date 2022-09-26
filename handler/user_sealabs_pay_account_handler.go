@@ -75,3 +75,19 @@ func (h *Handler) UpdateSeaLabsPayToMain(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, dto.StatusOKResponse(result))
 }
+
+func (h *Handler) GetSeaLabsPayAccount(ctx *gin.Context) {
+	user, exists := ctx.Get("user")
+	if !exists {
+		_ = ctx.Error(apperror.BadRequestError("User is invalid"))
+		return
+	}
+
+	result, err := h.seaLabsPayAccServ.GetSeaLabsAccountByUserID(user.(dto.UserJWT).UserID)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(result))
+}
