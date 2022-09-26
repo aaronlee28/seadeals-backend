@@ -21,7 +21,11 @@ func (h *Handler) GoogleSignIn(ctx *gin.Context) {
 
 	user, err := h.userService.CheckGoogleAccount(claims["email"].(string))
 	if err != nil {
-		_ = ctx.Error(err)
+		ctx.JSON(http.StatusBadRequest, dto.AppResponse{
+			StatusCode: http.StatusBadRequest,
+			Status:     "BAD_REQUEST_ERROR",
+			Data:       gin.H{"error": err.Error(), "user": gin.H{"email": claims["email"], "name": claims["name"]}},
+		})
 		return
 	}
 
