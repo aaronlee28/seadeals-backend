@@ -149,6 +149,16 @@ func (u *userService) RegisterAsSeller(req *dto.RegisterAsSellerReq) (*model.Sel
 		return nil, err
 	}
 
+	newUserRole := &model.UserRole{
+		UserID: user.ID,
+		RoleID: 3,
+	}
+	_, err = u.userRoleRepo.CreateRoleToUser(tx, newUserRole)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
 	newSeller := &model.Seller{
 		Name:        req.ShopName,
 		Slug:        "",

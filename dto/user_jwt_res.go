@@ -6,3 +6,8 @@ type UserJWT struct {
 	Username string `json:"username"`
 	WalletID uint   `json:"wallet_id"`
 }
+
+const (
+	JWTAccessToken  = "access_token"
+	JWTRefreshToken = "refresh_token"
+)
