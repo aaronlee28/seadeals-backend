@@ -130,6 +130,14 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	}), h.ValidateWalletPin)
 	r.GET("/user/wallet/status", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetWalletStatus)
 
+	// TOP UP WITH SEA LABS
+	r.POST("/user/wallet/top-up/sea-labs-pay", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
+		return &dto.TopUpWalletWithSeaLabsPayReq{}
+	}), h.TopUpWithSeaLabsPay)
+	r.POST("/user/wallet/top-up/sea-labs-pay/callback", middleware.RequestValidator(func() any {
+		return &dto.SeaLabsPayReq{}
+	}), h.TopUpWithSeaLabsPayCallback)
+
 	// SEA LABS ACCOUNT
 	r.POST("/user/sea-labs-pay/register", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.RegisterSeaLabsPayReq{}
@@ -142,6 +150,11 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	}), h.UpdateSeaLabsPayToMain)
 	r.POST("create-signature", middleware.RequestValidator(func() any { return &dto.SeaDealspayReq{} }), h.CreateSignature)
 	r.GET("/user/sea-labs-pay", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetSeaLabsPayAccount)
+
+	// PAY WITH SEA LABS
+	r.POST("/order/pay/sea-labs-pay", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
+		return &dto.PayWithSeaLabsPayReq{}
+	}), h.PayWithSeaLabsPay)
 
 	// CART ITEM
 	r.GET("/user/cart", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetCartItem)

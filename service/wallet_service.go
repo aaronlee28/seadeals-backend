@@ -167,12 +167,11 @@ func (w *walletService) RequestPinChangeWithEmail(userID uint) (*mailjet.Results
 	}
 
 	mailjetClient := mailjet.NewMailjetClient(config.Config.MailJetPublicKey, config.Config.MailJetSecretKey)
-	html := "<p>Here are the code to reset your pin:</p><h3>" + code + "</h3>" +
-		"<p>you can open the link <a href=\"http://localhost:3000/check?userID=" + strconv.FormatUint(uint64(user.ID), 10) + "&key=" + randomString + "\">here</a></p>"
+	html := "<p>Berikut adalah kode untuk reset pin kamu:</p><h3>" + code + "</h3>"
 	messagesInfo := []mailjet.InfoMessagesV31{
 		{
 			From: &mailjet.RecipientV31{
-				Email: "juliantovaldo@gmail.com",
+				Email: "seadeals04@gmail.com",
 				Name:  "SeaDeals No Reply",
 			},
 			To: &mailjet.RecipientsV31{
