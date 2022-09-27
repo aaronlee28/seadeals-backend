@@ -79,7 +79,7 @@ func (h *Handler) ChangeMainAddress(ctx *gin.Context) {
 
 	address, err := h.addressService.ChangeMainAddress(uint(id), userID)
 	if err != nil {
-		_ = ctx.Error(apperror.UnauthorizedError("Failed to change main address"))
+		_ = ctx.Error(apperror.BadRequestError("Failed to change main address"))
 		return
 	}
 
