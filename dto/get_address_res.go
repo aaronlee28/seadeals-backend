@@ -12,7 +12,7 @@ type GetAddressRes struct {
 	PostalCode  string `json:"postal_code"`
 	SubDistrict string `json:"sub_district"`
 	Address     string `json:"address"`
-	IsMain      *bool  `json:"is_main"`
+	IsMain      bool   `json:"is_main"`
 }
 
 func (_ *GetAddressRes) From(address *model.Address) *GetAddressRes {
@@ -26,10 +26,7 @@ func (_ *GetAddressRes) From(address *model.Address) *GetAddressRes {
 		PostalCode:  address.PostalCode,
 		SubDistrict: address.SubDistrict,
 		Address:     address.Address,
-	}
-
-	if address.UserAddress != nil {
-		res.IsMain = &address.UserAddress.IsMain
+		IsMain:      address.IsMain,
 	}
 
 	return res

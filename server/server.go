@@ -23,7 +23,6 @@ func Init() {
 	orderItemRepository := repository.NewCartItemRepository()
 	socialGraphRepo := repository.NewSocialGraphRepository()
 	productVarDetRepo := repository.NewProductVariantDetailRepository()
-	userAddressRepo := repository.NewUserAddressRepository()
 
 	userService := service.NewUserService(&service.UserServiceConfig{
 		DB:               db.Get(),
@@ -45,7 +44,6 @@ func Init() {
 	addressService := service.NewAddressService(&service.AddressServiceConfig{
 		DB:                db.Get(),
 		AddressRepository: addressRepository,
-		UserAddressRepo:   userAddressRepo,
 	})
 
 	productCategoryService := service.NewProductCategoryService(&service.ProductCategoryServiceConfig{

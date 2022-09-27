@@ -96,8 +96,8 @@ func (u *userRepository) GetUserByID(tx *gorm.DB, userID uint) (*model.User, err
 }
 
 func (u *userRepository) GetUserMainAddress(tx *gorm.DB, userID uint) (*model.Address, error) {
-	var userAddress = &model.UserAddress{}
-	result := tx.Model(&userAddress).Where("user_id = ? AND is_main IS TRUE", userID).Preload("Address").First(&userAddress)
+	var address *model.Address
+	result := tx.Model(&address).Where("user_id = ? AND is_main IS TRUE", userID).First(&address)
 	if result.Error != nil && result.Error != gorm.ErrRecordNotFound {
 		return nil, apperror.InternalServerError("Cannot use database to find Address")
 	}
@@ -105,7 +105,7 @@ func (u *userRepository) GetUserMainAddress(tx *gorm.DB, userID uint) (*model.Ad
 		return nil, apperror.NotFoundError("Please create address first before register as seller")
 	}
 
-	return userAddress.Address, nil
+	return address, nil
 }
 
 func (u *userRepository) MatchingCredential(tx *gorm.DB, email string, password string) (*model.User, error) {
@@ -145,7 +145,7 @@ func (u *userRepository) RegisterAsSeller(tx *gorm.DB, seller *model.Seller) (*m
 		return nil, apperror.BadRequestError("Shop name is already registered, please choose another name for the shop")
 	}
 
-	result = tx.Clauses(clause.Returning{}).Preload("Address").Preload("User").Create(&seller)
+	result = tx.Clauses(clause.Returning{}).Preload("Address").Preload("User").Create(&seller).First(&seller)
 	if result.Error != nil {
 		return nil, apperror.InternalServerError("Cannot register user as seller")
 	}
