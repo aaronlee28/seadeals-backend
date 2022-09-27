@@ -9,7 +9,7 @@ import (
 type AddressRepository interface {
 	CreateAddress(*gorm.DB, *model.Address) (*model.Address, error)
 	GetAddressesByUserID(*gorm.DB, uint) ([]*model.UserAddress, error)
-	GetAddressDetail(*gorm.DB, uint) (*model.Address, error)
+	GetAddressesByID(tx *gorm.DB, id, userID uint) (*model.Address, error)
 	UpdateAddress(*gorm.DB, *model.Address) (*model.Address, error)
 }
 
@@ -38,16 +38,16 @@ func (a *addressRepository) GetAddressesByUserID(tx *gorm.DB, userID uint) ([]*m
 	return addresses, result.Error
 }
 
-func (a *addressRepository) GetAddressDetail(tx *gorm.DB, id uint) (*model.Address, error) {
-	var address = &model.Address{}
-	address.ID = id
-	result := tx.Preload("UserAddress").First(&address)
-
-	if result.Error == gorm.ErrRecordNotFound {
-		return nil, apperror.InternalServerError("no record of that id exists")
-	}
+func (a *addressRepository) GetAddressesByID(tx *gorm.DB, id, userID uint) (*model.Address, error) {
+	var address *model.Address
+	result := tx.First(&address, id)
 	if result.Error != nil {
-		return nil, apperror.InternalServerError("cannot fetch address")
+		return nil, apperror.InternalServerError("cannot fetch addresses")
+	}
+
+	result = tx.Where("address_id = ? AND user_id = ?", id, userID).First(&address.UserAddress)
+	if result.Error != nil {
+		return nil, apperror.InternalServerError("cannot fetch someone address")
 	}
 
 	return address, result.Error

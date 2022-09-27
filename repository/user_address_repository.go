@@ -37,7 +37,7 @@ func (u *userAddressRepository) CreateUserAddress(tx *gorm.DB, userAddress *mode
 
 func (u *userAddressRepository) GetUserAddressesByUserID(tx *gorm.DB, userID uint) ([]*model.UserAddress, error) {
 	var addresses []*model.UserAddress
-	result := tx.Where("user_id = ?", userID).Preload("Address").Preload("Address.SubDistrict").Preload("Address.UserAddress").Find(&addresses)
+	result := tx.Where("user_id = ?", userID).Preload("Address.UserAddress").Find(&addresses)
 	if result.Error != nil {
 		return nil, apperror.InternalServerError("cannot fetch addresses")
 	}

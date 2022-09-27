@@ -9,9 +9,9 @@ import (
 )
 
 type AddressService interface {
-	CreateAddress(*dto.CreateAddressReq, uint) (*dto.CreateAddressRes, error)
-	UpdateAddress(*dto.UpdateAddressReq) (*dto.UpdateAddressRes, error)
-	GetAddressesByUserID(uint) ([]*model.Address, error)
+	CreateAddress(*dto.CreateAddressReq, uint) (*model.Address, error)
+	UpdateAddress(*dto.UpdateAddressReq) (*model.Address, error)
+	GetAddressesByUserID(uint) ([]*dto.GetAddressRes, error)
 }
 
 type addressService struct {
@@ -34,12 +34,17 @@ func NewAddressService(config *AddressServiceConfig) AddressService {
 	}
 }
 
-func (a *addressService) CreateAddress(req *dto.CreateAddressReq, userID uint) (*dto.CreateAddressRes, error) {
+func (a *addressService) CreateAddress(req *dto.CreateAddressReq, userID uint) (*model.Address, error) {
 	tx := a.db.Begin()
 	newAddress := &model.Address{
-		Address:       req.Address,
-		Zipcode:       req.Zipcode,
-		SubDistrictID: req.SubDistrictID,
+		CityID:      req.CityID,
+		ProvinceID:  req.ProvinceID,
+		Province:    req.Province,
+		City:        req.City,
+		Type:        req.Type,
+		PostalCode:  req.PostalCode,
+		SubDistrict: req.SubDistrict,
+		Address:     req.Address,
 	}
 	address, err := a.addressRepository.CreateAddress(tx, newAddress)
 	if err != nil {
@@ -55,21 +60,15 @@ func (a *addressService) CreateAddress(req *dto.CreateAddressReq, userID uint) (
 		return nil, err
 	}
 
-	dtoAddress := &dto.CreateAddressRes{
-		ID:            address.ID,
-		Address:       address.Address,
-		Zipcode:       address.Zipcode,
-		SubDistrictID: address.SubDistrictID,
-		UserID:        userAddress.UserID,
-	}
+	address.UserAddress = userAddress
 
 	tx.Commit()
-	return dtoAddress, nil
+	return address, nil
 }
 
-func (a *addressService) UpdateAddress(req *dto.UpdateAddressReq) (*dto.UpdateAddressRes, error) {
+func (a *addressService) UpdateAddress(req *dto.UpdateAddressReq) (*model.Address, error) {
 	tx := a.db.Begin()
-	currentAddress, err := a.addressRepository.GetAddressDetail(tx, req.ID)
+	currentAddress, err := a.addressRepository.GetAddressesByID(tx, req.ID, req.UserID)
 	if err != nil {
 		tx.Rollback()
 		return nil, err
@@ -80,29 +79,27 @@ func (a *addressService) UpdateAddress(req *dto.UpdateAddressReq) (*dto.UpdateAd
 	}
 
 	newAddress := &model.Address{
-		Address:       req.Address,
-		Zipcode:       req.Zipcode,
-		SubDistrictID: req.SubDistrictID,
-		ID:            req.ID,
+		ID:          req.ID,
+		CityID:      req.CityID,
+		ProvinceID:  req.ProvinceID,
+		Province:    req.Province,
+		City:        req.City,
+		Type:        req.Type,
+		PostalCode:  req.PostalCode,
+		SubDistrict: req.SubDistrict,
+		Address:     req.Address,
 	}
 	address, err := a.addressRepository.UpdateAddress(tx, newAddress)
 	if err != nil {
 		tx.Rollback()
 		return nil, err
 	}
+
 	tx.Commit()
-
-	dtoAddress := &dto.UpdateAddressRes{
-		ID:            address.ID,
-		Address:       address.Address,
-		Zipcode:       address.Zipcode,
-		SubDistrictID: address.SubDistrictID,
-	}
-
-	return dtoAddress, nil
+	return address, nil
 }
 
-func (a *addressService) GetAddressesByUserID(userID uint) ([]*model.Address, error) {
+func (a *addressService) GetAddressesByUserID(userID uint) ([]*dto.GetAddressRes, error) {
 	tx := a.db.Begin()
 	userAddresses, err := a.userAddressRepo.GetUserAddressesByUserID(tx, userID)
 	if err != nil {
@@ -110,9 +107,9 @@ func (a *addressService) GetAddressesByUserID(userID uint) ([]*model.Address, er
 		return nil, err
 	}
 
-	var addresses []*model.Address
+	var addresses []*dto.GetAddressRes
 	for _, userAddress := range userAddresses {
-		addresses = append(addresses, userAddress.Address)
+		addresses = append(addresses, new(dto.GetAddressRes).From(userAddress.Address))
 	}
 
 	tx.Commit()

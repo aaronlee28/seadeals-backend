@@ -14,10 +14,6 @@ func Init() {
 	walletRepository := repository.NewWalletRepository()
 	refreshTokenRepository := repository.NewRefreshTokenRepo()
 	addressRepository := repository.NewAddressRepository()
-	cityRepository := repository.NewCityRepository()
-	districtRepository := repository.NewDistrictRepository()
-	provinceRepository := repository.NewProvinceRepository()
-	subDistrictRepository := repository.NewSubDistrictRepository()
 	productCategoryRepository := repository.NewProductCategoryRepository()
 	productRepository := repository.NewProductRepository()
 	productVariantRepository := repository.NewProductVariantRepository()
@@ -44,26 +40,6 @@ func Init() {
 		UserRoleRepo:     userRoleRepository,
 		WalletRepository: walletRepository,
 		AppConfig:        config.Config,
-	})
-
-	cityService := service.NewCityService(&service.CityServiceConfig{
-		DB:             db.Get(),
-		CityRepository: cityRepository,
-	})
-
-	districtService := service.NewDistrictService(&service.DistrictServiceConfig{
-		DB:                 db.Get(),
-		DistrictRepository: districtRepository,
-	})
-
-	provinceService := service.NewProvinceService(&service.ProvinceServiceConfig{
-		DB:                 db.Get(),
-		ProvinceRepository: provinceRepository,
-	})
-
-	subDistrictService := service.NewSubDistrictService(&service.SubDistrictServiceConfig{
-		DB:                    db.Get(),
-		SubDistrictRepository: subDistrictRepository,
 	})
 
 	addressService := service.NewAddressService(&service.AddressServiceConfig{
@@ -129,10 +105,6 @@ func Init() {
 	router := NewRouter(&RouterConfig{
 		UserService:            userService,
 		AuthService:            authService,
-		ProvinceService:        provinceService,
-		CityService:            cityService,
-		DistrictService:        districtService,
-		SubDistrictService:     subDistrictService,
 		AddressService:         addressService,
 		WalletService:          walletService,
 		ProductCategoryService: productCategoryService,

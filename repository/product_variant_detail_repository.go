@@ -81,7 +81,7 @@ func (p *productVariantDetailRepository) GetProductsBySellerID(tx *gorm.DB, quer
 		table = table.Offset((query.Page - 1) * limit)
 	}
 
-	table = table.Preload("ProductPhotos").Preload("Seller.Address.SubDistrict.District.City")
+	table = table.Preload("ProductPhotos").Preload("Seller.Address")
 	table = table.Unscoped().Find(&products)
 	if table.Error != nil {
 		return nil, 0, 0, apperror.InternalServerError("cannot fetch products")
@@ -155,7 +155,7 @@ func (p *productVariantDetailRepository) GetProductsByCategoryID(tx *gorm.DB, qu
 		table = table.Offset((query.Page - 1) * limit)
 	}
 
-	table = table.Preload("ProductPhotos").Preload("Seller.Address.SubDistrict.District.City")
+	table = table.Preload("ProductPhotos").Preload("Seller.Address")
 	table = table.Unscoped().Find(&products)
 	if table.Error != nil {
 		return nil, 0, 0, apperror.InternalServerError("cannot fetch products")
@@ -243,7 +243,7 @@ func (p *productVariantDetailRepository) SearchProducts(tx *gorm.DB, query *Sear
 	}
 	table = table.Offset((page - 1) * limit)
 
-	table = table.Preload("ProductPhotos").Preload("Seller.Address.SubDistrict.District.City")
+	table = table.Preload("ProductPhotos").Preload("Seller.Address")
 	table = table.Unscoped().Find(&products)
 	if table.Error != nil {
 		return nil, 0, 0, apperror.InternalServerError("cannot fetch products")
