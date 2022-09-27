@@ -12,10 +12,6 @@ import (
 type RouterConfig struct {
 	UserService            service.UserService
 	AuthService            service.AuthService
-	ProvinceService        service.ProvinceService
-	CityService            service.CityService
-	DistrictService        service.DistrictService
-	SubDistrictService     service.SubDistrictService
 	AddressService         service.AddressService
 	WalletService          service.WalletService
 	ProductCategoryService service.ProductCategoryService
@@ -35,10 +31,6 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	h := handler.New(&handler.Config{
 		UserService:            c.UserService,
 		AuthService:            c.AuthService,
-		ProvinceService:        c.ProvinceService,
-		CityService:            c.CityService,
-		DistrictService:        c.DistrictService,
-		SubDistrictService:     c.SubDistrictService,
 		AddressService:         c.AddressService,
 		ProductCategoryService: c.ProductCategoryService,
 		ProductService:         c.ProductService,
@@ -76,16 +68,14 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	}), h.GoogleSignIn)
 
 	// ADDRESS
-	r.GET("/provinces", h.GetProvinces)
-	r.GET("/provinces/:id/cities", h.GetCitiesByProvinceID)
-	r.GET("/cities/:id/districts", h.GetDistrictsByCityID)
-	r.GET("/districts/:id/sub-districts", h.GetSubDistrictsByCityID)
 	r.POST("/user/profiles/addresses", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.CreateAddressReq{}
 	}), h.CreateNewAddress)
 	r.PATCH("/user/profiles/addresses", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.UpdateAddressReq{}
 	}), h.UpdateAddress)
+	r.PATCH("/user/profiles/addresses/:id", middleware.AuthorizeJWTFor(model.UserRoleName), h.ChangeMainAddress)
+	r.GET("/user/profiles/addresses/main", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetUserMainAddress)
 	r.GET("/user/profiles/addresses", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetAddressesByUserID)
 
 	// CATEGORIES
@@ -130,6 +120,14 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	}), h.ValidateWalletPin)
 	r.GET("/user/wallet/status", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetWalletStatus)
 
+	// TOP UP WITH SEA LABS
+	r.POST("/user/wallet/top-up/sea-labs-pay", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
+		return &dto.TopUpWalletWithSeaLabsPayReq{}
+	}), h.TopUpWithSeaLabsPay)
+	r.POST("/user/wallet/top-up/sea-labs-pay/callback", middleware.RequestValidator(func() any {
+		return &dto.SeaLabsPayReq{}
+	}), h.TopUpWithSeaLabsPayCallback)
+
 	// SEA LABS ACCOUNT
 	r.POST("/user/sea-labs-pay/register", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.RegisterSeaLabsPayReq{}
@@ -142,6 +140,11 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	}), h.UpdateSeaLabsPayToMain)
 	r.POST("create-signature", middleware.RequestValidator(func() any { return &dto.SeaDealspayReq{} }), h.CreateSignature)
 	r.GET("/user/sea-labs-pay", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetSeaLabsPayAccount)
+
+	// PAY WITH SEA LABS
+	r.POST("/order/pay/sea-labs-pay", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
+		return &dto.PayWithSeaLabsPayReq{}
+	}), h.PayWithSeaLabsPay)
 
 	// CART ITEM
 	r.GET("/user/cart", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetCartItem)

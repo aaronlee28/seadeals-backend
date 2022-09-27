@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/go-redis/redis/v8"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
 	"seadeals-backend/model"
@@ -19,8 +20,9 @@ type WalletRepository interface {
 	GetTransactionsByUserID(tx *gorm.DB, userID uint) (*[]model.Transaction, error)
 	TransactionDetails(tx *gorm.DB, transactionID uint) (*model.Transaction, error)
 	PaginatedTransactions(tx *gorm.DB, q *Query, userID uint) (int, *[]model.Transaction, error)
-	WalletPin(tx *gorm.DB, userID uint, pin string) error
+	TopUp(tx *gorm.DB, wallet *model.Wallet, amount float64) (*model.Wallet, error)
 
+	WalletPin(tx *gorm.DB, userID uint, pin string) error
 	RequestChangePinByEmail(userID uint, key string, code string) error
 	ValidateRequestIsValid(userID uint, key string) error
 	ValidateRequestByEmailCodeIsValid(userID uint, req *dto.CodeKeyRequestByEmailReq) error
@@ -109,6 +111,15 @@ func (w *walletRepository) PaginatedTransactions(tx *gorm.DB, q *Query, userID u
 	}
 	totalLength := len(*trans)
 	return totalLength, trans, nil
+}
+
+func (w *walletRepository) TopUp(tx *gorm.DB, wallet *model.Wallet, amount float64) (*model.Wallet, error) {
+	wallet.Balance += amount
+	result := tx.Model(wallet).Clauses(clause.Returning{}).Updates(wallet)
+	if result.Error != nil {
+		return nil, apperror.InternalServerError("Cannot top up wallet")
+	}
+	return wallet, nil
 }
 
 func (w *walletRepository) WalletPin(tx *gorm.DB, userID uint, pin string) error {

@@ -7,16 +7,22 @@ import (
 	"os"
 	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
+	"time"
 )
 
 func (h *Handler) GoogleSignIn(ctx *gin.Context) {
 	value, _ := ctx.Get("payload")
 	googleLogin, _ := value.(*dto.GoogleLogin)
 	claims := jwt.MapClaims{}
-	_, err := jwt.ParseWithClaims(googleLogin.TokenID, &claims, nil)
+	_, _ = jwt.ParseWithClaims(googleLogin.TokenID, &claims, nil)
 
-	if claims["iss"].(string) != "https://accounts.google.com" && claims["email_verified"] == true {
+	timeNow := time.Now().Unix()
+	timeExp := int64(claims["exp"].(float64))
+	aud := claims["aud"].(string)
+	clientID := os.Getenv("GOOGLE_CLIENT_ID")
+	if claims["iss"].(string) != "https://accounts.google.com" || claims["email_verified"].(bool) != true || timeExp < timeNow || aud != clientID {
 		_ = ctx.Error(apperror.UnauthorizedError("Unauthorized token"))
+		return
 	}
 
 	user, err := h.userService.CheckGoogleAccount(claims["email"].(string))
