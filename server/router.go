@@ -74,6 +74,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.PATCH("/user/profiles/addresses", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.UpdateAddressReq{}
 	}), h.UpdateAddress)
+	r.PATCH("/user/profiles/addresses/:id", middleware.AuthorizeJWTFor(model.UserRoleName), h.ChangeMainAddress)
 	r.GET("/user/profiles/addresses", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetAddressesByUserID)
 
 	// CATEGORIES

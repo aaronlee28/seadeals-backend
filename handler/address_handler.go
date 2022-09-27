@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
+	"strconv"
 )
 
 func (h *Handler) CreateNewAddress(ctx *gin.Context) {
@@ -63,4 +64,24 @@ func (h *Handler) GetAddressesByUserID(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, dto.StatusOKResponse(result))
+}
+
+func (h *Handler) ChangeMainAddress(ctx *gin.Context) {
+	payload, _ := ctx.Get("user")
+	user, _ := payload.(dto.UserJWT)
+	userID := user.UserID
+
+	id, err := strconv.Atoi(ctx.Param("id"))
+	if err != nil {
+		_ = ctx.Error(apperror.BadRequestError("Invalid id format"))
+		return
+	}
+
+	address, err := h.addressService.ChangeMainAddress(uint(id), userID)
+	if err != nil {
+		_ = ctx.Error(apperror.UnauthorizedError("Failed to change main address"))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(address))
 }

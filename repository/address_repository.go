@@ -8,9 +8,10 @@ import (
 
 type AddressRepository interface {
 	CreateAddress(*gorm.DB, *model.Address) (*model.Address, error)
-	GetAddressesByUserID(*gorm.DB, uint) ([]*model.UserAddress, error)
+	GetAddressesByUserID(*gorm.DB, uint) ([]*model.Address, error)
 	GetAddressesByID(tx *gorm.DB, id, userID uint) (*model.Address, error)
 	UpdateAddress(*gorm.DB, *model.Address) (*model.Address, error)
+	ChangeMainAddress(tx *gorm.DB, ID, userID uint) (*model.Address, error)
 }
 
 type addressRepository struct{}
@@ -28,9 +29,9 @@ func (a *addressRepository) CreateAddress(tx *gorm.DB, newAddress *model.Address
 	return newAddress, result.Error
 }
 
-func (a *addressRepository) GetAddressesByUserID(tx *gorm.DB, userID uint) ([]*model.UserAddress, error) {
-	var addresses []*model.UserAddress
-	result := tx.Where("user_id = ?", userID).Preload("Address").Find(&addresses)
+func (a *addressRepository) GetAddressesByUserID(tx *gorm.DB, userID uint) ([]*model.Address, error) {
+	var addresses []*model.Address
+	result := tx.Where("user_id = ?", userID).Find(&addresses)
 	if result.Error != nil {
 		return nil, apperror.InternalServerError("cannot fetch addresses")
 	}
@@ -40,14 +41,9 @@ func (a *addressRepository) GetAddressesByUserID(tx *gorm.DB, userID uint) ([]*m
 
 func (a *addressRepository) GetAddressesByID(tx *gorm.DB, id, userID uint) (*model.Address, error) {
 	var address *model.Address
-	result := tx.First(&address, id)
+	result := tx.Where("user_id = ?", userID).First(&address, id)
 	if result.Error != nil {
 		return nil, apperror.InternalServerError("cannot fetch addresses")
-	}
-
-	result = tx.Where("address_id = ? AND user_id = ?", id, userID).First(&address.UserAddress)
-	if result.Error != nil {
-		return nil, apperror.InternalServerError("cannot fetch someone address")
 	}
 
 	return address, result.Error
@@ -60,4 +56,23 @@ func (a *addressRepository) UpdateAddress(tx *gorm.DB, newAddress *model.Address
 	}
 
 	return newAddress, result.Error
+}
+
+func (a *addressRepository) ChangeMainAddress(tx *gorm.DB, ID, userID uint) (*model.Address, error) {
+	ud := &model.Address{
+		ID:     ID,
+		IsMain: true,
+	}
+
+	result := tx.Model(&model.Address{}).Where("user_id = ? AND is_main = true", userID).Update("is_main", false)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	result = tx.Where("user_id = ?", userID).Updates(&ud).First(&ud, ID)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return ud, nil
 }
