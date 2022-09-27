@@ -184,10 +184,10 @@ func (h *Handler) GetWalletStatus(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, successResponse)
 }
 
-func (h *Handler) CreateTransaction(ctx *gin.Context) {
+func (h *Handler) CheckoutCart(ctx *gin.Context) {
 	user, exists := ctx.Get("user")
 	value, _ := ctx.Get("payload")
-	json, _ := value.(*dto.CreateOrderReq)
+	json, _ := value.(*dto.CheckoutCartReq)
 
 	if !exists {
 		_ = ctx.Error(apperror.BadRequestError("User is invalid"))
@@ -195,7 +195,7 @@ func (h *Handler) CreateTransaction(ctx *gin.Context) {
 	}
 	userID := user.(dto.UserJWT).UserID
 
-	result, err := h.walletService.CreateTransaction(userID)
+	result, err := h.walletService.CheckoutCart(userID, json)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, err)
 		return

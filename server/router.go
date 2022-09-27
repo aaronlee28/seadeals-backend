@@ -153,6 +153,6 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	}), h.DeleteCartItem)
 
 	//Payment
-	r.POST("/pay-with-wallet", middleware.AuthorizeJWTFor(model.UserRoleName), h.PayWithWallet)
+	r.POST("/checkout-cart", middleware.RequestValidator(func() any { return &dto.CheckoutCartReq{} }), middleware.AuthorizeJWTFor(model.UserRoleName), h.CheckoutCart)
 	return r
 }

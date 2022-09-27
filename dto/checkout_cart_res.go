@@ -2,7 +2,7 @@ package dto
 
 import "time"
 
-type TransactionRes struct {
+type CheckoutCartRes struct {
 	UserID        uint      `json:"user_id" binding:"required"`
 	TransactionID uint      `json:"transaction_id" binding:"required"`
 	Total         float64   `json:"total" binding:"required"`

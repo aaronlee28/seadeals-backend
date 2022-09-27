@@ -29,7 +29,14 @@ type WalletRepository interface {
 	ValidateWalletPin(tx *gorm.DB, userID uint, pin string) error
 	GetWalletStatus(tx *gorm.DB, userID uint) (string, error)
 	StepUpPassword(tx *gorm.DB, userID uint, password string) error
-	GetOrderItems(tx *gorm.DB, userID uint) ([]*model.OrderItem, error)
+	GetCartItem(tx *gorm.DB, cartID uint) (*model.CartItem, error)
+	GetVoucher(tx *gorm.DB, voucherCode string) (*model.Voucher, error)
+	CreateTransaction(tx *gorm.DB, userID uint, globalVoucherID *uint) (*model.Transaction, error)
+	CreateOrder(tx *gorm.DB, sellerID uint, voucherID *uint, transactionID uint, userID uint) (*model.Order, error)
+	CreateOrderItemAndRemoveFromCart(tx *gorm.DB, productVariantDetailID uint, product *model.Product, orderID uint, userID uint, quantity uint, subtotal float64, cartItem *model.CartItem) error
+	UpdateOrder(tx *gorm.DB, order *model.Order, total float64) error
+	UpdateTransaction(tx *gorm.DB, transaction *model.Transaction, total float64) error
+	UpdateStock(tx *gorm.DB, cartItem *model.CartItem, newStock uint) error
 }
 
 type walletRepository struct{}
@@ -320,17 +327,6 @@ func (w *walletRepository) StepUpPassword(tx *gorm.DB, userID uint, password str
 	return nil
 }
 
-func (w *walletRepository) GetOrderItems(tx *gorm.DB, userID uint) ([]*model.OrderItem, error) {
-	var orderItems []*model.OrderItem
-
-	result := tx.Preload("ProductVariantDetail.Product").Preload("Promotion").Where("user_id = ?", userID).Where("order_id is null").Find(&orderItems)
-	if result.Error != nil {
-		return nil, apperror.InternalServerError("cannot find order")
-	}
-
-	return orderItems, nil
-}
-
 func (w *walletRepository) UpdateWallet(tx *gorm.DB, userID uint, newBalance float64) error {
 	var wallet *model.Wallet
 
@@ -341,6 +337,116 @@ func (w *walletRepository) UpdateWallet(tx *gorm.DB, userID uint, newBalance flo
 	result2 := tx.Model(&wallet).Update("Balance", newBalance)
 	if result2.Error != nil {
 		return apperror.InternalServerError("Failed to update wallet")
+	}
+	return nil
+}
+
+func (w *walletRepository) GetCartItem(tx *gorm.DB, cartID uint) (*model.CartItem, error) {
+	var cartItem *model.CartItem
+
+	result := tx.Preload("ProductVariantDetail.Product").Where("id = ?", cartID).First(&cartItem)
+	if result.Error != nil {
+		return nil, apperror.InternalServerError("cannot find cart item")
+	}
+
+	return cartItem, nil
+}
+
+func (w *walletRepository) GetVoucher(tx *gorm.DB, voucherCode string) (*model.Voucher, error) {
+	var voucher *model.Voucher
+	if voucherCode == "" {
+		return nil, nil
+	}
+	result := tx.Where("code = ?", voucherCode).First(&voucher)
+	if result.Error != nil {
+		return nil, apperror.InternalServerError("cannot find voucher")
+	}
+	return voucher, nil
+}
+
+func (w *walletRepository) CreateOrderItemAndRemoveFromCart(tx *gorm.DB, productVariantDetailID uint, product *model.Product, orderID uint, userID uint, quantity uint, subtotal float64, cartItem *model.CartItem) error {
+	createOrderItem := &model.OrderItem{
+		ProductVariantDetailID: productVariantDetailID,
+		OrderID:                &orderID,
+		UserID:                 userID,
+		Quantity:               quantity,
+		Subtotal:               subtotal,
+	}
+	if product.Promotion != nil {
+		createOrderItem.PromotionID = &product.Promotion.ID
+	}
+	result := tx.Create(&createOrderItem)
+	if result.Error != nil {
+		return apperror.InternalServerError("Failed to create order")
+	}
+	result2 := tx.Delete(&cartItem)
+	if result2.Error != nil {
+		return apperror.InternalServerError("Failed to delete order")
+	}
+	return nil
+
+}
+func (w *walletRepository) CreateTransaction(tx *gorm.DB, userID uint, globalVoucherID *uint) (*model.Transaction, error) {
+	transaction := &model.Transaction{
+		UserID:        userID,
+		Total:         0,
+		PaymentMethod: "wallet",
+		VoucherID:     nil,
+		CreatedAt:     time.Time{},
+		UpdatedAt:     time.Time{},
+		Status:        "Waiting for seller",
+	}
+
+	if globalVoucherID != nil {
+		transaction.VoucherID = globalVoucherID
+	}
+	result := tx.Create(&transaction)
+	if result.Error != nil {
+		return nil, apperror.InternalServerError("Failed to create transaction")
+	}
+	return transaction, nil
+}
+func (w *walletRepository) CreateOrder(tx *gorm.DB, sellerID uint, voucherID *uint, transactionID uint, userID uint) (*model.Order, error) {
+	order := &model.Order{
+		SellerID:      sellerID,
+		VoucherID:     nil,
+		TransactionID: transactionID,
+		UserID:        userID,
+		Total:         0,
+	}
+	if voucherID != nil {
+		order.VoucherID = voucherID
+	}
+
+	result := tx.Create(&order)
+	if result.Error != nil {
+		return nil, apperror.InternalServerError("Failed to create order")
+	}
+
+	return order, nil
+}
+func (w *walletRepository) UpdateOrder(tx *gorm.DB, order *model.Order, total float64) error {
+	result := tx.Model(&order).Update("total", total)
+
+	if result.Error != nil {
+		return apperror.InternalServerError("failed to update order")
+	}
+	return nil
+}
+func (w *walletRepository) UpdateTransaction(tx *gorm.DB, transaction *model.Transaction, total float64) error {
+	result := tx.Model(&transaction).Update("total", total)
+
+	if result.Error != nil {
+		return apperror.InternalServerError("failed to update ")
+	}
+	return nil
+}
+
+func (w *walletRepository) UpdateStock(tx *gorm.DB, cartItem *model.CartItem, newStock uint) error {
+	result := tx.Model(&cartItem).Update("stock", newStock)
+
+	if result.Error != nil {
+		return apperror.InternalServerError("failed to update stock")
 	}
 	return nil
 }

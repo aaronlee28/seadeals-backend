@@ -20,9 +20,8 @@ func (_ *TransactionsRes) FromTransaction(t *model.Transaction) *TransactionsRes
 	return &TransactionsRes{
 		Id:            t.Id,
 		UserID:        t.UserID,
-		VoucherID:     t.VoucherID,
+		VoucherID:     *t.VoucherID,
 		Total:         t.Total,
-		PaymentType:   t.PaymentType,
 		PaymentMethod: t.PaymentMethod,
 		CreatedAt:     t.CreatedAt,
 		UpdatedAt:     t.UpdatedAt,
