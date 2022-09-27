@@ -240,35 +240,38 @@ func (u *userSeaPayAccountServ) TopUpWithSeaLabsPay(amount float64, userID uint,
 
 func (u *userSeaPayAccountServ) TopUpWithSeaLabsPayCallback(txnID uint, status string) (*model.WalletTransaction, error) {
 	tx := u.db.Begin()
-	topUpHolder, err := u.seaLabsPayTopUpHolderRepo.UpdateTopUpHolder(tx, txnID, status)
-	if err != nil {
+	topUpHolder, topUpHolderError := u.seaLabsPayTopUpHolderRepo.UpdateTopUpHolder(tx, txnID, status)
+	if topUpHolderError != nil {
 		tx.Rollback()
-		return nil, err
+		return nil, topUpHolderError
 	}
 
-	wallet, err := u.walletRepository.GetWalletByUserID(tx, topUpHolder.UserID)
-	if err != nil {
-		tx.Rollback()
-		return nil, err
-	}
+	var transaction *model.WalletTransaction
+	if status == dto.TXN_PAID {
+		wallet, err := u.walletRepository.GetWalletByUserID(tx, topUpHolder.UserID)
+		if err != nil {
+			tx.Rollback()
+			return nil, err
+		}
 
-	_, err = u.walletRepository.TopUp(tx, wallet, topUpHolder.Total)
-	if err != nil {
-		tx.Rollback()
-		return nil, err
-	}
+		_, err = u.walletRepository.TopUp(tx, wallet, topUpHolder.Total)
+		if err != nil {
+			tx.Rollback()
+			return nil, err
+		}
 
-	transactionModel := &model.WalletTransaction{
-		WalletID:      wallet.ID,
-		Total:         topUpHolder.Total,
-		PaymentMethod: "",
-		PaymentType:   "CREDIT",
-		Description:   "Top up from Sea Labs Pay",
-	}
-	transaction, err := u.walletTransactionRepo.CreateTransaction(tx, transactionModel)
-	if err != nil {
-		tx.Rollback()
-		return nil, err
+		transactionModel := &model.WalletTransaction{
+			WalletID:      wallet.ID,
+			Total:         topUpHolder.Total,
+			PaymentMethod: "",
+			PaymentType:   "CREDIT",
+			Description:   "Top up from Sea Labs Pay",
+		}
+		transaction, err = u.walletTransactionRepo.CreateTransaction(tx, transactionModel)
+		if err != nil {
+			tx.Rollback()
+			return nil, err
+		}
 	}
 
 	tx.Commit()

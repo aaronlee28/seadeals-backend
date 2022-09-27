@@ -8,3 +8,8 @@ type SeaLabsPayReq struct {
 	Status       string `json:"status" binding:"required"`
 	TxnID        string `json:"txn_id" binding:"required"`
 }
+
+const (
+	TXN_PAID   = "TXN_PAID"
+	TXN_FAILED = "TXN_FAILED"
+)
