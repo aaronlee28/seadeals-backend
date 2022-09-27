@@ -24,6 +24,7 @@ type userService struct {
 	db               *gorm.DB
 	userRepository   repository.UserRepository
 	userRoleRepo     repository.UserRoleRepository
+	addressRepo      repository.AddressRepository
 	walletRepository repository.WalletRepository
 	appConfig        config.AppConfig
 }
@@ -32,6 +33,7 @@ type UserServiceConfig struct {
 	DB               *gorm.DB
 	UserRepository   repository.UserRepository
 	UserRoleRepo     repository.UserRoleRepository
+	AddressRepo      repository.AddressRepository
 	WalletRepository repository.WalletRepository
 	AppConfig        config.AppConfig
 }
@@ -41,6 +43,7 @@ func NewUserService(c *UserServiceConfig) UserService {
 		db:               c.DB,
 		userRepository:   c.UserRepository,
 		userRoleRepo:     c.UserRoleRepo,
+		addressRepo:      c.AddressRepo,
 		walletRepository: c.WalletRepository,
 		appConfig:        c.AppConfig,
 	}
@@ -172,7 +175,7 @@ func (u *userService) RegisterAsSeller(req *dto.RegisterAsSellerReq) (*model.Sel
 		return nil, "", err
 	}
 
-	address, err := u.userRepository.GetUserMainAddress(tx, user.ID)
+	address, err := u.addressRepo.GetUserMainAddress(tx, user.ID)
 	if err != nil {
 		tx.Rollback()
 		return nil, "", err

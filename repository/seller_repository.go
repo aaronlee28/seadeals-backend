@@ -17,7 +17,7 @@ func NewSellerRepository() SellerRepository {
 
 func (r *sellerRepository) FindSellerByID(tx *gorm.DB, id uint) (*model.Seller, error) {
 	var seller *model.Seller
-	result := tx.Preload("Address").Preload("Address.SubDistrict.District.City.Province").First(&seller, id)
+	result := tx.Preload("Address").First(&seller, id)
 	if result.Error != nil {
 		return nil, result.Error
 	}

@@ -12,10 +12,6 @@ import (
 type RouterConfig struct {
 	UserService            service.UserService
 	AuthService            service.AuthService
-	ProvinceService        service.ProvinceService
-	CityService            service.CityService
-	DistrictService        service.DistrictService
-	SubDistrictService     service.SubDistrictService
 	AddressService         service.AddressService
 	WalletService          service.WalletService
 	ProductCategoryService service.ProductCategoryService
@@ -35,10 +31,6 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	h := handler.New(&handler.Config{
 		UserService:            c.UserService,
 		AuthService:            c.AuthService,
-		ProvinceService:        c.ProvinceService,
-		CityService:            c.CityService,
-		DistrictService:        c.DistrictService,
-		SubDistrictService:     c.SubDistrictService,
 		AddressService:         c.AddressService,
 		ProductCategoryService: c.ProductCategoryService,
 		ProductService:         c.ProductService,
@@ -76,16 +68,14 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	}), h.GoogleSignIn)
 
 	// ADDRESS
-	r.GET("/provinces", h.GetProvinces)
-	r.GET("/provinces/:id/cities", h.GetCitiesByProvinceID)
-	r.GET("/cities/:id/districts", h.GetDistrictsByCityID)
-	r.GET("/districts/:id/sub-districts", h.GetSubDistrictsByCityID)
 	r.POST("/user/profiles/addresses", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.CreateAddressReq{}
 	}), h.CreateNewAddress)
 	r.PATCH("/user/profiles/addresses", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.UpdateAddressReq{}
 	}), h.UpdateAddress)
+	r.PATCH("/user/profiles/addresses/:id", middleware.AuthorizeJWTFor(model.UserRoleName), h.ChangeMainAddress)
+	r.GET("/user/profiles/addresses/main", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetUserMainAddress)
 	r.GET("/user/profiles/addresses", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetAddressesByUserID)
 
 	// CATEGORIES
