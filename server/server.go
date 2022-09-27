@@ -28,6 +28,7 @@ func Init() {
 		DB:               db.Get(),
 		UserRepository:   userRepository,
 		UserRoleRepo:     userRoleRepository,
+		AddressRepo:      addressRepository,
 		WalletRepository: walletRepository,
 		AppConfig:        config.Config,
 	})

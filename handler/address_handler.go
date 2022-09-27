@@ -66,6 +66,20 @@ func (h *Handler) GetAddressesByUserID(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, dto.StatusOKResponse(result))
 }
 
+func (h *Handler) GetUserMainAddress(ctx *gin.Context) {
+	payload, _ := ctx.Get("user")
+	user, _ := payload.(dto.UserJWT)
+	userID := user.UserID
+
+	address, err := h.addressService.GetUserMainAddress(userID)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(address))
+}
+
 func (h *Handler) ChangeMainAddress(ctx *gin.Context) {
 	payload, _ := ctx.Get("user")
 	user, _ := payload.(dto.UserJWT)

@@ -11,6 +11,7 @@ type AddressService interface {
 	CreateAddress(*dto.CreateAddressReq, uint) (*model.Address, error)
 	UpdateAddress(*dto.UpdateAddressReq) (*model.Address, error)
 	GetAddressesByUserID(uint) ([]*dto.GetAddressRes, error)
+	GetUserMainAddress(userID uint) (*dto.GetAddressRes, error)
 	ChangeMainAddress(ID, userID uint) (*dto.GetAddressRes, error)
 }
 
@@ -88,6 +89,19 @@ func (a *addressService) GetAddressesByUserID(userID uint) ([]*dto.GetAddressRes
 	for _, addr := range addresses {
 		res = append(res, new(dto.GetAddressRes).From(addr))
 	}
+
+	tx.Commit()
+	return res, nil
+}
+
+func (a *addressService) GetUserMainAddress(userID uint) (*dto.GetAddressRes, error) {
+	tx := a.db.Begin()
+	addr, err := a.addressRepository.GetUserMainAddress(tx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	res := new(dto.GetAddressRes).From(addr)
 
 	tx.Commit()
 	return res, nil
