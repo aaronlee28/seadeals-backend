@@ -14,7 +14,6 @@ type UserRepository interface {
 	HasExistEmail(*gorm.DB, string) (bool, error)
 	GetUserByEmail(*gorm.DB, string) (*model.User, error)
 	GetUserByID(tx *gorm.DB, userID uint) (*model.User, error)
-	GetUserMainAddress(tx *gorm.DB, userID uint) (*model.Address, error)
 	MatchingCredential(*gorm.DB, string, string) (*model.User, error)
 	RegisterAsSeller(db *gorm.DB, model *model.Seller) (*model.Seller, error)
 }
@@ -93,19 +92,6 @@ func (u *userRepository) GetUserByID(tx *gorm.DB, userID uint) (*model.User, err
 	}
 
 	return user, nil
-}
-
-func (u *userRepository) GetUserMainAddress(tx *gorm.DB, userID uint) (*model.Address, error) {
-	var address *model.Address
-	result := tx.Model(&address).Where("user_id = ? AND is_main IS TRUE", userID).First(&address)
-	if result.Error != nil && result.Error != gorm.ErrRecordNotFound {
-		return nil, apperror.InternalServerError("Cannot use database to find Address")
-	}
-	if result.Error == gorm.ErrRecordNotFound {
-		return nil, apperror.NotFoundError("Please create address first before register as seller")
-	}
-
-	return address, nil
 }
 
 func (u *userRepository) MatchingCredential(tx *gorm.DB, email string, password string) (*model.User, error) {

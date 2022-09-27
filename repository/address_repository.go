@@ -11,6 +11,7 @@ type AddressRepository interface {
 	GetAddressesByUserID(*gorm.DB, uint) ([]*model.Address, error)
 	GetAddressesByID(tx *gorm.DB, id, userID uint) (*model.Address, error)
 	UpdateAddress(*gorm.DB, *model.Address) (*model.Address, error)
+	GetUserMainAddress(tx *gorm.DB, userID uint) (*model.Address, error)
 	ChangeMainAddress(tx *gorm.DB, ID, userID uint) (*model.Address, error)
 }
 
@@ -56,6 +57,19 @@ func (a *addressRepository) UpdateAddress(tx *gorm.DB, newAddress *model.Address
 	}
 
 	return newAddress, result.Error
+}
+
+func (a *addressRepository) GetUserMainAddress(tx *gorm.DB, userID uint) (*model.Address, error) {
+	var address *model.Address
+	result := tx.Model(&address).Where("user_id = ? AND is_main IS TRUE", userID).First(&address)
+	if result.Error != nil && result.Error != gorm.ErrRecordNotFound {
+		return nil, apperror.InternalServerError("Cannot use database to find Address")
+	}
+	if result.Error == gorm.ErrRecordNotFound {
+		return nil, apperror.NotFoundError("Main address not found")
+	}
+
+	return address, nil
 }
 
 func (a *addressRepository) ChangeMainAddress(tx *gorm.DB, ID, userID uint) (*model.Address, error) {
