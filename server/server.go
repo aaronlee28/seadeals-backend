@@ -12,6 +12,7 @@ func Init() {
 	userRepository := repository.NewUserRepository()
 	userRoleRepository := repository.NewUserRoleRepository()
 	walletRepository := repository.NewWalletRepository()
+	walletTransactionRepo := repository.NewWalletTransactionRepository()
 	refreshTokenRepository := repository.NewRefreshTokenRepo()
 	addressRepository := repository.NewAddressRepository()
 	productCategoryRepository := repository.NewProductCategoryRepository()
@@ -23,6 +24,7 @@ func Init() {
 	orderItemRepository := repository.NewCartItemRepository()
 	socialGraphRepo := repository.NewSocialGraphRepository()
 	productVarDetRepo := repository.NewProductVariantDetailRepository()
+	seaLabsPayTopUpHolderRepo := repository.NewSeaLabsPayTopUpHolderRepository()
 
 	userService := service.NewUserService(&service.UserServiceConfig{
 		DB:               db.Get(),
@@ -85,8 +87,11 @@ func Init() {
 	})
 
 	userSeaLabsPayAccountServ := service.NewUserSeaPayAccountServ(&service.UserSeaPayAccountServConfig{
-		DB:                    db.Get(),
-		UserSeaPayAccountRepo: userSeaLabsPayAccountRepo,
+		DB:                        db.Get(),
+		UserSeaPayAccountRepo:     userSeaLabsPayAccountRepo,
+		SeaLabsPayTopUpHolderRepo: seaLabsPayTopUpHolderRepo,
+		WalletRepository:          walletRepository,
+		WalletTransactionRepo:     walletTransactionRepo,
 	})
 
 	orderItemService := service.NewCartItemService(&service.CartItemServiceConfig{

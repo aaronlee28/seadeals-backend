@@ -9,7 +9,7 @@ import (
 )
 
 type UserSeaPayAccountRepo interface {
-	HasExistsSeaLabsPayAccountWith(*gorm.DB, uint, string) (bool, error)
+	HasExistsSeaLabsPayAccountWith(tx *gorm.DB, userID uint, accountNumber string) (bool, error)
 	RegisterSeaLabsPayAccount(tx *gorm.DB, req *dto.RegisterSeaLabsPayReq) (*model.UserSealabsPayAccount, error)
 	UpdateSeaLabsPayAccountToMain(tx *gorm.DB, req *dto.UpdateSeaLabsPayToMainReq) (*model.UserSealabsPayAccount, error)
 	GetSeaLabsPayAccountByUserID(tx *gorm.DB, userID uint) ([]*model.UserSealabsPayAccount, error)
