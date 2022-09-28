@@ -51,6 +51,7 @@ func AuthorizeJWTFor(role string) gin.HandlerFunc {
 			_ = json.Unmarshal(typeJson, &typeString)
 			if typeString != dto.JWTAccessToken {
 				c.AbortWithStatusJSON(unauthorizedError.StatusCode, unauthorizedError)
+				return
 			}
 
 			scopeJson, err := json.Marshal(claims["scope"])
