@@ -17,6 +17,7 @@ type idTokenClaims struct {
 	jwt.RegisteredClaims
 	User  *dto.UserJWT `json:"user"`
 	Scope string       `json:"scope"`
+	Type  string       `json:"type"`
 }
 
 func (h *Handler) RefreshAccessToken(c *gin.Context) {
@@ -83,6 +84,7 @@ func (h *Handler) RefreshAccessToken(c *gin.Context) {
 		},
 		User:  &user,
 		Scope: scope,
+		Type:  dto.JWTAccessToken,
 	}
 	newToken := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims)
 	tokenString, err := newToken.SignedString(config.Config.JWTSecret)
