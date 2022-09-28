@@ -45,3 +45,22 @@ func (h *Handler) UpdateVoucher(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, dto.StatusOKResponse(voucher))
 }
+
+func (h *Handler) DeleteVoucherByID(ctx *gin.Context) {
+	userJWT, _ := ctx.Get("user")
+	user := userJWT.(dto.UserJWT)
+
+	id, err := strconv.Atoi(ctx.Param("id"))
+	if err != nil {
+		_ = ctx.Error(apperror.BadRequestError("Invalid id format"))
+		return
+	}
+
+	isDeleted, err := h.voucherService.DeleteVoucherByID(uint(id), user.UserID)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(gin.H{"is_deleted": isDeleted}))
+}
