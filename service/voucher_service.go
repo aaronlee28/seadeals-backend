@@ -7,11 +7,13 @@ import (
 	"seadeals-backend/model"
 	"seadeals-backend/repository"
 	"strings"
+	"time"
 )
 
 type VoucherService interface {
-	CreateVoucher(req *dto.PostVoucherReq, userID uint) (*model.Voucher, error)
-	UpdateVoucher(req *dto.PatchVoucherReq, id, userID uint) (*model.Voucher, error)
+	CreateVoucher(req *dto.PostVoucherReq, userID uint) (*dto.GetVoucherRes, error)
+	UpdateVoucher(req *dto.PatchVoucherReq, id, userID uint) (*dto.GetVoucherRes, error)
+	DeleteVoucherByID(id, userID uint) (bool, error)
 }
 
 type voucherService struct {
@@ -53,7 +55,7 @@ func validateModel(v *model.Voucher, seller *model.Seller) error {
 	return nil
 }
 
-func (s *voucherService) CreateVoucher(req *dto.PostVoucherReq, userID uint) (*model.Voucher, error) {
+func (s *voucherService) CreateVoucher(req *dto.PostVoucherReq, userID uint) (*dto.GetVoucherRes, error) {
 	tx := s.db.Begin()
 
 	seller, err := s.sellerRepo.FindSellerByID(tx, req.SellerID)
@@ -90,20 +92,22 @@ func (s *voucherService) CreateVoucher(req *dto.PostVoucherReq, userID uint) (*m
 		return nil, err
 	}
 
+	res := new(dto.GetVoucherRes).From(voucher)
+
 	tx.Commit()
-	return voucher, nil
+	return res, nil
 }
 
-func (s *voucherService) UpdateVoucher(req *dto.PatchVoucherReq, id, userID uint) (*model.Voucher, error) {
+func (s *voucherService) UpdateVoucher(req *dto.PatchVoucherReq, id, userID uint) (*dto.GetVoucherRes, error) {
 	tx := s.db.Begin()
 
-	seller, err := s.sellerRepo.FindSellerByUserID(tx, userID)
+	v, err := s.voucherRepo.FindVoucherByID(tx, id)
 	if err != nil {
 		tx.Rollback()
 		return nil, err
 	}
 
-	if seller.UserID != userID {
+	if v.Seller.UserID != userID {
 		tx.Rollback()
 		return nil, apperror.UnauthorizedError("cannot update other shop voucher")
 	}
@@ -118,18 +122,54 @@ func (s *voucherService) UpdateVoucher(req *dto.PatchVoucherReq, id, userID uint
 		MinSpending: req.MinSpending,
 	}
 
-	err = validateModel(voucher, seller)
+	err = validateModel(voucher, v.Seller)
 	if err != nil {
 		tx.Rollback()
 		return nil, err
 	}
 
-	v, err := s.voucherRepo.UpdateVoucher(tx, voucher, id)
+	v, err = s.voucherRepo.UpdateVoucher(tx, voucher, id)
 	if err != nil {
 		tx.Callback()
 		return nil, err
 	}
 
+	res := new(dto.GetVoucherRes).From(v)
+
 	tx.Commit()
-	return v, nil
+	return res, nil
+}
+
+func (s *voucherService) DeleteVoucherByID(id, userID uint) (bool, error) {
+	tx := s.db.Begin()
+
+	v, err := s.voucherRepo.FindVoucherByID(tx, id)
+	if err != nil {
+		tx.Rollback()
+		return false, err
+	}
+
+	if v.Seller.User.ID != userID {
+		tx.Rollback()
+		return false, apperror.UnauthorizedError("cannot delete other shop voucher")
+	}
+
+	voucher, err := s.voucherRepo.FindVoucherByID(tx, id)
+	if err != nil {
+		tx.Rollback()
+		return false, err
+	}
+	if voucher.StartDate.Before(time.Now()) {
+		tx.Rollback()
+		return false, apperror.BadRequestError("cannot delete voucher that has been started")
+	}
+
+	isDeleted, err := s.voucherRepo.DeleteVoucherByID(tx, id)
+	if err != nil {
+		tx.Rollback()
+		return false, err
+	}
+
+	tx.Commit()
+	return isDeleted, nil
 }
