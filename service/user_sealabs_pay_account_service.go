@@ -4,6 +4,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"gorm.io/gorm"
 	"io"
@@ -93,25 +94,38 @@ func transactionToSeaLabsPay(accountNumber string, amount string, sign string, c
 		return "", 0, err
 	}
 	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
+		err2 := Body.Close()
+		if err2 != nil {
 			fmt.Println("Error Closing Client")
 		}
 	}(response.Body)
 
 	if response.StatusCode == http.StatusSeeOther {
-		redirectUrl, err := response.Location()
-		if err != nil {
-			return "", 0, err
+		redirectUrl, err2 := response.Location()
+		if err2 != nil {
+			return "", 0, err2
 		}
 
-		TxnID, error := strconv.ParseUint(redirectUrl.Query().Get("txn_id"), 10, 64)
-		if error != nil {
-			return "", 0, error
+		TxnID, err3 := strconv.ParseUint(redirectUrl.Query().Get("txn_id"), 10, 64)
+		if err3 != nil {
+			return "", 0, err3
 		}
 		return redirectUrl.String(), uint(TxnID), nil
+	} else {
+		type seaLabsPayError struct {
+			Code    string `json:"code"`
+			Message string `json:"message"`
+			Data    struct {
+			} `json:"data"`
+		}
+		var j seaLabsPayError
+		err = json.NewDecoder(response.Body).Decode(&j)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(j.Message)
+		return "", 0, apperror.BadRequestError(j.Message)
 	}
-	return "", 0, apperror.BadRequestError("Cannot send data to sea labs pay API")
 }
 
 func (u *userSeaPayAccountServ) CheckSeaLabsAccountExists(req *dto.CheckSeaLabsPayReq) (*dto.CheckSeaLabsPayRes, error) {

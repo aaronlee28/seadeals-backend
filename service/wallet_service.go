@@ -316,7 +316,7 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 	timeNow := time.Now()
 
 	if globalVoucher != nil {
-		if timeNow.After(globalVoucher.EndDate) {
+		if timeNow.After(globalVoucher.EndDate) || timeNow.Before(globalVoucher.StartDate) {
 			return nil, apperror.InternalServerError("Level 3 Voucher invalid")
 		}
 	}
@@ -351,7 +351,7 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 		var order *model.Order
 		var err6 error
 		if voucher != nil {
-			if timeNow.After(voucher.EndDate) {
+			if timeNow.After(voucher.EndDate) || timeNow.Before(voucher.StartDate) {
 				return nil, apperror.InternalServerError("Level 2 Voucher invalid")
 			}
 			order, err6 = w.walletRepository.CreateOrder(tx, item.SellerID, &voucher.ID, transaction.Id, userID)
