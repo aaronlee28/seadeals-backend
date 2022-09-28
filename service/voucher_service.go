@@ -33,6 +33,23 @@ func NewVoucherService(c *VoucherServiceConfig) VoucherService {
 	}
 }
 
+func validateRequest(req *dto.PostVoucherReq, seller *model.Seller) error {
+	username := seller.User.Username[:4]
+	req.Code = strings.ToUpper(username + req.Code)
+
+	req.AmountType = strings.ToLower(req.AmountType)
+	if req.AmountType != model.PercentageType && req.AmountType != model.NominalType {
+		req.AmountType = model.PercentageType
+	}
+
+	if req.AmountType == model.PercentageType {
+		if req.Amount > 100 {
+			return apperror.BadRequestError("percentage amount must be in range 1-100")
+		}
+	}
+	return nil
+}
+
 func (s *voucherService) CreateVoucher(req *dto.PostVoucherReq, userID uint) (*model.Voucher, error) {
 	tx := s.db.Begin()
 
@@ -47,11 +64,16 @@ func (s *voucherService) CreateVoucher(req *dto.PostVoucherReq, userID uint) (*m
 		return nil, apperror.UnauthorizedError("cannot add other shop voucher")
 	}
 
-	code := seller.User.Username + strings.ToUpper(req.Code)
+	err = validateRequest(req, seller)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
 	voucher := &model.Voucher{
 		SellerID:    req.SellerID,
 		Name:        req.Name,
-		Code:        code,
+		Code:        req.Code,
 		StartDate:   req.StartDate,
 		EndDate:     req.EndDate,
 		Quota:       req.Quota,

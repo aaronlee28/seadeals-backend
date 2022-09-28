@@ -5,6 +5,9 @@ import (
 	"time"
 )
 
+const PercentageType = "percentage"
+const NominalType = "nominal"
+
 type Voucher struct {
 	gorm.Model  `json:"-"`
 	ID          uint      `json:"id" gorm:"primaryKey"`
