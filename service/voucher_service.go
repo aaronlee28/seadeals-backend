@@ -7,6 +7,7 @@ import (
 	"seadeals-backend/model"
 	"seadeals-backend/repository"
 	"strings"
+	"time"
 )
 
 type VoucherService interface {
@@ -146,7 +147,17 @@ func (s *voucherService) DeleteVoucherByID(id, userID uint) (bool, error) {
 
 	if seller.UserID != userID {
 		tx.Rollback()
-		return false, apperror.UnauthorizedError("cannot update other shop voucher")
+		return false, apperror.UnauthorizedError("cannot delete other shop voucher")
+	}
+
+	voucher, err := s.voucherRepo.FindVoucherByID(tx, id)
+	if err != nil {
+		tx.Rollback()
+		return false, err
+	}
+	if voucher.StartDate.Before(time.Now()) {
+		tx.Rollback()
+		return false, apperror.BadRequestError("cannot delete voucher that has been started")
 	}
 
 	isDeleted, err := s.voucherRepo.DeleteVoucherByID(tx, id)
