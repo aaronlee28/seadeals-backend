@@ -37,6 +37,7 @@ func (s *sellerService) FindSellerByID(id uint) (*dto.GetSellerRes, error) {
 	tx := s.db.Begin()
 	seller, err := s.sellerRepo.FindSellerByID(tx, id)
 	if err != nil {
+		tx.Rollback()
 		return nil, err
 	}
 
@@ -44,6 +45,7 @@ func (s *sellerService) FindSellerByID(id uint) (*dto.GetSellerRes, error) {
 
 	averageReview, totalReview, err := s.reviewRepo.GetReviewsAvgAndCountBySellerID(tx, id)
 	if err != nil {
+		tx.Rollback()
 		return nil, err
 	}
 	res.TotalReviewer = uint(totalReview)
@@ -51,12 +53,14 @@ func (s *sellerService) FindSellerByID(id uint) (*dto.GetSellerRes, error) {
 
 	followers, err := s.socialGraphRepo.GetFollowerCountBySellerID(tx, seller.ID)
 	if err != nil {
+		tx.Rollback()
 		return nil, err
 	}
 	res.Followers = uint(followers)
 
 	following, err := s.socialGraphRepo.GetFollowingCountByUserID(tx, seller.UserID)
 	if err != nil {
+		tx.Rollback()
 		return nil, err
 	}
 	res.Following = uint(following)

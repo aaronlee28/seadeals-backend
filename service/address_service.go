@@ -98,6 +98,7 @@ func (a *addressService) GetUserMainAddress(userID uint) (*dto.GetAddressRes, er
 	tx := a.db.Begin()
 	addr, err := a.addressRepository.GetUserMainAddress(tx, userID)
 	if err != nil {
+		tx.Rollback()
 		return nil, err
 	}
 
@@ -111,6 +112,7 @@ func (a *addressService) ChangeMainAddress(ID, userID uint) (*dto.GetAddressRes,
 	tx := a.db.Begin()
 	addr, err := a.addressRepository.ChangeMainAddress(tx, ID, userID)
 	if err != nil {
+		tx.Rollback()
 		return nil, err
 	}
 	res := new(dto.GetAddressRes).From(addr)

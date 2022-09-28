@@ -2,6 +2,7 @@ package repository
 
 import (
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"seadeals-backend/apperror"
 	"seadeals-backend/model"
 )
@@ -9,6 +10,7 @@ import (
 type SocialGraphRepository interface {
 	GetFollowerCountBySellerID(tx *gorm.DB, sellerID uint) (int64, error)
 	GetFollowingCountByUserID(tx *gorm.DB, userID uint) (int64, error)
+	FollowToSeller(tx *gorm.DB, userID uint, sellerID uint) (*model.SocialGraph, error)
 }
 
 type socialGraphRepository struct{}
@@ -35,4 +37,29 @@ func (s *socialGraphRepository) GetFollowingCountByUserID(tx *gorm.DB, userID ui
 	}
 
 	return count, nil
+}
+
+func (s *socialGraphRepository) FollowToSeller(tx *gorm.DB, userID uint, sellerID uint) (*model.SocialGraph, error) {
+	var socialGraph = &model.SocialGraph{}
+	result := tx.Model(&socialGraph).Where("user_id = ?", userID).Where("seller_id = ?", sellerID).First(&socialGraph)
+	if result.Error != nil {
+		if result.Error != gorm.ErrRecordNotFound {
+			return nil, apperror.InternalServerError("Cannot find follow status on a seller")
+		}
+		socialGraph.UserID = userID
+		socialGraph.SellerID = sellerID
+		socialGraph.IsFollow = true
+		result = tx.Create(socialGraph)
+		if result.Error != nil {
+			return nil, apperror.InternalServerError("Cannot social graph an item")
+		}
+	}
+
+	currentFollow := !socialGraph.IsFollow
+	result = tx.Model(&socialGraph).Clauses(clause.Returning{}).Updates(map[string]interface{}{"is_follow": currentFollow})
+	if result.Error != nil {
+		return nil, apperror.InternalServerError("Cannot social graph an item")
+	}
+
+	return socialGraph, nil
 }

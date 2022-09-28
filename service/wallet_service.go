@@ -136,15 +136,18 @@ func (w *walletService) GetWalletTransactionsByUserID(q *dto.WalletTransactionsQ
 	tx := w.db.Begin()
 	wallet, err := w.walletRepository.GetWalletByUserID(tx, userID)
 	if err != nil {
+		tx.Rollback()
 		return nil, 0, 0, err
 	}
 
 	transactions, totalPage, totalData, err := w.walletTransRepo.GetTransactionsByWalletID(tx, q, wallet.ID)
 	if err != nil {
+		tx.Rollback()
 		return nil, 0, 0, err
 	}
 
 	if len(transactions) <= 0 {
+		tx.Rollback()
 		return nil, 0, 0, apperror.NotFoundError("No transactions were made")
 	}
 
@@ -274,6 +277,7 @@ func (w *walletService) ChangeWalletPinByEmail(userID uint, req *dto.ChangePinBy
 func (w *walletService) ValidateWalletPin(userID uint, pin string) (bool, error) {
 	tx := w.db.Begin()
 	if len(pin) != 6 {
+		tx.Rollback()
 		return false, apperror.BadRequestError("Pin has to be 6 digits long")
 	}
 
