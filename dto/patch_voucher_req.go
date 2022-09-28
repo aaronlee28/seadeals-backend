@@ -4,7 +4,7 @@ import "time"
 
 type PatchVoucherReq struct {
 	Name        string    `json:"name"`
-	StartDate   time.Time `json:"start_date" binding:"ltefield=EndDate,gte"`
+	StartDate   time.Time `json:"start_date" binding:"omitempty,ltefield=EndDate,gte"`
 	EndDate     time.Time `json:"end_date"`
 	Quota       int       `json:"quota" binding:"omitempty,gt=0"`
 	AmountType  string    `json:"amount_type"`
