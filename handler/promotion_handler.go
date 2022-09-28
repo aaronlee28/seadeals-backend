@@ -11,7 +11,7 @@ func (h *Handler) GetPromotion(ctx *gin.Context) {
 	user, _ := payload.(dto.UserJWT)
 	userID := user.UserID
 
-	result, err := h.promotionService.GetPromotionByID(userID)
+	result, err := h.promotionService.GetPromotionByUserID(userID)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, err)
 		return

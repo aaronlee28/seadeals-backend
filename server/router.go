@@ -114,6 +114,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.DELETE("/vouchers/:id", middleware.AuthorizeJWTFor(model.SellerRoleName), h.DeleteVoucherByID)
 
 	// PROMOTION
+	r.GET("/promotion-list", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetPromotion)
 
 	// WALLET
 	r.GET("/user-wallet", middleware.AuthorizeJWTFor(model.UserRoleName), h.WalletDataTransactions)

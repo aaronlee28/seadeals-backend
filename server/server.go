@@ -118,6 +118,8 @@ func Init() {
 	promotionService := service.NewPromotionService(&service.PromotionServiceConfig{
 		DB:                  db.Get(),
 		PromotionRepository: promotionRepository,
+		SellerRepo:          sellerRepository,
+		ProductRepo:         productRepository,
 	})
 	router := NewRouter(&RouterConfig{
 		UserService:            userService,
