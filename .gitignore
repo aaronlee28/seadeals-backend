@@ -2,3 +2,6 @@
 .idea
 .env
 dump.rdb
+.DS_Store
+.vscode
+

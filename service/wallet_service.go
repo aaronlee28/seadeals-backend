@@ -1,8 +1,6 @@
 package service
 
 import (
-	"github.com/mailjet/mailjet-apiv3-go"
-	"gorm.io/gorm"
 	"math"
 	"seadeals-backend/apperror"
 	"seadeals-backend/config"
@@ -12,6 +10,9 @@ import (
 	"seadeals-backend/repository"
 	"strconv"
 	"time"
+
+	"github.com/mailjet/mailjet-apiv3-go"
+	"gorm.io/gorm"
 )
 
 type WalletService interface {
@@ -416,7 +417,7 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 	}
 	//total transaction - voucher
 	//4. check user wallet balance is sufficient
-	user, err8 := w.walletRepository.GetWalletByUserID(tx, userID)
+	wallet, err8 := w.walletRepository.GetWalletByUserID(tx, userID)
 	if err8 != nil {
 		tx.Rollback()
 		return nil, err8
@@ -424,7 +425,7 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 	if globalVoucher != nil {
 		totalTransaction -= globalVoucher.Amount
 	}
-	if user.Balance-totalTransaction < 0 {
+	if wallet.Balance-totalTransaction < 0 {
 		return nil, apperror.InternalServerError("Insufficient Balance")
 	}
 	//5. update transaction
@@ -432,6 +433,13 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 	if err9 != nil {
 		tx.Rollback()
 		return nil, err9
+	}
+	if req.PaymentMethod == "wallet" {
+		err11 := w.walletRepository.CreateWalletTransaction(tx, userID, wallet.ID, transaction)
+		if err11 != nil {
+			tx.Rollback()
+			return nil, err11
+		}
 	}
 	//6. create response
 	transRes := dto.CheckoutCartRes{

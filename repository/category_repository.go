@@ -1,10 +1,11 @@
 package repository
 
 import (
-	"gorm.io/gorm"
 	"seadeals-backend/apperror"
 	"seadeals-backend/model"
 	"strconv"
+
+	"gorm.io/gorm"
 )
 
 type ProductCategoryRepository interface {
