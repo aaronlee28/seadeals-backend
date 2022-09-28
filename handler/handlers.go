@@ -16,8 +16,12 @@ type Handler struct {
 	orderItemService       service.CartItemService
 	refreshTokenService    service.RefreshTokenService
 	sealabsPayService      service.SealabsPayService
+<<<<<<< HEAD
 	favoriteService        service.FavoriteService
 	socialGraphService     service.SocialGraphService
+=======
+	voucherService         service.VoucherService
+>>>>>>> db82985306d0d3ff2d29a44cd126a360f46fbf8e
 }
 
 type Config struct {
@@ -34,8 +38,12 @@ type Config struct {
 	OrderItemService       service.CartItemService
 	RefreshTokenService    service.RefreshTokenService
 	SealabsPayService      service.SealabsPayService
+<<<<<<< HEAD
 	FavoriteService        service.FavoriteService
 	SocialGraphService     service.SocialGraphService
+=======
+	VoucherService         service.VoucherService
+>>>>>>> db82985306d0d3ff2d29a44cd126a360f46fbf8e
 }
 
 func New(config *Config) *Handler {
@@ -53,7 +61,11 @@ func New(config *Config) *Handler {
 		orderItemService:       config.OrderItemService,
 		refreshTokenService:    config.RefreshTokenService,
 		sealabsPayService:      config.SealabsPayService,
+<<<<<<< HEAD
 		favoriteService:        config.FavoriteService,
 		socialGraphService:     config.SocialGraphService,
+=======
+		voucherService:         config.VoucherService,
+>>>>>>> db82985306d0d3ff2d29a44cd126a360f46fbf8e
 	}
 }

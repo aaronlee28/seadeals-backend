@@ -23,8 +23,12 @@ type RouterConfig struct {
 	OrderItemService       service.CartItemService
 	RefreshTokenService    service.RefreshTokenService
 	SealabsPayService      service.SealabsPayService
+<<<<<<< HEAD
 	FavoriteService        service.FavoriteService
 	SocialGraphService     service.SocialGraphService
+=======
+	VoucherService         service.VoucherService
+>>>>>>> db82985306d0d3ff2d29a44cd126a360f46fbf8e
 }
 
 func NewRouter(c *RouterConfig) *gin.Engine {
@@ -44,8 +48,12 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		OrderItemService:       c.OrderItemService,
 		RefreshTokenService:    c.RefreshTokenService,
 		SealabsPayService:      c.SealabsPayService,
+<<<<<<< HEAD
 		FavoriteService:        c.FavoriteService,
 		SocialGraphService:     c.SocialGraphService,
+=======
+		VoucherService:         c.VoucherService,
+>>>>>>> db82985306d0d3ff2d29a44cd126a360f46fbf8e
 	})
 
 	r.Use(middleware.ErrorHandler)
@@ -111,6 +119,15 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.POST("/sellers", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.RegisterAsSellerReq{}
 	}), h.RegisterAsSeller)
+
+	// VOUCHER
+	r.POST("/vouchers", middleware.AuthorizeJWTFor(model.SellerRoleName), middleware.RequestValidator(func() any {
+		return &dto.PostVoucherReq{}
+	}), h.CreateVoucher)
+	r.PATCH("/vouchers/:id", middleware.AuthorizeJWTFor(model.SellerRoleName), middleware.RequestValidator(func() any {
+		return &dto.PatchVoucherReq{}
+	}), h.UpdateVoucher)
+	r.DELETE("/vouchers/:id", middleware.AuthorizeJWTFor(model.SellerRoleName), h.DeleteVoucherByID)
 
 	// WALLET
 	r.GET("/user-wallet", middleware.AuthorizeJWTFor(model.UserRoleName), h.WalletDataTransactions)

@@ -2,15 +2,16 @@ package repository
 
 import (
 	"context"
-	"github.com/go-redis/redis/v8"
-	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
 	"seadeals-backend/model"
 	"seadeals-backend/redisutils"
 	"strconv"
 	"time"
+
+	"github.com/go-redis/redis/v8"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type WalletRepository interface {
@@ -39,6 +40,7 @@ type WalletRepository interface {
 	UpdateOrder(tx *gorm.DB, order *model.Order, total float64) error
 	UpdateTransaction(tx *gorm.DB, transaction *model.Transaction, total float64) error
 	UpdateStock(tx *gorm.DB, cartItem *model.CartItem, newStock uint) error
+	CreateWalletTransaction(tx *gorm.DB, userID uint, walletID uint, transaction *model.Transaction) error
 }
 
 type walletRepository struct{}
@@ -458,6 +460,25 @@ func (w *walletRepository) UpdateStock(tx *gorm.DB, cartItem *model.CartItem, ne
 
 	if result.Error != nil {
 		return apperror.InternalServerError("failed to update stock")
+	}
+	return nil
+}
+
+func (w *walletRepository) CreateWalletTransaction(tx *gorm.DB, userID uint, walletID uint, transaction *model.Transaction) error {
+
+	walletTransaction := &model.WalletTransaction{
+		WalletID:      walletID,
+		TransactionID: &transaction.Id,
+		Total:         transaction.Total,
+		PaymentMethod: transaction.PaymentMethod,
+		PaymentType:   "DEBIT",
+		Description:   "Payment from wallet",
+		CreatedAt:     transaction.CreatedAt,
+	}
+
+	result := tx.Create(&walletTransaction)
+	if result.Error != nil {
+		return apperror.InternalServerError("Failed to create wallet transaction")
 	}
 	return nil
 }
