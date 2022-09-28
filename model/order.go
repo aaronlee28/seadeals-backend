@@ -14,5 +14,4 @@ type Order struct {
 	UserID        uint         `json:"user_id"`
 	User          *User        `json:"user"`
 	Total         float64      `json:"total"`
-	IsWithdrawn   bool         `json:"is_withdrawn"`
 }

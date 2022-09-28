@@ -13,6 +13,6 @@ type OrderItem struct {
 	Order                  *Order                `json:"order"`
 	UserID                 uint                  `json:"user_id"`
 	User                   *User                 `json:"user"`
-	Quantity               int                   `json:"quantity"`
+	Quantity               uint                  `json:"quantity"`
 	Subtotal               float64               `json:"subtotal"`
 }

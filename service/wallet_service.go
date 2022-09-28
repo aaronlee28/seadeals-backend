@@ -11,6 +11,7 @@ import (
 	"seadeals-backend/model"
 	"seadeals-backend/repository"
 	"strconv"
+	"time"
 )
 
 type WalletService interface {
@@ -24,6 +25,7 @@ type WalletService interface {
 	ChangeWalletPinByEmail(userID uint, req *dto.ChangePinByEmailReq) (*model.Wallet, error)
 	ValidateWalletPin(userID uint, pin string) (bool, error)
 	GetWalletStatus(userID uint) (string, error)
+	CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dto.CheckoutCartRes, error)
 }
 
 type walletService struct {
@@ -80,9 +82,8 @@ func (w *walletService) TransactionDetails(id uint) (*dto.TransactionDetailsRes,
 	}
 	transaction := &dto.TransactionDetailsRes{
 		Id:            t.Id,
-		VoucherID:     t.VoucherID,
+		VoucherID:     *t.VoucherID,
 		Total:         t.Total,
-		PaymentType:   t.PaymentType,
 		PaymentMethod: t.PaymentMethod,
 		CreatedAt:     t.CreatedAt,
 		UpdatedAt:     t.UpdatedAt,
@@ -271,4 +272,150 @@ func (w *walletService) GetWalletStatus(userID uint) (string, error) {
 
 	tx.Commit()
 	return status, nil
+}
+
+func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dto.CheckoutCartRes, error) {
+	tx := w.db.Begin()
+
+	globalVoucher, err := w.walletRepository.GetVoucher(tx, req.GlobalVoucherCode)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+	timeNow := time.Now()
+
+	if globalVoucher != nil {
+		if timeNow.After(globalVoucher.EndDate) {
+			return nil, apperror.InternalServerError("Level 3 Voucher invalid")
+		}
+	}
+
+	//create transaction
+	var transaction *model.Transaction
+	var err5 error
+	if globalVoucher != nil {
+		transaction, err5 = w.walletRepository.CreateTransaction(tx, userID, &globalVoucher.ID)
+		if err5 != nil {
+			tx.Rollback()
+			return nil, err5
+		}
+
+	} else {
+		transaction, err5 = w.walletRepository.CreateTransaction(tx, userID, nil)
+		if err5 != nil {
+			tx.Rollback()
+			return nil, err5
+		}
+	}
+
+	var totalTransaction float64
+
+	for _, item := range req.Cart {
+		//check voucher if voucher still valid
+		voucher, err1 := w.walletRepository.GetVoucher(tx, item.VoucherCode)
+		if err1 != nil {
+			tx.Rollback()
+			return nil, err1
+		}
+		var order *model.Order
+		var err6 error
+		if voucher != nil {
+			if timeNow.After(voucher.EndDate) {
+				return nil, apperror.InternalServerError("Level 2 Voucher invalid")
+			}
+			order, err6 = w.walletRepository.CreateOrder(tx, item.SellerID, &voucher.ID, transaction.Id, userID)
+
+			if err6 != nil {
+				tx.Rollback()
+				return nil, err6
+			}
+
+		} else {
+			//create order before order_items
+			order, err6 = w.walletRepository.CreateOrder(tx, item.SellerID, nil, transaction.Id, userID)
+
+			if err6 != nil {
+				tx.Rollback()
+				return nil, err6
+			}
+		}
+		var totalOrder float64
+
+		for _, id := range item.CartItemID {
+			var totalOrderItem float64
+			cartItem, err2 := w.walletRepository.GetCartItem(tx, id)
+			if err2 != nil {
+				tx.Rollback()
+				return nil, err2
+			}
+			//check stock
+			newStock := cartItem.ProductVariantDetail.Stock - cartItem.Quantity
+			if newStock < 0 {
+				tx.Rollback()
+				return nil, apperror.InternalServerError(cartItem.ProductVariantDetail.Product.Name + "is out of stock")
+			}
+			if cartItem.ProductVariantDetail.Product.Promotion != nil {
+				totalOrderItem = (cartItem.ProductVariantDetail.Price - cartItem.ProductVariantDetail.Product.Promotion.Amount) * float64(cartItem.Quantity)
+			} else {
+				totalOrderItem = cartItem.ProductVariantDetail.Price * float64(cartItem.Quantity)
+			}
+			totalOrder += totalOrderItem
+
+			// update stock
+			err10 := w.walletRepository.UpdateStock(tx, cartItem, newStock)
+			if err10 != nil {
+				tx.Rollback()
+				return nil, err10
+			}
+			//1. create order item and remove cart
+			err3 := w.walletRepository.CreateOrderItemAndRemoveFromCart(tx, cartItem.ProductVariantDetailID, cartItem.ProductVariantDetail.Product, order.ID, userID, cartItem.Quantity, totalOrderItem, cartItem)
+			if err3 != nil {
+				tx.Rollback()
+				return nil, err3
+			}
+
+		}
+		//order - voucher
+		if voucher != nil {
+			totalOrder -= voucher.Amount
+		}
+		//update order price with map - voucher id
+		err7 := w.walletRepository.UpdateOrder(tx, order, totalOrder)
+		if err7 != nil {
+			tx.Rollback()
+			return nil, err7
+		}
+
+		totalTransaction += totalOrder
+	}
+	//total transaction - voucher
+	//4. check user wallet balance is sufficient
+	user, err8 := w.walletRepository.GetWalletByUserID(tx, userID)
+	if err8 != nil {
+		tx.Rollback()
+		return nil, err8
+	}
+	if globalVoucher != nil {
+		totalTransaction -= globalVoucher.Amount
+	}
+	if user.Balance-totalTransaction < 0 {
+		return nil, apperror.InternalServerError("Insufficient Balance")
+	}
+	//5. update transaction
+	err9 := w.walletRepository.UpdateTransaction(tx, transaction, totalTransaction)
+	if err9 != nil {
+		tx.Rollback()
+		return nil, err9
+	}
+	//6. create response
+	transRes := dto.CheckoutCartRes{
+		UserID:        userID,
+		TransactionID: transaction.Id,
+		Total:         transaction.Total,
+		PaymentMethod: transaction.PaymentMethod,
+		CreatedAt:     transaction.CreatedAt,
+	}
+
+	tx.Commit()
+	return &transRes, nil
 }
