@@ -23,6 +23,7 @@ type RouterConfig struct {
 	OrderItemService       service.CartItemService
 	RefreshTokenService    service.RefreshTokenService
 	SealabsPayService      service.SealabsPayService
+	VoucherService         service.VoucherService
 }
 
 func NewRouter(c *RouterConfig) *gin.Engine {
@@ -42,6 +43,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		OrderItemService:       c.OrderItemService,
 		RefreshTokenService:    c.RefreshTokenService,
 		SealabsPayService:      c.SealabsPayService,
+		VoucherService:         c.VoucherService,
 	})
 
 	r.Use(middleware.ErrorHandler)
@@ -99,6 +101,11 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.POST("/sellers", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.RegisterAsSellerReq{}
 	}), h.RegisterAsSeller)
+
+	// VOUCHER
+	r.POST("/vouchers", middleware.AuthorizeJWTFor(model.SellerRoleName), middleware.RequestValidator(func() any {
+		return &dto.PostVoucherReq{}
+	}), h.CreateVoucher)
 
 	// WALLET
 	r.GET("/user-wallet", middleware.AuthorizeJWTFor(model.UserRoleName), h.WalletDataTransactions)
