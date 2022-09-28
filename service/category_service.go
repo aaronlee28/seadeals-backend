@@ -33,6 +33,7 @@ func (s *productCategoryService) FindAllProductCategories(query *model.CategoryQ
 
 	categories, totalPage, totalData, err := s.productCategoryRepository.FindAllProductCategories(tx, query)
 	if err != nil {
+		tx.Rollback()
 		return nil, 0, 0, apperror.InternalServerError(err.Error())
 	}
 

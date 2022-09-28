@@ -97,6 +97,6 @@ func (s *productVariantService) GetVariantPriceAfterPromotionByProductID(product
 		ProductVariant:   variants,
 	}
 
+	tx.Commit()
 	return &res, nil
-
 }
