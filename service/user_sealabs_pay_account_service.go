@@ -263,7 +263,7 @@ func (u *userSeaPayAccountServ) TopUpWithSeaLabsPayCallback(txnID uint, status s
 		transactionModel := &model.WalletTransaction{
 			WalletID:      wallet.ID,
 			Total:         topUpHolder.Total,
-			PaymentMethod: "",
+			PaymentMethod: dto.SEA_LABS_PAY,
 			PaymentType:   "CREDIT",
 			Description:   "Top up from Sea Labs Pay",
 		}

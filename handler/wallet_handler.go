@@ -5,7 +5,9 @@ import (
 	"net/http"
 	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
+	"seadeals-backend/helper"
 	"seadeals-backend/repository"
+	"strconv"
 )
 
 func (h *Handler) WalletDataTransactions(ctx *gin.Context) {
@@ -54,6 +56,34 @@ func (h *Handler) PaginatedTransactions(ctx *gin.Context) {
 	}
 	successResponse := dto.StatusOKResponse(result)
 	ctx.JSON(http.StatusOK, successResponse)
+}
+
+func (h *Handler) GetWalletTransactions(ctx *gin.Context) {
+	payload, _ := ctx.Get("user")
+	user, _ := payload.(dto.UserJWT)
+	userID := user.UserID
+
+	query := &dto.WalletTransactionsQuery{
+		SortBy: helper.GetQuery(ctx, "sortBy", ""),
+		Sort:   helper.GetQuery(ctx, "sort", ""),
+		Limit:  helper.GetQuery(ctx, "limit", "10"),
+		Page:   helper.GetQuery(ctx, "page", "1"),
+	}
+	limit, _ := strconv.ParseUint(query.Limit, 10, 64)
+	if limit == 0 {
+		limit = 20
+	}
+	page, _ := strconv.ParseUint(query.Page, 10, 64)
+	if page == 0 {
+		page = 1
+	}
+
+	result, totalPage, totalData, err := h.walletService.GetWalletTransactionsByUserID(query, userID)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(gin.H{"transactions": result, "total_data": totalData, "total_page": totalPage, "current_data": page, "limit": limit}))
 }
 
 func (h *Handler) WalletPin(ctx *gin.Context) {
