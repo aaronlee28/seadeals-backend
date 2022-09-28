@@ -23,12 +23,9 @@ type RouterConfig struct {
 	OrderItemService       service.CartItemService
 	RefreshTokenService    service.RefreshTokenService
 	SealabsPayService      service.SealabsPayService
-<<<<<<< HEAD
 	FavoriteService        service.FavoriteService
 	SocialGraphService     service.SocialGraphService
-=======
 	VoucherService         service.VoucherService
->>>>>>> db82985306d0d3ff2d29a44cd126a360f46fbf8e
 }
 
 func NewRouter(c *RouterConfig) *gin.Engine {
@@ -48,12 +45,9 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		OrderItemService:       c.OrderItemService,
 		RefreshTokenService:    c.RefreshTokenService,
 		SealabsPayService:      c.SealabsPayService,
-<<<<<<< HEAD
 		FavoriteService:        c.FavoriteService,
 		SocialGraphService:     c.SocialGraphService,
-=======
 		VoucherService:         c.VoucherService,
->>>>>>> db82985306d0d3ff2d29a44cd126a360f46fbf8e
 	})
 
 	r.Use(middleware.ErrorHandler)
