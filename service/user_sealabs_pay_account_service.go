@@ -90,7 +90,6 @@ func transactionToSeaLabsPay(accountNumber string, amount string, sign string, c
 	req.Header.Add("Content-Length", strconv.Itoa(len(data.Encode())))
 	response, err := client.Do(req)
 	if err != nil {
-		fmt.Println("dua")
 		return "", 0, err
 	}
 	defer func(Body io.ReadCloser) {

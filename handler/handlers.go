@@ -19,6 +19,7 @@ type Handler struct {
 	favoriteService        service.FavoriteService
 	socialGraphService     service.SocialGraphService
 	voucherService         service.VoucherService
+	promotionService       service.PromotionService
 }
 
 type Config struct {
@@ -38,6 +39,7 @@ type Config struct {
 	FavoriteService        service.FavoriteService
 	SocialGraphService     service.SocialGraphService
 	VoucherService         service.VoucherService
+	PromotionService       service.PromotionService
 }
 
 func New(config *Config) *Handler {
@@ -58,5 +60,6 @@ func New(config *Config) *Handler {
 		favoriteService:        config.FavoriteService,
 		socialGraphService:     config.SocialGraphService,
 		voucherService:         config.VoucherService,
+		promotionService:       config.PromotionService,
 	}
 }
