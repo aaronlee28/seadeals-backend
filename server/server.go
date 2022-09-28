@@ -25,6 +25,7 @@ func Init() {
 	socialGraphRepo := repository.NewSocialGraphRepository()
 	productVarDetRepo := repository.NewProductVariantDetailRepository()
 	seaLabsPayTopUpHolderRepo := repository.NewSeaLabsPayTopUpHolderRepository()
+	favoriteRepository := repository.NewFavoriteRepository()
 	voucherRepo := repository.NewVoucherRepository()
 	promotionRepository := repository.NewPromotionRepository()
 
@@ -106,8 +107,19 @@ func Init() {
 		DB:               db.Get(),
 		RefreshTokenRepo: refreshTokenRepository,
 	})
+
 	sealabsPayService := service.NewSealabsPayService(&service.SealabsServiceConfig{
 		DB: db.Get(),
+	})
+
+	favoriteService := service.NewFavoriteService(&service.FavoriteServiceConfig{
+		DB:                 db.Get(),
+		FavoriteRepository: favoriteRepository,
+	})
+
+	socialGraphService := service.NewSocialGraphService(&service.SocialGraphServiceConfig{
+		DB:                    db.Get(),
+		SocialGraphRepository: socialGraphRepo,
 	})
 
 	voucherService := service.NewVoucherService(&service.VoucherServiceConfig{
@@ -135,6 +147,8 @@ func Init() {
 		OrderItemService:       orderItemService,
 		RefreshTokenService:    refreshTokenService,
 		SealabsPayService:      sealabsPayService,
+		FavoriteService:        favoriteService,
+		SocialGraphService:     socialGraphService,
 		VoucherService:         voucherService,
 		PromotionService:       promotionService,
 	})

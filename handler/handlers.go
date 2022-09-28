@@ -16,6 +16,8 @@ type Handler struct {
 	orderItemService       service.CartItemService
 	refreshTokenService    service.RefreshTokenService
 	sealabsPayService      service.SealabsPayService
+	favoriteService        service.FavoriteService
+	socialGraphService     service.SocialGraphService
 	voucherService         service.VoucherService
 	promotionService       service.PromotionService
 }
@@ -34,6 +36,8 @@ type Config struct {
 	OrderItemService       service.CartItemService
 	RefreshTokenService    service.RefreshTokenService
 	SealabsPayService      service.SealabsPayService
+	FavoriteService        service.FavoriteService
+	SocialGraphService     service.SocialGraphService
 	VoucherService         service.VoucherService
 	PromotionService       service.PromotionService
 }
@@ -53,6 +57,8 @@ func New(config *Config) *Handler {
 		orderItemService:       config.OrderItemService,
 		refreshTokenService:    config.RefreshTokenService,
 		sealabsPayService:      config.SealabsPayService,
+		favoriteService:        config.FavoriteService,
+		socialGraphService:     config.SocialGraphService,
 		voucherService:         config.VoucherService,
 		promotionService:       config.PromotionService,
 	}
