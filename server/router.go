@@ -104,6 +104,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.GET("/user-wallet", middleware.AuthorizeJWTFor(model.UserRoleName), h.WalletDataTransactions)
 	r.GET("/transaction-details", middleware.RequestValidator(func() any { return &dto.TransactionDetailsReq{} }), middleware.AuthorizeJWTFor("user"), h.TransactionDetails)
 	r.GET("/paginated-transaction", middleware.AuthorizeJWTFor(model.UserRoleName), h.PaginatedTransactions)
+	r.GET("/user/wallet/transactions", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetWalletTransactions)
 	r.PATCH("/wallet-pin", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any { return &dto.PinReq{} }), h.WalletPin)
 	r.POST("/wallet/pin-by-email/", middleware.AuthorizeJWTFor(model.UserRoleName), h.RequestWalletChangeByEmail)
 	r.POST("/wallet/validator/pin-by-email", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {

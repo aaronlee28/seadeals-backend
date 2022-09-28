@@ -18,12 +18,15 @@ type WalletService interface {
 	UserWalletData(id uint) (*dto.WalletDataRes, error)
 	TransactionDetails(id uint) (*dto.TransactionDetailsRes, error)
 	PaginatedTransactions(q *repository.Query, userID uint) (*dto.PaginatedTransactionsRes, error)
+	GetWalletTransactionsByUserID(q *dto.WalletTransactionsQuery, userID uint) ([]*model.WalletTransaction, int64, int64, error)
+
 	WalletPin(userID uint, pin string) error
 	RequestPinChangeWithEmail(userID uint) (*mailjet.ResultsV31, string, error)
 	ValidateRequestIsValid(userID uint, key string) (string, error)
 	ValidateCodeToRequestByEmail(userID uint, req *dto.CodeKeyRequestByEmailReq) (string, error)
 	ChangeWalletPinByEmail(userID uint, req *dto.ChangePinByEmailReq) (*model.Wallet, error)
 	ValidateWalletPin(userID uint, pin string) (bool, error)
+
 	GetWalletStatus(userID uint) (string, error)
 	CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dto.CheckoutCartRes, error)
 }
@@ -32,12 +35,14 @@ type walletService struct {
 	db               *gorm.DB
 	walletRepository repository.WalletRepository
 	userRepository   repository.UserRepository
+	walletTransRepo  repository.WalletTransactionRepository
 }
 
 type WalletServiceConfig struct {
 	DB               *gorm.DB
 	WalletRepository repository.WalletRepository
 	UserRepository   repository.UserRepository
+	WalletTransRepo  repository.WalletTransactionRepository
 }
 
 func NewWalletService(c *WalletServiceConfig) WalletService {
@@ -45,6 +50,7 @@ func NewWalletService(c *WalletServiceConfig) WalletService {
 		db:               c.DB,
 		walletRepository: c.WalletRepository,
 		userRepository:   c.UserRepository,
+		walletTransRepo:  c.WalletTransRepo,
 	}
 }
 
@@ -124,6 +130,26 @@ func (w *walletService) PaginatedTransactions(q *repository.Query, userID uint) 
 
 	tx.Commit()
 	return &paginatedTransactions, nil
+}
+
+func (w *walletService) GetWalletTransactionsByUserID(q *dto.WalletTransactionsQuery, userID uint) ([]*model.WalletTransaction, int64, int64, error) {
+	tx := w.db.Begin()
+	wallet, err := w.walletRepository.GetWalletByUserID(tx, userID)
+	if err != nil {
+		return nil, 0, 0, err
+	}
+
+	transactions, totalPage, totalData, err := w.walletTransRepo.GetTransactionsByWalletID(tx, q, wallet.ID)
+	if err != nil {
+		return nil, 0, 0, err
+	}
+
+	if len(transactions) <= 0 {
+		return nil, 0, 0, apperror.NotFoundError("No transactions were made")
+	}
+
+	tx.Commit()
+	return transactions, totalPage, totalData, nil
 }
 
 func (w *walletService) WalletPin(userID uint, pin string) error {
