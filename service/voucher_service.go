@@ -11,6 +11,7 @@ import (
 
 type VoucherService interface {
 	CreateVoucher(req *dto.PostVoucherReq, userID uint) (*model.Voucher, error)
+	UpdateVoucher(req *dto.PatchVoucherReq, id, userID uint) (*model.Voucher, error)
 }
 
 type voucherService struct {
@@ -33,17 +34,19 @@ func NewVoucherService(c *VoucherServiceConfig) VoucherService {
 	}
 }
 
-func validateRequest(req *dto.PostVoucherReq, seller *model.Seller) error {
-	username := seller.User.Username[:4]
-	req.Code = strings.ToUpper(username + req.Code)
-
-	req.AmountType = strings.ToLower(req.AmountType)
-	if req.AmountType != model.PercentageType && req.AmountType != model.NominalType {
-		req.AmountType = model.PercentageType
+func validateModel(v *model.Voucher, seller *model.Seller) error {
+	if v.Code != "" {
+		username := seller.User.Username[:4]
+		v.Code = strings.ToUpper(username + v.Code)
 	}
 
-	if req.AmountType == model.PercentageType {
-		if req.Amount > 100 {
+	v.AmountType = strings.ToLower(v.AmountType)
+	if v.AmountType != model.PercentageType && v.AmountType != model.NominalType {
+		v.AmountType = model.NominalType
+	}
+
+	if v.AmountType == model.PercentageType {
+		if v.Amount > 100 {
 			return apperror.BadRequestError("percentage amount must be in range 1-100")
 		}
 	}
@@ -64,12 +67,6 @@ func (s *voucherService) CreateVoucher(req *dto.PostVoucherReq, userID uint) (*m
 		return nil, apperror.UnauthorizedError("cannot add other shop voucher")
 	}
 
-	err = validateRequest(req, seller)
-	if err != nil {
-		tx.Rollback()
-		return nil, err
-	}
-
 	voucher := &model.Voucher{
 		SellerID:    req.SellerID,
 		Name:        req.Name,
@@ -82,6 +79,11 @@ func (s *voucherService) CreateVoucher(req *dto.PostVoucherReq, userID uint) (*m
 		MinSpending: req.MinSpending,
 	}
 
+	err = validateModel(voucher, seller)
+	if err != nil {
+		return nil, apperror.BadRequestError(err.Error())
+	}
+
 	voucher, err = s.voucherRepo.CreateVoucher(tx, voucher)
 	if err != nil {
 		tx.Rollback()
@@ -90,4 +92,44 @@ func (s *voucherService) CreateVoucher(req *dto.PostVoucherReq, userID uint) (*m
 
 	tx.Commit()
 	return voucher, nil
+}
+
+func (s *voucherService) UpdateVoucher(req *dto.PatchVoucherReq, id, userID uint) (*model.Voucher, error) {
+	tx := s.db.Begin()
+
+	seller, err := s.sellerRepo.FindSellerByUserID(tx, userID)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	if seller.UserID != userID {
+		tx.Rollback()
+		return nil, apperror.UnauthorizedError("cannot update other shop voucher")
+	}
+
+	voucher := &model.Voucher{
+		Name:        req.Name,
+		StartDate:   req.StartDate,
+		EndDate:     req.EndDate,
+		Quota:       req.Quota,
+		AmountType:  req.AmountType,
+		Amount:      req.Amount,
+		MinSpending: req.MinSpending,
+	}
+
+	err = validateModel(voucher, seller)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	v, err := s.voucherRepo.UpdateVoucher(tx, voucher, id)
+	if err != nil {
+		tx.Callback()
+		return nil, err
+	}
+
+	tx.Commit()
+	return v, nil
 }
