@@ -24,6 +24,7 @@ type RouterConfig struct {
 	RefreshTokenService    service.RefreshTokenService
 	SealabsPayService      service.SealabsPayService
 	VoucherService         service.VoucherService
+	PromotionService       service.PromotionService
 }
 
 func NewRouter(c *RouterConfig) *gin.Engine {
@@ -44,6 +45,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		RefreshTokenService:    c.RefreshTokenService,
 		SealabsPayService:      c.SealabsPayService,
 		VoucherService:         c.VoucherService,
+		PromotionService:       c.PromotionService,
 	})
 
 	r.Use(middleware.ErrorHandler)
@@ -110,9 +112,11 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		return &dto.PatchVoucherReq{}
 	}), h.UpdateVoucher)
 
+	// PROMOTION
+
 	// WALLET
 	r.GET("/user-wallet", middleware.AuthorizeJWTFor(model.UserRoleName), h.WalletDataTransactions)
-	r.GET("/transaction-details", middleware.RequestValidator(func() any { return &dto.TransactionDetailsReq{} }), middleware.AuthorizeJWTFor("user"), h.TransactionDetails)
+	r.POST("/transaction-details", middleware.RequestValidator(func() any { return &dto.TransactionDetailsReq{} }), middleware.AuthorizeJWTFor("user"), h.TransactionDetails)
 	r.GET("/paginated-transaction", middleware.AuthorizeJWTFor(model.UserRoleName), h.PaginatedTransactions)
 	r.GET("/user/wallet/transactions", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetWalletTransactions)
 	r.PATCH("/wallet-pin", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any { return &dto.PinReq{} }), h.WalletPin)

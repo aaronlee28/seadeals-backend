@@ -17,6 +17,7 @@ type Handler struct {
 	refreshTokenService    service.RefreshTokenService
 	sealabsPayService      service.SealabsPayService
 	voucherService         service.VoucherService
+	promotionService       service.PromotionService
 }
 
 type Config struct {
@@ -34,6 +35,7 @@ type Config struct {
 	RefreshTokenService    service.RefreshTokenService
 	SealabsPayService      service.SealabsPayService
 	VoucherService         service.VoucherService
+	PromotionService       service.PromotionService
 }
 
 func New(config *Config) *Handler {
@@ -52,5 +54,6 @@ func New(config *Config) *Handler {
 		refreshTokenService:    config.RefreshTokenService,
 		sealabsPayService:      config.SealabsPayService,
 		voucherService:         config.VoucherService,
+		promotionService:       config.PromotionService,
 	}
 }
