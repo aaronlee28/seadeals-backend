@@ -25,6 +25,7 @@ func Init() {
 	socialGraphRepo := repository.NewSocialGraphRepository()
 	productVarDetRepo := repository.NewProductVariantDetailRepository()
 	seaLabsPayTopUpHolderRepo := repository.NewSeaLabsPayTopUpHolderRepository()
+	voucherRepo := repository.NewVoucherRepository()
 
 	userService := service.NewUserService(&service.UserServiceConfig{
 		DB:               db.Get(),
@@ -106,6 +107,13 @@ func Init() {
 	sealabsPayService := service.NewSealabsPayService(&service.SealabsServiceConfig{
 		DB: db.Get(),
 	})
+
+	voucherService := service.NewVoucherService(&service.VoucherServiceConfig{
+		DB:          db.Get(),
+		VoucherRepo: voucherRepo,
+		SellerRepo:  sellerRepository,
+	})
+
 	router := NewRouter(&RouterConfig{
 		UserService:            userService,
 		AuthService:            authService,
@@ -120,6 +128,7 @@ func Init() {
 		OrderItemService:       orderItemService,
 		RefreshTokenService:    refreshTokenService,
 		SealabsPayService:      sealabsPayService,
+		VoucherService:         voucherService,
 	})
 	log.Fatalln(router.Run(":" + config.Config.Port))
 }
