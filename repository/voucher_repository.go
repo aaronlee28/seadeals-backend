@@ -11,6 +11,7 @@ import (
 type VoucherRepository interface {
 	CreateVoucher(tx *gorm.DB, v *model.Voucher) (*model.Voucher, error)
 	UpdateVoucher(tx *gorm.DB, v *model.Voucher, id uint) (*model.Voucher, error)
+	DeleteVoucherByID(tx *gorm.DB, id uint) (bool, error)
 }
 
 type voucherRepository struct{}
@@ -34,4 +35,13 @@ func (r *voucherRepository) UpdateVoucher(tx *gorm.DB, v *model.Voucher, id uint
 		return nil, apperror.NotFoundError("voucher not found error")
 	}
 	return updatedVoucher, result.Error
+}
+
+func (r *voucherRepository) DeleteVoucherByID(tx *gorm.DB, id uint) (bool, error) {
+	var deletedVoucher *model.Voucher
+	result := tx.Delete(&deletedVoucher, id)
+	if result.RowsAffected == 0 {
+		return false, apperror.NotFoundError("voucher not found error")
+	}
+	return true, result.Error
 }

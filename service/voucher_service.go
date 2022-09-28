@@ -12,6 +12,7 @@ import (
 type VoucherService interface {
 	CreateVoucher(req *dto.PostVoucherReq, userID uint) (*model.Voucher, error)
 	UpdateVoucher(req *dto.PatchVoucherReq, id, userID uint) (*model.Voucher, error)
+	DeleteVoucherByID(id, userID uint) (bool, error)
 }
 
 type voucherService struct {
@@ -132,4 +133,28 @@ func (s *voucherService) UpdateVoucher(req *dto.PatchVoucherReq, id, userID uint
 
 	tx.Commit()
 	return v, nil
+}
+
+func (s *voucherService) DeleteVoucherByID(id, userID uint) (bool, error) {
+	tx := s.db.Begin()
+
+	seller, err := s.sellerRepo.FindSellerByUserID(tx, userID)
+	if err != nil {
+		tx.Rollback()
+		return false, err
+	}
+
+	if seller.UserID != userID {
+		tx.Rollback()
+		return false, apperror.UnauthorizedError("cannot update other shop voucher")
+	}
+
+	isDeleted, err := s.voucherRepo.DeleteVoucherByID(tx, id)
+	if err != nil {
+		tx.Rollback()
+		return false, err
+	}
+
+	tx.Commit()
+	return isDeleted, nil
 }
