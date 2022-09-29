@@ -15,6 +15,8 @@ const (
 	StatusVoucherDefault = ""
 )
 
+var MonthVoucherDefault = uint(time.Now().Month())
+
 const (
 	StatusUpcoming = "upcoming"
 	StatusOnGoing  = "ongoing"
@@ -27,6 +29,7 @@ type VoucherQueryParam struct {
 	Limit  uint
 	Page   uint
 	Status string
+	Month  uint
 }
 
 type Voucher struct {

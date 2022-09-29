@@ -75,6 +75,10 @@ func (r *voucherRepository) FindVoucherBySellerID(tx *gorm.DB, sellerID uint, qp
 		queryDB = tx.Where("end_date < ?", time.Now())
 	}
 
+	if qp.Month != 0 {
+		queryDB = queryDB.Where("extract (month from start_date) = ? OR extract (month from end_date) = ?", qp.Month, qp.Month)
+	}
+
 	var vouchers []*model.Voucher
 	result := queryDB.Limit(int(qp.Limit)).Offset(int(offset)).Where("seller_id = ?", sellerID).Preload("Seller.User").Order(orderStmt).Find(&vouchers)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
