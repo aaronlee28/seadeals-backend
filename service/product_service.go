@@ -11,7 +11,7 @@ import (
 )
 
 type ProductService interface {
-	FindProductDetailBySlug(slug string) (*model.Product, error)
+	FindProductDetailBySlug(slug string, userID uint) (*model.Product, error)
 	FindSimilarProducts(productID uint) ([]*dto.ProductRes, error)
 	SearchRecommendProduct(q *repository.SearchQuery) (*dto.SearchedSortFilterProduct, error)
 	GetProductsBySellerID(query *dto.SellerProductSearchQuery, sellerID uint) ([]*dto.ProductRes, int64, int64, error)
@@ -42,7 +42,7 @@ func NewProductService(config *ProductConfig) ProductService {
 	}
 }
 
-func (p *productService) FindProductDetailBySlug(slug string) (*model.Product, error) {
+func (p *productService) FindProductDetailBySlug(slug string, userID uint) (*model.Product, error) {
 	tx := p.db.Begin()
 
 	product, err := p.productRepo.FindProductBySlug(tx, slug)
@@ -51,7 +51,7 @@ func (p *productService) FindProductDetailBySlug(slug string) (*model.Product, e
 		return nil, err
 	}
 
-	product, err = p.productRepo.FindProductDetailByID(tx, product.ID)
+	product, err = p.productRepo.FindProductDetailByID(tx, product.ID, userID)
 	if err != nil {
 		tx.Rollback()
 		return nil, err
@@ -103,10 +103,10 @@ func (p *productService) GetProductsBySellerID(query *dto.SellerProductSearchQue
 	return productsRes, totalPage, totalData, nil
 }
 
-func (s *productService) GetProductsByCategoryID(query *dto.SellerProductSearchQuery, categoryID uint) ([]*dto.ProductRes, int64, int64, error) {
-	tx := s.db.Begin()
+func (p *productService) GetProductsByCategoryID(query *dto.SellerProductSearchQuery, categoryID uint) ([]*dto.ProductRes, int64, int64, error) {
+	tx := p.db.Begin()
 
-	variantDetails, totalPage, totalData, err := s.productVarDetRepo.GetProductsByCategoryID(tx, query, categoryID)
+	variantDetails, totalPage, totalData, err := p.productVarDetRepo.GetProductsByCategoryID(tx, query, categoryID)
 	if err != nil {
 		tx.Rollback()
 		return nil, 0, 0, err
@@ -145,10 +145,10 @@ func (s *productService) GetProductsByCategoryID(query *dto.SellerProductSearchQ
 	return productsRes, totalPage, totalData, nil
 }
 
-func (s *productService) FindSimilarProducts(productID uint) ([]*dto.ProductRes, error) {
-	tx := s.db.Begin()
+func (p *productService) FindSimilarProducts(productID uint) ([]*dto.ProductRes, error) {
+	tx := p.db.Begin()
 
-	products, err := s.productRepo.FindSimilarProduct(tx, productID)
+	products, err := p.productRepo.FindSimilarProduct(tx, productID)
 	if err != nil {
 		tx.Rollback()
 		if errors.Is(err, &apperror.ProductNotFoundError{}) {
@@ -168,13 +168,13 @@ func (s *productService) FindSimilarProducts(productID uint) ([]*dto.ProductRes,
 			photoURL = product.ProductPhotos[0].PhotoURL
 		}
 
-		minPrice, maxPrice, err := s.productRepo.SearchMinMaxPrice(tx, product.ID)
+		minPrice, maxPrice, err := p.productRepo.SearchMinMaxPrice(tx, product.ID)
 		if err != nil {
 			tx.Rollback()
 			return nil, err
 		}
 
-		ratings, err := s.productRepo.SearchRating(tx, product.ID)
+		ratings, err := p.productRepo.SearchRating(tx, product.ID)
 		if err != nil {
 			tx.Rollback()
 			return nil, err
@@ -203,10 +203,10 @@ func (s *productService) FindSimilarProducts(productID uint) ([]*dto.ProductRes,
 	return productsRes, nil
 }
 
-func (s *productService) GetProducts(query *repository.SearchQuery) ([]*dto.ProductRes, int64, int64, error) {
-	tx := s.db.Begin()
+func (p *productService) GetProducts(query *repository.SearchQuery) ([]*dto.ProductRes, int64, int64, error) {
+	tx := p.db.Begin()
 
-	variantDetails, totalPage, totalData, err := s.productVarDetRepo.SearchProducts(tx, query)
+	variantDetails, totalPage, totalData, err := p.productVarDetRepo.SearchProducts(tx, query)
 	if err != nil {
 		tx.Rollback()
 		return nil, 0, 0, err

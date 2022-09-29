@@ -15,7 +15,14 @@ import (
 func (h *Handler) FindProductDetailBySlug(ctx *gin.Context) {
 	slug := ctx.Param("slug")
 
-	res, err := h.productService.FindProductDetailBySlug(slug)
+	payload, _ := ctx.Get("user")
+	user, isValid := payload.(dto.UserJWT)
+	userID := uint(0)
+	if isValid {
+		userID = user.UserID
+	}
+
+	res, err := h.productService.FindProductDetailBySlug(slug, userID)
 	if err != nil {
 		_ = ctx.Error(err)
 		return
