@@ -14,6 +14,7 @@ type VoucherService interface {
 	CreateVoucher(req *dto.PostVoucherReq, userID uint) (*dto.GetVoucherRes, error)
 	FindVoucherDetailByID(id, userID uint) (*dto.GetVoucherRes, error)
 	FindVoucherByID(id uint) (*dto.GetVoucherRes, error)
+	FindVoucherBySellerID(sellerID, userID uint) ([]*dto.GetVoucherRes, error)
 	UpdateVoucher(req *dto.PatchVoucherReq, id, userID uint) (*dto.GetVoucherRes, error)
 	DeleteVoucherByID(id, userID uint) (bool, error)
 }
@@ -128,6 +129,35 @@ func (s *voucherService) FindVoucherByID(id uint) (*dto.GetVoucherRes, error) {
 	}
 
 	res := new(dto.GetVoucherRes).From(voucher)
+
+	tx.Commit()
+	return res, nil
+}
+
+func (s *voucherService) FindVoucherBySellerID(sellerID, userID uint) ([]*dto.GetVoucherRes, error) {
+	tx := s.db.Begin()
+
+	seller, err := s.sellerRepo.FindSellerByID(tx, sellerID)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	if seller.UserID != userID {
+		tx.Rollback()
+		return nil, apperror.UnauthorizedError("cannot fetch other shop voucher")
+	}
+
+	vouchers, err := s.voucherRepo.FindVoucherBySellerID(tx, sellerID)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	var res []*dto.GetVoucherRes
+	for _, voucher := range vouchers {
+		res = append(res, new(dto.GetVoucherRes).From(voucher))
+	}
 
 	tx.Commit()
 	return res, nil

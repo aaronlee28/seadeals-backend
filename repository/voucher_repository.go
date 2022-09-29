@@ -13,6 +13,7 @@ type VoucherRepository interface {
 	UpdateVoucher(tx *gorm.DB, v *model.Voucher, id uint) (*model.Voucher, error)
 	FindVoucherByID(tx *gorm.DB, id uint) (*model.Voucher, error)
 	FindVoucherDetailByID(tx *gorm.DB, id uint) (*model.Voucher, error)
+	FindVoucherBySellerID(tx *gorm.DB, sellerID uint) ([]*model.Voucher, error)
 	DeleteVoucherByID(tx *gorm.DB, id uint) (bool, error)
 }
 
@@ -34,7 +35,7 @@ func (r *voucherRepository) UpdateVoucher(tx *gorm.DB, v *model.Voucher, id uint
 	var updatedVoucher *model.Voucher
 	result := tx.First(&updatedVoucher, id).Updates(&v)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, apperror.NotFoundError("voucher not found error")
+		return nil, apperror.NotFoundError(new(apperror.VoucherNotFoundError).Error())
 	}
 	return updatedVoucher, result.Error
 }
@@ -43,7 +44,7 @@ func (r *voucherRepository) FindVoucherByID(tx *gorm.DB, id uint) (*model.Vouche
 	var v *model.Voucher
 	result := tx.First(&v, id)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, apperror.NotFoundError("voucher not found error")
+		return nil, apperror.NotFoundError(new(apperror.VoucherNotFoundError).Error())
 	}
 	return v, result.Error
 }
@@ -52,16 +53,25 @@ func (r *voucherRepository) FindVoucherDetailByID(tx *gorm.DB, id uint) (*model.
 	var v *model.Voucher
 	result := tx.Preload("Seller.User").First(&v, id)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, apperror.NotFoundError("voucher not found error")
+		return nil, apperror.NotFoundError(new(apperror.VoucherNotFoundError).Error())
 	}
 	return v, result.Error
+}
+
+func (r *voucherRepository) FindVoucherBySellerID(tx *gorm.DB, sellerID uint) ([]*model.Voucher, error) {
+	var vouchers []*model.Voucher
+	result := tx.Where("seller_id = ?", sellerID).Preload("Seller.User").Find(&vouchers)
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return nil, apperror.NotFoundError(new(apperror.VoucherNotFoundError).Error())
+	}
+	return vouchers, result.Error
 }
 
 func (r *voucherRepository) DeleteVoucherByID(tx *gorm.DB, id uint) (bool, error) {
 	var deletedVoucher *model.Voucher
 	result := tx.Delete(&deletedVoucher, id)
 	if result.RowsAffected == 0 {
-		return false, apperror.NotFoundError("voucher not found error")
+		return false, apperror.NotFoundError(new(apperror.VoucherNotFoundError).Error())
 	}
 	return true, result.Error
 }

@@ -59,6 +59,25 @@ func (h *Handler) FindVoucherByID(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, dto.StatusOKResponse(voucher))
 }
 
+func (h *Handler) FindVoucherBySellerID(ctx *gin.Context) {
+	userJWT, _ := ctx.Get("user")
+	user := userJWT.(dto.UserJWT)
+
+	sellerID, err := strconv.Atoi(ctx.Param("id"))
+	if err != nil {
+		_ = ctx.Error(apperror.BadRequestError("Invalid id format"))
+		return
+	}
+
+	vouchers, err := h.voucherService.FindVoucherBySellerID(uint(sellerID), user.UserID)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(vouchers))
+}
+
 func (h *Handler) UpdateVoucher(ctx *gin.Context) {
 	userJWT, _ := ctx.Get("user")
 	user := userJWT.(dto.UserJWT)
