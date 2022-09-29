@@ -8,6 +8,7 @@ import (
 
 type PromotionService interface {
 	GetPromotionByUserID(id uint) (*[]dto.GetPromotionRes, error)
+	CreatePromotion(id uint, req *dto.CreatePromotionReq) (*dto.CreatePromotionRes, error)
 }
 
 type promotionService struct {
@@ -55,4 +56,24 @@ func (p *promotionService) GetPromotionByUserID(id uint) (*[]dto.GetPromotionRes
 		promoRes = append(promoRes, *pr)
 	}
 	return &promoRes, nil
+}
+
+func (p *promotionService) CreatePromotion(id uint, req *dto.CreatePromotionReq) (*dto.CreatePromotionRes, error) {
+	tx := p.db.Begin()
+	seller, err := p.sellerRepo.FindSellerByUserID(tx, id)
+	if err != nil {
+		return nil, err
+	}
+	sellerID := seller.ID
+	createPromo, err2 := p.promotionRepository.CreatePromotion(tx, req, sellerID)
+	if err2 != nil {
+		tx.Rollback()
+		return nil, err2
+	}
+	ret := dto.CreatePromotionRes{
+		ID:        createPromo.ID,
+		ProductID: createPromo.ProductID,
+		Name:      createPromo.Name,
+	}
+	return &ret, nil
 }

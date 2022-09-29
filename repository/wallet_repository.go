@@ -39,8 +39,9 @@ type WalletRepository interface {
 	CreateOrderItemAndRemoveFromCart(tx *gorm.DB, productVariantDetailID uint, product *model.Product, orderID uint, userID uint, quantity uint, subtotal float64, cartItem *model.CartItem) error
 	UpdateOrder(tx *gorm.DB, order *model.Order, total float64) error
 	UpdateTransaction(tx *gorm.DB, transaction *model.Transaction, total float64) error
-	UpdateStock(tx *gorm.DB, cartItem *model.CartItem, newStock uint) error
-	CreateWalletTransaction(tx *gorm.DB, userID uint, walletID uint, transaction *model.Transaction) error
+	UpdateStock(tx *gorm.DB, productVariantDetail *model.ProductVariantDetail, newStock uint) error
+	CreateWalletTransaction(tx *gorm.DB, walletID uint, transaction *model.Transaction) error
+	UpdateWalletBalance(tx *gorm.DB, wallet *model.Wallet, totalTransaction float64) error
 }
 
 type walletRepository struct{}
@@ -395,7 +396,8 @@ func (w *walletRepository) CreateOrderItemAndRemoveFromCart(tx *gorm.DB, product
 	if result.Error != nil {
 		return apperror.InternalServerError("Failed to create order")
 	}
-	result2 := tx.Delete(&cartItem)
+	result2 := tx.Model(&cartItem).Update("deleted_at", time.Now())
+
 	if result2.Error != nil {
 		return apperror.InternalServerError("Failed to delete order")
 	}
@@ -453,13 +455,13 @@ func (w *walletRepository) UpdateTransaction(tx *gorm.DB, transaction *model.Tra
 	result := tx.Model(&transaction).Update("total", total)
 
 	if result.Error != nil {
-		return apperror.InternalServerError("failed to update ")
+		return apperror.InternalServerError("failed to update transaction")
 	}
 	return nil
 }
 
-func (w *walletRepository) UpdateStock(tx *gorm.DB, cartItem *model.CartItem, newStock uint) error {
-	result := tx.Model(&cartItem).Update("stock", newStock)
+func (w *walletRepository) UpdateStock(tx *gorm.DB, productVariantDetail *model.ProductVariantDetail, newStock uint) error {
+	result := tx.Model(&productVariantDetail).Update("stock", newStock)
 
 	if result.Error != nil {
 		return apperror.InternalServerError("failed to update stock")
@@ -467,7 +469,7 @@ func (w *walletRepository) UpdateStock(tx *gorm.DB, cartItem *model.CartItem, ne
 	return nil
 }
 
-func (w *walletRepository) CreateWalletTransaction(tx *gorm.DB, userID uint, walletID uint, transaction *model.Transaction) error {
+func (w *walletRepository) CreateWalletTransaction(tx *gorm.DB, walletID uint, transaction *model.Transaction) error {
 
 	walletTransaction := &model.WalletTransaction{
 		WalletID:      walletID,
@@ -482,6 +484,16 @@ func (w *walletRepository) CreateWalletTransaction(tx *gorm.DB, userID uint, wal
 	result := tx.Create(&walletTransaction)
 	if result.Error != nil {
 		return apperror.InternalServerError("Failed to create wallet transaction")
+	}
+	return nil
+}
+
+func (w *walletRepository) UpdateWalletBalance(tx *gorm.DB, wallet *model.Wallet, totalTransaction float64) error {
+	newBalance := wallet.Balance - totalTransaction
+	result := tx.Model(&wallet).Update("balance", newBalance)
+
+	if result.Error != nil {
+		return apperror.InternalServerError("failed to update wallet's balance")
 	}
 	return nil
 }
