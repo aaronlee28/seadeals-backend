@@ -8,7 +8,7 @@ import (
 type TransactionsRes struct {
 	Id            uint      `json:"id"`
 	UserID        uint      `json:"user_id"`
-	VoucherID     uint      `json:"voucher_id"`
+	VoucherID     *uint     `json:"voucher_id"`
 	Total         float64   `json:"total"`
 	PaymentType   string    `json:"payment_type"`
 	PaymentMethod string    `json:"payment_method"`
@@ -20,7 +20,7 @@ func (_ *TransactionsRes) FromTransaction(t *model.Transaction) *TransactionsRes
 	return &TransactionsRes{
 		Id:            t.Id,
 		UserID:        t.UserID,
-		VoucherID:     *t.VoucherID,
+		VoucherID:     t.VoucherID,
 		Total:         t.Total,
 		PaymentMethod: t.PaymentMethod,
 		CreatedAt:     t.CreatedAt,
