@@ -106,6 +106,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.POST("/vouchers", middleware.AuthorizeJWTFor(model.SellerRoleName), middleware.RequestValidator(func() any {
 		return &dto.PostVoucherReq{}
 	}), h.CreateVoucher)
+	r.GET("/vouchers/:id/detail", middleware.AuthorizeJWTFor(model.SellerRoleName), h.FindVoucherDetailByID)
 	r.PATCH("/vouchers/:id", middleware.AuthorizeJWTFor(model.SellerRoleName), middleware.RequestValidator(func() any {
 		return &dto.PatchVoucherReq{}
 	}), h.UpdateVoucher)

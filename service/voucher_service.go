@@ -12,6 +12,7 @@ import (
 
 type VoucherService interface {
 	CreateVoucher(req *dto.PostVoucherReq, userID uint) (*dto.GetVoucherRes, error)
+	FindVoucherDetailByID(id, userID uint) (*dto.GetVoucherRes, error)
 	UpdateVoucher(req *dto.PatchVoucherReq, id, userID uint) (*dto.GetVoucherRes, error)
 	DeleteVoucherByID(id, userID uint) (bool, error)
 }
@@ -98,10 +99,29 @@ func (s *voucherService) CreateVoucher(req *dto.PostVoucherReq, userID uint) (*d
 	return res, nil
 }
 
+func (s *voucherService) FindVoucherDetailByID(id, userID uint) (*dto.GetVoucherRes, error) {
+	tx := s.db.Begin()
+	voucher, err := s.voucherRepo.FindVoucherDetailByID(tx, id)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	if voucher.Seller.UserID != userID {
+		tx.Rollback()
+		return nil, apperror.UnauthorizedError("cannot fetch other shop detail voucher")
+	}
+
+	res := new(dto.GetVoucherRes).From(voucher)
+
+	tx.Commit()
+	return res, nil
+}
+
 func (s *voucherService) UpdateVoucher(req *dto.PatchVoucherReq, id, userID uint) (*dto.GetVoucherRes, error) {
 	tx := s.db.Begin()
 
-	v, err := s.voucherRepo.FindVoucherByID(tx, id)
+	v, err := s.voucherRepo.FindVoucherDetailByID(tx, id)
 	if err != nil {
 		tx.Rollback()
 		return nil, err
@@ -143,7 +163,7 @@ func (s *voucherService) UpdateVoucher(req *dto.PatchVoucherReq, id, userID uint
 func (s *voucherService) DeleteVoucherByID(id, userID uint) (bool, error) {
 	tx := s.db.Begin()
 
-	v, err := s.voucherRepo.FindVoucherByID(tx, id)
+	v, err := s.voucherRepo.FindVoucherDetailByID(tx, id)
 	if err != nil {
 		tx.Rollback()
 		return false, err
@@ -154,7 +174,7 @@ func (s *voucherService) DeleteVoucherByID(id, userID uint) (bool, error) {
 		return false, apperror.UnauthorizedError("cannot delete other shop voucher")
 	}
 
-	voucher, err := s.voucherRepo.FindVoucherByID(tx, id)
+	voucher, err := s.voucherRepo.FindVoucherDetailByID(tx, id)
 	if err != nil {
 		tx.Rollback()
 		return false, err
