@@ -91,6 +91,9 @@ func (w *walletRepository) TransactionDetails(tx *gorm.DB, transactionID uint) (
 	var transaction *model.Transaction
 	result := tx.Where("id = ?", transactionID).First(&transaction)
 	if result.Error != nil {
+		if result.Error == gorm.ErrRecordNotFound {
+			return nil, apperror.NotFoundError("No such transaction exists")
+		}
 		return nil, apperror.InternalServerError("cannot find transactions")
 	}
 	return transaction, nil
