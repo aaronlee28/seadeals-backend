@@ -1,16 +1,9 @@
-package model
+package dto
 
-import (
-	"gorm.io/gorm"
-	"time"
-)
+import "time"
 
-type Promotion struct {
-	gorm.Model  `json:"-"`
-	ID          uint      `json:"id" gorm:"primaryKey"`
+type CreatePromotionReq struct {
 	ProductID   uint      `json:"product_id"`
-	Product     *Product  `json:"product"`
-	SellerID    uint      `json:"seller_id"`
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
 	StartDate   time.Time `json:"start_date"`

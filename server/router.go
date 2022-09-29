@@ -133,6 +133,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 
 	// PROMOTION
 	r.GET("/promotion-list", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetPromotion)
+	r.POST("/create-promotion", middleware.RequestValidator(func() any { return &dto.CreatePromotionReq{} }), middleware.AuthorizeJWTFor(model.UserRoleName), h.CreatePromotion)
 
 	// WALLET
 	r.GET("/user-wallet", middleware.AuthorizeJWTFor(model.UserRoleName), h.WalletDataTransactions)
