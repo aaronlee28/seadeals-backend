@@ -58,7 +58,7 @@ func validateModel(v *model.Voucher, seller *model.Seller) error {
 func (s *voucherService) CreateVoucher(req *dto.PostVoucherReq, userID uint) (*dto.GetVoucherRes, error) {
 	tx := s.db.Begin()
 
-	seller, err := s.sellerRepo.FindSellerByID(tx, req.SellerID)
+	seller, err := s.sellerRepo.FindSellerByID(tx, req.SellerID, userID)
 	if err != nil {
 		tx.Rollback()
 		return nil, err

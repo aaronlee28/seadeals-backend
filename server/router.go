@@ -111,7 +111,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.GET("/products/:id/reviews", h.FindReviewByProductID)
 
 	// SELLER
-	r.GET("/sellers/:id", h.FindSellerByID)
+	r.GET("/sellers/:id", middleware.OptionalAuthorizeJWTFor(model.UserRoleName), h.FindSellerByID)
 	r.POST("/sellers", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.RegisterAsSellerReq{}
 	}), h.RegisterAsSeller)
