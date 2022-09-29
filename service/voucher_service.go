@@ -58,6 +58,20 @@ func validateModel(v *model.Voucher, seller *model.Seller) error {
 	return nil
 }
 
+func validateVoucherQueryParam(qp *model.VoucherQueryParam) {
+	if !(qp.Sort == "asc" || qp.Sort == "desc") {
+		qp.Sort = "desc"
+	}
+	qp.SortBy = "created_at"
+
+	if qp.Page == 0 {
+		qp.Page = model.PageVoucherDefault
+	}
+	if qp.Limit == 0 {
+		qp.Limit = model.LimitVoucherDefault
+	}
+}
+
 func (s *voucherService) CreateVoucher(req *dto.PostVoucherReq, userID uint) (*dto.GetVoucherRes, error) {
 	tx := s.db.Begin()
 
@@ -148,6 +162,7 @@ func (s *voucherService) FindVoucherBySellerID(sellerID, userID uint, qp *model.
 		return nil, apperror.UnauthorizedError("cannot fetch other shop voucher")
 	}
 
+	validateVoucherQueryParam(qp)
 	vouchers, err := s.voucherRepo.FindVoucherBySellerID(tx, sellerID, qp)
 	if err != nil {
 		tx.Rollback()
