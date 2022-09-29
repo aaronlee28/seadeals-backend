@@ -5,39 +5,39 @@ import (
 	"time"
 )
 
-const (
-	statusUpcoming = "upcoming"
-	statusOnGoing  = "ongoing"
-	statusEnded    = "ended"
-)
+type GetVouchersRes struct {
+	Limit         uint             `json:"limit"`
+	Page          uint             `json:"page"`
+	TotalPages    uint             `json:"total_pages"`
+	TotalVouchers uint             `json:"total_vouchers"`
+	Vouchers      []*GetVoucherRes `json:"vouchers"`
+}
 
 type GetVoucherRes struct {
-	ID          uint          `json:"id" gorm:"primaryKey"`
-	SellerID    uint          `json:"seller_id"`
-	Seller      *model.Seller `json:"seller"`
-	Name        string        `json:"name"`
-	Code        string        `json:"code"`
-	StartDate   time.Time     `json:"start_date"`
-	EndDate     time.Time     `json:"end_date"`
-	Status      string        `json:"status"`
-	Quota       int           `json:"quota"`
-	AmountType  string        `json:"amount_type"`
-	Amount      float64       `json:"amount"`
-	MinSpending float64       `json:"min_spending"`
+	ID          uint      `json:"id" gorm:"primaryKey"`
+	SellerID    uint      `json:"seller_id"`
+	Name        string    `json:"name"`
+	Code        string    `json:"code"`
+	StartDate   time.Time `json:"start_date"`
+	EndDate     time.Time `json:"end_date"`
+	Status      string    `json:"status"`
+	Quota       int       `json:"quota"`
+	AmountType  string    `json:"amount_type"`
+	Amount      float64   `json:"amount"`
+	MinSpending float64   `json:"min_spending"`
 }
 
 func (_ *GetVoucherRes) From(v *model.Voucher) *GetVoucherRes {
-	status := statusOnGoing
+	status := model.StatusOnGoing
 	if time.Now().After(v.EndDate) {
-		status = statusEnded
+		status = model.StatusEnded
 	} else if v.StartDate.After(time.Now()) {
-		status = statusUpcoming
+		status = model.StatusUpcoming
 	}
 
 	return &GetVoucherRes{
 		ID:          v.ID,
 		SellerID:    v.SellerID,
-		Seller:      v.Seller,
 		Name:        v.Name,
 		Code:        v.Code,
 		StartDate:   v.StartDate,

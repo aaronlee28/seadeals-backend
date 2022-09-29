@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"gorm.io/gorm"
 	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
@@ -12,6 +13,10 @@ import (
 
 type VoucherService interface {
 	CreateVoucher(req *dto.PostVoucherReq, userID uint) (*dto.GetVoucherRes, error)
+	FindVoucherDetailByID(id, userID uint) (*dto.GetVoucherRes, error)
+	FindVoucherByID(id uint) (*dto.GetVoucherRes, error)
+	FindVoucherBySellerID(sellerID, userID uint, qp *model.VoucherQueryParam) (*dto.GetVouchersRes, error)
+	ValidateVoucher(req *dto.PostValidateVoucherReq) (*dto.GetVoucherRes, error)
 	UpdateVoucher(req *dto.PatchVoucherReq, id, userID uint) (*dto.GetVoucherRes, error)
 	DeleteVoucherByID(id, userID uint) (bool, error)
 }
@@ -51,6 +56,39 @@ func validateModel(v *model.Voucher, seller *model.Seller) error {
 		if v.Amount > 100 {
 			return apperror.BadRequestError("percentage amount must be in range 1-100")
 		}
+	}
+	return nil
+}
+
+func validateVoucherQueryParam(qp *model.VoucherQueryParam) {
+	if !(qp.Sort == "asc" || qp.Sort == "desc") {
+		qp.Sort = "desc"
+	}
+	qp.SortBy = "created_at"
+
+	if qp.Page == 0 {
+		qp.Page = model.PageVoucherDefault
+	}
+	if qp.Limit == 0 {
+		qp.Limit = model.LimitVoucherDefault
+	}
+	if !(qp.Status == model.StatusUpcoming || qp.Status == model.StatusOnGoing || qp.Status == model.StatusEnded) {
+		qp.Status = ""
+	}
+}
+
+func validateVoucher(voucher *model.Voucher, req *dto.PostValidateVoucherReq) error {
+	if !(voucher.StartDate.Before(time.Now()) && voucher.EndDate.After(time.Now())) {
+		return apperror.BadRequestError(new(apperror.VoucherNotFoundError).Error())
+	}
+	if voucher.SellerID != req.SellerID {
+		return apperror.BadRequestError("voucher cannot be used in this shop")
+	}
+	if (voucher.Quota - int(req.Quantity)) <= 0 {
+		return apperror.BadRequestError(fmt.Sprintf("the number of purchases exceeds the voucher quota (quota: %d)", voucher.Quota))
+	}
+	if voucher.MinSpending > req.Price {
+		return apperror.BadRequestError(fmt.Sprintf("need %.2f more spending", voucher.MinSpending-req.Price))
 	}
 	return nil
 }
@@ -98,10 +136,104 @@ func (s *voucherService) CreateVoucher(req *dto.PostVoucherReq, userID uint) (*d
 	return res, nil
 }
 
+func (s *voucherService) FindVoucherDetailByID(id, userID uint) (*dto.GetVoucherRes, error) {
+	tx := s.db.Begin()
+	voucher, err := s.voucherRepo.FindVoucherDetailByID(tx, id)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	if voucher.Seller.UserID != userID {
+		tx.Rollback()
+		return nil, apperror.UnauthorizedError("cannot fetch other shop detail voucher")
+	}
+
+	res := new(dto.GetVoucherRes).From(voucher)
+
+	tx.Commit()
+	return res, nil
+}
+
+func (s *voucherService) FindVoucherByID(id uint) (*dto.GetVoucherRes, error) {
+	tx := s.db.Begin()
+	voucher, err := s.voucherRepo.FindVoucherByID(tx, id)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	res := new(dto.GetVoucherRes).From(voucher)
+
+	tx.Commit()
+	return res, nil
+}
+
+func (s *voucherService) FindVoucherBySellerID(sellerID, userID uint, qp *model.VoucherQueryParam) (*dto.GetVouchersRes, error) {
+	tx := s.db.Begin()
+
+	seller, err := s.sellerRepo.FindSellerByID(tx, sellerID)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	if seller.UserID != userID {
+		tx.Rollback()
+		return nil, apperror.UnauthorizedError("cannot fetch other shop voucher")
+	}
+
+	validateVoucherQueryParam(qp)
+	vouchers, err := s.voucherRepo.FindVoucherBySellerID(tx, sellerID, qp)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	totalVouchers := uint(len(vouchers))
+	totalPages := (totalVouchers + qp.Limit - 1) / qp.Limit
+
+	var voucherRes []*dto.GetVoucherRes
+	for _, voucher := range vouchers {
+		voucherRes = append(voucherRes, new(dto.GetVoucherRes).From(voucher))
+	}
+
+	res := &dto.GetVouchersRes{
+		Limit:         qp.Limit,
+		Page:          qp.Page,
+		TotalPages:    totalPages,
+		TotalVouchers: totalVouchers,
+		Vouchers:      voucherRes,
+	}
+
+	tx.Commit()
+	return res, nil
+}
+
+func (s *voucherService) ValidateVoucher(req *dto.PostValidateVoucherReq) (*dto.GetVoucherRes, error) {
+	tx := s.db.Begin()
+	voucher, err := s.voucherRepo.FindVoucherByCode(tx, req.Code)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	err = validateVoucher(voucher, req)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	res := new(dto.GetVoucherRes).From(voucher)
+
+	tx.Commit()
+	return res, nil
+}
+
 func (s *voucherService) UpdateVoucher(req *dto.PatchVoucherReq, id, userID uint) (*dto.GetVoucherRes, error) {
 	tx := s.db.Begin()
 
-	v, err := s.voucherRepo.FindVoucherByID(tx, id)
+	v, err := s.voucherRepo.FindVoucherDetailByID(tx, id)
 	if err != nil {
 		tx.Rollback()
 		return nil, err
@@ -143,7 +275,7 @@ func (s *voucherService) UpdateVoucher(req *dto.PatchVoucherReq, id, userID uint
 func (s *voucherService) DeleteVoucherByID(id, userID uint) (bool, error) {
 	tx := s.db.Begin()
 
-	v, err := s.voucherRepo.FindVoucherByID(tx, id)
+	v, err := s.voucherRepo.FindVoucherDetailByID(tx, id)
 	if err != nil {
 		tx.Rollback()
 		return false, err
@@ -154,7 +286,7 @@ func (s *voucherService) DeleteVoucherByID(id, userID uint) (bool, error) {
 		return false, apperror.UnauthorizedError("cannot delete other shop voucher")
 	}
 
-	voucher, err := s.voucherRepo.FindVoucherByID(tx, id)
+	voucher, err := s.voucherRepo.FindVoucherDetailByID(tx, id)
 	if err != nil {
 		tx.Rollback()
 		return false, err

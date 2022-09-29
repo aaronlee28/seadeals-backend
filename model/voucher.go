@@ -7,6 +7,30 @@ import (
 
 const PercentageType = "percentage"
 const NominalType = "nominal"
+const (
+	SortVoucherDefault   = "desc"
+	SortByVoucherDefault = "created_at"
+	LimitVoucherDefault  = 10
+	PageVoucherDefault   = 1
+	StatusVoucherDefault = ""
+)
+
+var MonthVoucherDefault = uint(time.Now().Month())
+
+const (
+	StatusUpcoming = "upcoming"
+	StatusOnGoing  = "ongoing"
+	StatusEnded    = "ended"
+)
+
+type VoucherQueryParam struct {
+	Sort   string
+	SortBy string
+	Limit  uint
+	Page   uint
+	Status string
+	Month  uint
+}
 
 type Voucher struct {
 	gorm.Model  `json:"-"`
