@@ -179,8 +179,12 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 
 	// PAY WITH SEA LABS
 	r.POST("/order/pay/sea-labs-pay", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
-		return &dto.PayWithSeaLabsPayReq{}
+		return &dto.CheckoutCartReq{}
 	}), h.PayWithSeaLabsPay)
+	// PAY WITH SEA LABS
+	r.POST("/order/pay/sea-labs-pay/callback", middleware.RequestValidator(func() any {
+		return &dto.SeaLabsPayReq{}
+	}), h.PayWithSeaLabsPayCallback)
 
 	// CART ITEM
 	r.GET("/user/cart", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetCartItem)
@@ -191,7 +195,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		return &dto.DeleteFromCartReq{}
 	}), h.DeleteCartItem)
 
-	//Payment
+	// PAYMENT
 	r.POST("/checkout-cart", middleware.RequestValidator(func() any { return &dto.CheckoutCartReq{} }), middleware.AuthorizeJWTFor(model.UserRoleName), h.CheckoutCart)
 	return r
 }

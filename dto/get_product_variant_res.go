@@ -51,6 +51,6 @@ func (_ *GetProductVariantRes) From(pv *model.ProductVariantDetail) *GetProductV
 		Variant2Value: variant2Value,
 		VariantCode:   pv.VariantCode,
 		PictureURL:    pictureURL,
-		Stock:         pv.Stock,
+		Stock:         uint(pv.Stock),
 	}
 }

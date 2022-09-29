@@ -11,7 +11,7 @@ import (
 
 type CartItemService interface {
 	DeleteCartItem(orderItemID uint, userID uint) (*model.CartItem, error)
-	AddToCart(req *dto.AddToCartReq) (*model.CartItem, error)
+	AddToCart(userID uint, req *dto.AddToCartReq) (*model.CartItem, error)
 	GetCartItems(query *repository.Query, userID uint) ([]*dto.CartItemRes, int64, int64, error)
 }
 
@@ -43,11 +43,11 @@ func (o *cartItemService) DeleteCartItem(orderItemID uint, userID uint) (*model.
 	return deleteOrder, nil
 }
 
-func (o *cartItemService) AddToCart(req *dto.AddToCartReq) (*model.CartItem, error) {
+func (o *cartItemService) AddToCart(userID uint, req *dto.AddToCartReq) (*model.CartItem, error) {
 	tx := o.db.Begin()
 	cartItem := &model.CartItem{
 		ProductVariantDetailID: req.ProductVariantDetailID,
-		UserID:                 req.UserID,
+		UserID:                 userID,
 		Quantity:               req.Quantity,
 	}
 	addedItem, err := o.cartItemRepository.AddToCart(tx, cartItem)

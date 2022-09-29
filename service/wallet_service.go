@@ -95,7 +95,7 @@ func (w *walletService) TransactionDetails(userID uint, transactionID uint) (*dt
 	}
 
 	transaction := &dto.TransactionDetailsRes{
-		Id:            t.Id,
+		Id:            t.ID,
 		VoucherID:     t.VoucherID,
 		Total:         t.Total,
 		PaymentMethod: t.PaymentMethod,
@@ -328,26 +328,26 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 		}
 	}
 
-	//create transaction
-	var transaction *model.Transaction
-	var err5 error
+	var voucherID *uint
 	if globalVoucher != nil {
-		transaction, err5 = w.walletRepository.CreateTransaction(tx, userID, &globalVoucher.ID)
-		if err5 != nil {
-			tx.Rollback()
-			return nil, err5
-		}
-
-	} else {
-		transaction, err5 = w.walletRepository.CreateTransaction(tx, userID, nil)
-		if err5 != nil {
-			tx.Rollback()
-			return nil, err5
-		}
+		voucherID = &globalVoucher.ID
+	}
+	//create transaction
+	var transaction = &model.Transaction{
+		UserID:        userID,
+		VoucherID:     voucherID,
+		Total:         0,
+		PaymentMethod: "wallet",
+		Status:        "Waiting for Seller",
+	}
+	var err5 error
+	transaction, err5 = w.walletRepository.CreateTransaction(tx, transaction)
+	if err5 != nil {
+		tx.Rollback()
+		return nil, err5
 	}
 
 	var totalTransaction float64
-
 	for _, item := range req.Cart {
 		//check voucher if voucher still valid
 		voucher, err1 := w.walletRepository.GetVoucher(tx, item.VoucherCode)
@@ -361,7 +361,7 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 			if timeNow.After(voucher.EndDate) || timeNow.Before(voucher.StartDate) {
 				return nil, apperror.InternalServerError("Level 2 Voucher invalid")
 			}
-			order, err6 = w.walletRepository.CreateOrder(tx, item.SellerID, &voucher.ID, transaction.Id, userID)
+			order, err6 = w.walletRepository.CreateOrder(tx, item.SellerID, &voucher.ID, transaction.ID, userID)
 
 			if err6 != nil {
 				tx.Rollback()
@@ -370,7 +370,7 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 
 		} else {
 			//create order before order_items
-			order, err6 = w.walletRepository.CreateOrder(tx, item.SellerID, nil, transaction.Id, userID)
+			order, err6 = w.walletRepository.CreateOrder(tx, item.SellerID, nil, transaction.ID, userID)
 
 			if err6 != nil {
 				tx.Rollback()
@@ -386,8 +386,14 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 				tx.Rollback()
 				return nil, err2
 			}
+
+			if cartItem.ProductVariantDetail.Product.SellerID != item.SellerID {
+				tx.Rollback()
+				return nil, apperror.BadRequestError("That cart item does not belong to that seller")
+			}
+
 			//check stock
-			newStock := cartItem.ProductVariantDetail.Stock - cartItem.Quantity
+			newStock := cartItem.ProductVariantDetail.Stock - int(cartItem.Quantity)
 			if newStock < 0 {
 				tx.Rollback()
 				return nil, apperror.InternalServerError(cartItem.ProductVariantDetail.Product.Name + "is out of stock")
@@ -401,7 +407,7 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 			totalOrder += totalOrderItem
 
 			// update stock
-			err10 := w.walletRepository.UpdateStock(tx, cartItem.ProductVariantDetail, newStock)
+			err10 := w.walletRepository.UpdateStock(tx, cartItem.ProductVariantDetail, uint(newStock))
 			if err10 != nil {
 				tx.Rollback()
 				return nil, err10
@@ -444,15 +450,13 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 		return nil, apperror.InternalServerError("Insufficient Balance")
 	}
 	//5. update transaction
-	err9 := w.walletRepository.UpdateTransaction(tx, transaction, totalTransaction)
+	transaction.Total = totalTransaction
+	err9 := w.walletRepository.UpdateTransaction(tx, transaction)
 	if err9 != nil {
 		tx.Rollback()
 		return nil, err9
 	}
-	fmt.Println("total transaction")
-	fmt.Printf("%f\n", totalTransaction)
-	fmt.Println("total balance")
-	fmt.Printf("%f\n", wallet.Balance)
+
 	if req.PaymentMethod == "wallet" {
 		err11 := w.walletRepository.CreateWalletTransaction(tx, wallet.ID, transaction)
 		if err11 != nil {
@@ -468,7 +472,7 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 	//6. create response
 	transRes := dto.CheckoutCartRes{
 		UserID:        userID,
-		TransactionID: transaction.Id,
+		TransactionID: transaction.ID,
 		Total:         transaction.Total,
 		PaymentMethod: transaction.PaymentMethod,
 		CreatedAt:     transaction.CreatedAt,

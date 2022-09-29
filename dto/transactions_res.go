@@ -18,7 +18,7 @@ type TransactionsRes struct {
 
 func (_ *TransactionsRes) FromTransaction(t *model.Transaction) *TransactionsRes {
 	return &TransactionsRes{
-		Id:            t.Id,
+		Id:            t.ID,
 		UserID:        t.UserID,
 		VoucherID:     t.VoucherID,
 		Total:         t.Total,

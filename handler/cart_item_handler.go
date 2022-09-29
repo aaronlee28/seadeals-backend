@@ -37,12 +37,8 @@ func (h *Handler) AddToCart(ctx *gin.Context) {
 
 	value, _ := ctx.Get("payload")
 	json, _ := value.(*dto.AddToCartReq)
-	if json.UserID != userID {
-		ctx.JSON(http.StatusBadRequest, apperror.UnauthorizedError("Cannot add other user order item"))
-		return
-	}
 
-	result, err := h.orderItemService.AddToCart(json)
+	result, err := h.orderItemService.AddToCart(userID, json)
 	if err != nil {
 		_ = ctx.Error(err)
 		return
