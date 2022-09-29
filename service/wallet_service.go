@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"math"
 	"seadeals-backend/apperror"
 	"seadeals-backend/config"
@@ -385,6 +386,7 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 				tx.Rollback()
 				return nil, apperror.InternalServerError(cartItem.ProductVariantDetail.Product.Name + "is out of stock")
 			}
+			fmt.Println("price", cartItem.ProductVariantDetail.Price)
 			if cartItem.ProductVariantDetail.Product.Promotion != nil {
 				totalOrderItem = (cartItem.ProductVariantDetail.Price - cartItem.ProductVariantDetail.Product.Promotion.Amount) * float64(cartItem.Quantity)
 			} else {
@@ -393,11 +395,12 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 			totalOrder += totalOrderItem
 
 			// update stock
-			err10 := w.walletRepository.UpdateStock(tx, cartItem, newStock)
+			err10 := w.walletRepository.UpdateStock(tx, cartItem.ProductVariantDetail, newStock)
 			if err10 != nil {
 				tx.Rollback()
 				return nil, err10
 			}
+
 			//1. create order item and remove cart
 			err3 := w.walletRepository.CreateOrderItemAndRemoveFromCart(tx, cartItem.ProductVariantDetailID, cartItem.ProductVariantDetail.Product, order.ID, userID, cartItem.Quantity, totalOrderItem, cartItem)
 			if err3 != nil {
@@ -406,6 +409,7 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 			}
 
 		}
+
 		//order - voucher
 		if voucher != nil {
 			totalOrder -= voucher.Amount
@@ -429,6 +433,7 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 	if globalVoucher != nil {
 		totalTransaction -= globalVoucher.Amount
 	}
+
 	if wallet.Balance-totalTransaction < 0 {
 		return nil, apperror.InternalServerError("Insufficient Balance")
 	}
@@ -438,11 +443,20 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 		tx.Rollback()
 		return nil, err9
 	}
+	fmt.Println("total transaction")
+	fmt.Printf("%f\n", totalTransaction)
+	fmt.Println("total balance")
+	fmt.Printf("%f\n", wallet.Balance)
 	if req.PaymentMethod == "wallet" {
-		err11 := w.walletRepository.CreateWalletTransaction(tx, userID, wallet.ID, transaction)
+		err11 := w.walletRepository.CreateWalletTransaction(tx, wallet.ID, transaction)
 		if err11 != nil {
 			tx.Rollback()
 			return nil, err11
+		}
+		err12 := w.walletRepository.UpdateWalletBalance(tx, wallet, totalTransaction)
+		if err12 != nil {
+			tx.Rollback()
+			return nil, err12
 		}
 	}
 	//6. create response
