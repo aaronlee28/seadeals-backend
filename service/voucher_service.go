@@ -75,6 +75,9 @@ func validateVoucherQueryParam(qp *model.VoucherQueryParam) {
 	if !(qp.Status == model.StatusUpcoming || qp.Status == model.StatusOnGoing || qp.Status == model.StatusEnded) {
 		qp.Status = ""
 	}
+	if qp.Month == 0 {
+		qp.Month = model.MonthVoucherDefault
+	}
 }
 
 func validateVoucher(voucher *model.Voucher, req *dto.PostValidateVoucherReq) error {

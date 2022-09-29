@@ -71,13 +71,14 @@ func (h *Handler) FindVoucherBySellerID(ctx *gin.Context) {
 		return
 	}
 
+	month, _ := strconv.Atoi(helper.GetQuery(ctx, "month", "-1"))
 	qp := &model.VoucherQueryParam{
 		SortBy: helper.GetQuery(ctx, "sortBy", model.SortByVoucherDefault),
 		Sort:   helper.GetQuery(ctx, "sort", model.SortVoucherDefault),
 		Limit:  helper.GetQueryToUint(ctx, "limit", model.LimitVoucherDefault),
 		Page:   helper.GetQueryToUint(ctx, "page", model.PageVoucherDefault),
 		Status: helper.GetQuery(ctx, "status", model.StatusVoucherDefault),
-		Month:  helper.GetQueryToUint(ctx, "month", model.MonthVoucherDefault),
+		Month:  month,
 	}
 	vouchers, err := h.voucherService.FindVoucherBySellerID(uint(sellerID), user.UserID, qp)
 	if err != nil {
