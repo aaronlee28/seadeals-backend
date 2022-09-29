@@ -79,7 +79,7 @@ func (r *productRepository) FindSimilarProduct(tx *gorm.DB, categoryID uint) ([]
 
 func (r *productRepository) GetProductDetail(tx *gorm.DB, id uint) (*model.Product, error) {
 	var product *model.Product
-	result := tx.Preload("ProductVariantDetail", "product_id = ?", id).Preload("Promotion", "product_id = ?", id).Where("id = ?", id).First(&product, id)
+	result := tx.Preload("ProductVariantDetail", "product_id = ?", id).Preload("Promotion", "product_id = ?", id).First(&product, id)
 	if result.Error != nil {
 		return nil, result.Error
 	}
