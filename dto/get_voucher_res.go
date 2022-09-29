@@ -11,6 +11,14 @@ const (
 	statusEnded    = "ended"
 )
 
+type GetVouchersRes struct {
+	Limit         uint             `json:"limit"`
+	Page          uint             `json:"page"`
+	TotalPages    uint             `json:"total_pages"`
+	TotalVouchers uint             `json:"total_vouchers"`
+	Vouchers      []*GetVoucherRes `json:"vouchers"`
+}
+
 type GetVoucherRes struct {
 	ID          uint      `json:"id" gorm:"primaryKey"`
 	SellerID    uint      `json:"seller_id"`

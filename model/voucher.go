@@ -7,6 +7,19 @@ import (
 
 const PercentageType = "percentage"
 const NominalType = "nominal"
+const (
+	SortVoucherDefault   = "desc"
+	SortByVoucherDefault = "created_at"
+	LimitVoucherDefault  = 10
+	PageVoucherDefault   = 1
+)
+
+type VoucherQueryParam struct {
+	Sort   string
+	SortBy string
+	Limit  uint
+	Page   uint
+}
 
 type Voucher struct {
 	gorm.Model  `json:"-"`

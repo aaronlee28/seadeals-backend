@@ -2,6 +2,7 @@ package repository
 
 import (
 	"errors"
+	"fmt"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"seadeals-backend/apperror"
@@ -13,7 +14,7 @@ type VoucherRepository interface {
 	UpdateVoucher(tx *gorm.DB, v *model.Voucher, id uint) (*model.Voucher, error)
 	FindVoucherByID(tx *gorm.DB, id uint) (*model.Voucher, error)
 	FindVoucherDetailByID(tx *gorm.DB, id uint) (*model.Voucher, error)
-	FindVoucherBySellerID(tx *gorm.DB, sellerID uint) ([]*model.Voucher, error)
+	FindVoucherBySellerID(tx *gorm.DB, sellerID uint, qp *model.VoucherQueryParam) ([]*model.Voucher, error)
 	DeleteVoucherByID(tx *gorm.DB, id uint) (bool, error)
 }
 
@@ -58,9 +59,12 @@ func (r *voucherRepository) FindVoucherDetailByID(tx *gorm.DB, id uint) (*model.
 	return v, result.Error
 }
 
-func (r *voucherRepository) FindVoucherBySellerID(tx *gorm.DB, sellerID uint) ([]*model.Voucher, error) {
+func (r *voucherRepository) FindVoucherBySellerID(tx *gorm.DB, sellerID uint, qp *model.VoucherQueryParam) ([]*model.Voucher, error) {
+	offset := (qp.Page - 1) * qp.Limit
+	orderStmt := fmt.Sprintf("%s %s", qp.SortBy, qp.Sort)
+
 	var vouchers []*model.Voucher
-	result := tx.Where("seller_id = ?", sellerID).Preload("Seller.User").Find(&vouchers)
+	result := tx.Limit(int(qp.Limit)).Offset(int(offset)).Where("seller_id = ?", sellerID).Preload("Seller.User").Order(orderStmt).Find(&vouchers)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return nil, apperror.NotFoundError(new(apperror.VoucherNotFoundError).Error())
 	}

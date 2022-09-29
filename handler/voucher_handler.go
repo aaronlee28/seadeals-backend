@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
+	"seadeals-backend/helper"
+	"seadeals-backend/model"
 	"strconv"
 )
 
@@ -69,7 +71,13 @@ func (h *Handler) FindVoucherBySellerID(ctx *gin.Context) {
 		return
 	}
 
-	vouchers, err := h.voucherService.FindVoucherBySellerID(uint(sellerID), user.UserID)
+	qp := &model.VoucherQueryParam{
+		SortBy: helper.GetQuery(ctx, "sortBy", model.SortByVoucherDefault),
+		Sort:   helper.GetQuery(ctx, "sort", model.SortVoucherDefault),
+		Limit:  helper.GetQueryToUint(ctx, "limit", model.LimitVoucherDefault),
+		Page:   helper.GetQueryToUint(ctx, "page", model.PageVoucherDefault),
+	}
+	vouchers, err := h.voucherService.FindVoucherBySellerID(uint(sellerID), user.UserID, qp)
 	if err != nil {
 		_ = ctx.Error(err)
 		return
