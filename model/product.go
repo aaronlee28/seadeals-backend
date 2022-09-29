@@ -21,6 +21,7 @@ type Product struct {
 	ProductDetail        *ProductDetail          `json:"product_detail"`
 	ProductPhotos        []*ProductPhoto         `json:"product_photos"`
 	Promotion            *Promotion              `json:"promotion"`
+	Favorite             *Favorite               `json:"favorite"`
 }
 
 type SellerProductQuery struct {

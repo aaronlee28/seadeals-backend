@@ -2,11 +2,12 @@ package repository
 
 import (
 	"gorm.io/gorm"
+	"seadeals-backend/apperror"
 	"seadeals-backend/model"
 )
 
 type SellerRepository interface {
-	FindSellerByID(tx *gorm.DB, id uint) (*model.Seller, error)
+	FindSellerByID(tx *gorm.DB, sellerID uint, userID uint) (*model.Seller, error)
 	FindSellerByUserID(tx *gorm.DB, userID uint) (*model.Seller, error)
 }
 
@@ -16,11 +17,14 @@ func NewSellerRepository() SellerRepository {
 	return &sellerRepository{}
 }
 
-func (r *sellerRepository) FindSellerByID(tx *gorm.DB, id uint) (*model.Seller, error) {
+func (r *sellerRepository) FindSellerByID(tx *gorm.DB, sellerID uint, userID uint) (*model.Seller, error) {
 	var seller *model.Seller
-	result := tx.Preload("Address").Preload("User").First(&seller, id)
+	result := tx.Preload("Address").Preload("User").Preload("SocialGraph", "seller_id = ? AND user_id = ? AND is_follow IS TRUE", sellerID, userID).First(&seller, sellerID)
 	if result.Error != nil {
-		return nil, result.Error
+		if result.Error == gorm.ErrRecordNotFound {
+			return nil, apperror.NotFoundError("No such seller exists")
+		}
+		return nil, apperror.InternalServerError("Cannot fetch seller detail")
 	}
 	return seller, nil
 }

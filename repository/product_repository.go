@@ -11,7 +11,7 @@ import (
 )
 
 type ProductRepository interface {
-	FindProductDetailByID(tx *gorm.DB, id uint) (*model.Product, error)
+	FindProductDetailByID(tx *gorm.DB, productID uint, userID uint) (*model.Product, error)
 	FindProductBySlug(tx *gorm.DB, slug string) (*model.Product, error)
 	FindSimilarProduct(tx *gorm.DB, productID uint) ([]*model.Product, error)
 
@@ -48,9 +48,13 @@ type SearchQuery struct {
 	CategoryID uint
 }
 
-func (r *productRepository) FindProductDetailByID(tx *gorm.DB, id uint) (*model.Product, error) {
+func (r *productRepository) FindProductDetailByID(tx *gorm.DB, productID uint, userID uint) (*model.Product, error) {
 	var product *model.Product
-	result := tx.Preload("ProductPhotos", "product_id = ?", id).Preload("ProductDetail", "product_id = ?", id).First(&product, id)
+	result := tx.Preload("ProductPhotos", "product_id = ?", productID)
+	result = result.Preload("ProductDetail", "product_id = ?", productID)
+	result = result.Preload("ProductVariantDetail", "product_id = ?", productID)
+	result = result.Preload("Favorite", "product_id = ? AND user_id = ? AND is_favorite IS TRUE", productID, userID)
+	result = result.First(&product, productID)
 	if result.Error != nil {
 		return nil, result.Error
 	}

@@ -94,7 +94,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.GET("/products/:id/promotion-price", h.GetVariantPriceAfterPromotionByProductID)
 	r.GET("/products/:id/similar-products", h.FindSimilarProduct)
 	r.GET("/search-recommend-product", h.SearchRecommendProduct)
-	r.GET("/products/detail/:slug", h.FindProductDetailBySlug)
+	r.GET("/products/detail/:slug", middleware.OptionalAuthorizeJWTFor(model.UserRoleName), h.FindProductDetailBySlug)
 	r.GET("/sellers/:id/products", h.GetProductsBySellerID)
 	r.GET("/categories/:id/products", h.GetProductsByCategoryID)
 	r.GET("/products", h.SearchProducts)
@@ -111,7 +111,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.GET("/products/:id/reviews", h.FindReviewByProductID)
 
 	// SELLER
-	r.GET("/sellers/:id", h.FindSellerByID)
+	r.GET("/sellers/:id", middleware.OptionalAuthorizeJWTFor(model.UserRoleName), h.FindSellerByID)
 	r.POST("/sellers", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.RegisterAsSellerReq{}
 	}), h.RegisterAsSeller)

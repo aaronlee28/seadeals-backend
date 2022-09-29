@@ -18,6 +18,7 @@ type GetSellerRes struct {
 	Rating        float64        `json:"rating"`
 	TotalReviewer uint           `json:"total_reviewer"`
 	JoinDate      string         `json:"join_date"`
+	IsFollow      bool           `json:"is_follow"`
 }
 
 func (_ *GetSellerRes) From(s *model.Seller) *GetSellerRes {
@@ -52,6 +53,11 @@ func (_ *GetSellerRes) From(s *model.Seller) *GetSellerRes {
 		joinStatus = strconv.Itoa(deltaDay) + plural + " ago"
 	}
 
+	isFollow := false
+	if s.SocialGraph != nil {
+		isFollow = true
+	}
+
 	return &GetSellerRes{
 		ID:          s.ID,
 		Name:        s.Name,
@@ -60,5 +66,6 @@ func (_ *GetSellerRes) From(s *model.Seller) *GetSellerRes {
 		ProfileURL:  s.PictureURL,
 		BannerURL:   s.BannerURL,
 		JoinDate:    joinStatus,
+		IsFollow:    isFollow,
 	}
 }
