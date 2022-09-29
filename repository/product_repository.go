@@ -52,7 +52,9 @@ func (r *productRepository) FindProductDetailByID(tx *gorm.DB, productID uint, u
 	var product *model.Product
 	result := tx.Preload("ProductPhotos", "product_id = ?", productID)
 	result = result.Preload("ProductDetail", "product_id = ?", productID)
-	result = result.Preload("ProductVariantDetail", "product_id = ?", productID)
+	result = result.Preload("ProductVariantDetail", "product_id = ?", productID, func(db *gorm.DB) *gorm.DB {
+		return db.Order("product_variant_details.price")
+	})
 	result = result.Preload("ProductVariantDetail.ProductVariant1")
 	result = result.Preload("ProductVariantDetail.ProductVariant2")
 	result = result.Preload("Favorite", "product_id = ? AND user_id = ? AND is_favorite IS TRUE", productID, userID)
