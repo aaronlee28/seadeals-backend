@@ -19,34 +19,38 @@ type UserSeaPayAccountServ interface {
 	UpdateSeaLabsAccountToMain(req *dto.UpdateSeaLabsPayToMainReq) (*model.UserSealabsPayAccount, error)
 	GetSeaLabsAccountByUserID(userID uint) ([]*model.UserSealabsPayAccount, error)
 
-	PayWithSeaLabsPay(userID uint, req *dto.CheckoutCartReq) (string, int, error)
+	PayWithSeaLabsPay(userID uint, req *dto.CheckoutCartReq) (string, *model.SeaLabsPayTransactionHolder, error)
+	PayWithSeaLabsPayCallback(txnID uint, status string) (*model.Transaction, error)
 	TopUpWithSeaLabsPay(amount float64, userID uint, accountNumber string) (*model.SeaLabsPayTopUpHolder, string, error)
 	TopUpWithSeaLabsPayCallback(txnID uint, status string) (*model.WalletTransaction, error)
 }
 
 type userSeaPayAccountServ struct {
-	db                        *gorm.DB
-	userSeaPayAccountRepo     repository.UserSeaPayAccountRepo
-	seaLabsPayTopUpHolderRepo repository.SeaLabsPayTopUpHolderRepository
-	walletRepository          repository.WalletRepository
-	walletTransactionRepo     repository.WalletTransactionRepository
+	db                          *gorm.DB
+	userSeaPayAccountRepo       repository.UserSeaPayAccountRepo
+	seaLabsPayTopUpHolderRepo   repository.SeaLabsPayTopUpHolderRepository
+	seaLabsPayTransactionHolder repository.SeaLabsPayTransactionHolderRepository
+	walletRepository            repository.WalletRepository
+	walletTransactionRepo       repository.WalletTransactionRepository
 }
 
 type UserSeaPayAccountServConfig struct {
-	DB                        *gorm.DB
-	UserSeaPayAccountRepo     repository.UserSeaPayAccountRepo
-	SeaLabsPayTopUpHolderRepo repository.SeaLabsPayTopUpHolderRepository
-	WalletRepository          repository.WalletRepository
-	WalletTransactionRepo     repository.WalletTransactionRepository
+	DB                          *gorm.DB
+	UserSeaPayAccountRepo       repository.UserSeaPayAccountRepo
+	SeaLabsPayTopUpHolderRepo   repository.SeaLabsPayTopUpHolderRepository
+	SeaLabsPayTransactionHolder repository.SeaLabsPayTransactionHolderRepository
+	WalletRepository            repository.WalletRepository
+	WalletTransactionRepo       repository.WalletTransactionRepository
 }
 
 func NewUserSeaPayAccountServ(c *UserSeaPayAccountServConfig) UserSeaPayAccountServ {
 	return &userSeaPayAccountServ{
-		db:                        c.DB,
-		userSeaPayAccountRepo:     c.UserSeaPayAccountRepo,
-		seaLabsPayTopUpHolderRepo: c.SeaLabsPayTopUpHolderRepo,
-		walletRepository:          c.WalletRepository,
-		walletTransactionRepo:     c.WalletTransactionRepo,
+		db:                          c.DB,
+		userSeaPayAccountRepo:       c.UserSeaPayAccountRepo,
+		seaLabsPayTopUpHolderRepo:   c.SeaLabsPayTopUpHolderRepo,
+		seaLabsPayTransactionHolder: c.SeaLabsPayTransactionHolder,
+		walletRepository:            c.WalletRepository,
+		walletTransactionRepo:       c.WalletTransactionRepo,
 	}
 }
 
@@ -120,79 +124,79 @@ func (u *userSeaPayAccountServ) GetSeaLabsAccountByUserID(userID uint) ([]*model
 	return accounts, nil
 }
 
-func (u *userSeaPayAccountServ) PayWithSeaLabsPay(userID uint, req *dto.CheckoutCartReq) (string, int, error) {
+func (u *userSeaPayAccountServ) PayWithSeaLabsPay(userID uint, req *dto.CheckoutCartReq) (string, *model.SeaLabsPayTransactionHolder, error) {
 	tx := u.db.Begin()
 
 	hasAccount, err := u.userSeaPayAccountRepo.HasExistsSeaLabsPayAccountWith(tx, userID, req.AccountNumber)
 	if err != nil {
 		tx.Rollback()
-		return "", 0, err
+		return "", nil, err
 	}
 	if !hasAccount {
 		tx.Rollback()
-		return "", 0, apperror.BadRequestError("That sea labs pay account is not registered in your account")
+		return "", nil, apperror.BadRequestError("That sea labs pay account is not registered in your account")
 	}
 
 	globalVoucher, err := u.walletRepository.GetVoucher(tx, req.GlobalVoucherCode)
 	if err != nil {
 		tx.Rollback()
-		return "", 0, err
+		return "", nil, err
 	}
 	timeNow := time.Now()
 
 	if globalVoucher != nil {
 		if timeNow.After(globalVoucher.EndDate) || timeNow.Before(globalVoucher.StartDate) {
-			return "", 0, apperror.InternalServerError("Level 3 Voucher invalid")
+			return "", nil, apperror.InternalServerError("Level 3 Voucher invalid")
 		}
 	}
 
 	//create transaction
-	var transaction *model.Transaction
-	var err5 error
+	var voucherID *uint
 	if globalVoucher != nil {
-		transaction, err5 = u.walletRepository.CreateTransaction(tx, userID, &globalVoucher.ID)
-		if err5 != nil {
-			tx.Rollback()
-			return "", 0, err5
-		}
-
-	} else {
-		transaction, err5 = u.walletRepository.CreateTransaction(tx, userID, nil)
-		if err5 != nil {
-			tx.Rollback()
-			return "", 0, err5
-		}
+		voucherID = &globalVoucher.ID
+	}
+	var transaction = &model.Transaction{
+		UserID:        userID,
+		VoucherID:     voucherID,
+		Total:         0,
+		PaymentMethod: "sealabs pay",
+		Status:        "Waiting for payment",
+	}
+	var err5 error
+	transaction, err5 = u.walletRepository.CreateTransaction(tx, transaction)
+	if err5 != nil {
+		tx.Rollback()
+		return "", nil, err5
 	}
 
 	var totalTransaction float64
-
 	for _, item := range req.Cart {
 		//check voucher if voucher still valid
 		voucher, err1 := u.walletRepository.GetVoucher(tx, item.VoucherCode)
 		if err1 != nil {
 			tx.Rollback()
-			return "", 0, err1
+			return "", nil, err1
 		}
 		var order *model.Order
 		var err6 error
 		if voucher != nil {
 			if timeNow.After(voucher.EndDate) || timeNow.Before(voucher.StartDate) {
-				return "", 0, apperror.InternalServerError("Level 2 Voucher invalid")
+				return "", nil, apperror.InternalServerError("Level 2 Voucher invalid")
 			}
-			order, err6 = u.walletRepository.CreateOrder(tx, item.SellerID, &voucher.ID, transaction.Id, userID)
+			order, err6 = u.walletRepository.CreateOrder(tx, item.SellerID, &voucher.ID, transaction.ID, userID)
 
 			if err6 != nil {
 				tx.Rollback()
-				return "", 0, err6
+				return "", nil, err6
 			}
 
 		} else {
 			//create order before order_items
-			order, err6 = u.walletRepository.CreateOrder(tx, item.SellerID, nil, transaction.Id, userID)
+			order, err6 = u.walletRepository.CreateOrder(tx, item.SellerID, nil, transaction.ID, userID)
 
 			if err6 != nil {
 				tx.Rollback()
-				return "", 0, err6
+				return "", nil, err6
 			}
 		}
 		var totalOrder float64
@@ -202,18 +206,18 @@ func (u *userSeaPayAccountServ) PayWithSeaLabsPay(userID uint, req *dto.Checkout
 			cartItem, err2 := u.walletRepository.GetCartItem(tx, id)
 			if err2 != nil {
 				tx.Rollback()
-				return "", 0, err2
+				return "", nil, err2
 			}
 
 			if cartItem.ProductVariantDetail.Product.SellerID != item.SellerID {
 				tx.Rollback()
-				return "", 0, apperror.BadRequestError("That cart item is not belong to that seller")
+				return "", nil, apperror.BadRequestError("That cart item is not belong to that seller")
 			}
 			//check stock
 			newStock := cartItem.ProductVariantDetail.Stock - int(cartItem.Quantity)
 			if newStock < 0 {
 				tx.Rollback()
-				return "", 0, apperror.InternalServerError(cartItem.ProductVariantDetail.Product.Name + "is out of stock")
+				return "", nil, apperror.InternalServerError(cartItem.ProductVariantDetail.Product.Name + "is out of stock")
 			}
 			fmt.Println("stock", id)
 			if cartItem.ProductVariantDetail.Product.Promotion != nil {
@@ -227,14 +231,14 @@ func (u *userSeaPayAccountServ) PayWithSeaLabsPay(userID uint, req *dto.Checkout
 			err10 := u.walletRepository.UpdateStock(tx, cartItem.ProductVariantDetail, uint(newStock))
 			if err10 != nil {
 				tx.Rollback()
-				return "", 0, err10
+				return "", nil, err10
 			}
 
 			//1. create order item and remove cart
 			err3 := u.walletRepository.CreateOrderItemAndRemoveFromCart(tx, cartItem.ProductVariantDetailID, cartItem.ProductVariantDetail.Product, order.ID, userID, cartItem.Quantity, totalOrderItem, cartItem)
 			if err3 != nil {
 				tx.Rollback()
-				return "", 0, err3
+				return "", nil, err3
 			}
 
 		}
@@ -247,10 +251,17 @@ func (u *userSeaPayAccountServ) PayWithSeaLabsPay(userID uint, req *dto.Checkout
 		err7 := u.walletRepository.UpdateOrder(tx, order, totalOrder)
 		if err7 != nil {
 			tx.Rollback()
-			return "", 0, err7
+			return "", nil, err7
 		}
 
 		totalTransaction += totalOrder
+	}
+
+	transaction.Total = totalTransaction
+	err9 := u.walletRepository.UpdateTransaction(tx, transaction)
+	if err9 != nil {
+		tx.Rollback()
+		return "", nil, err9
 	}
 
 	merchantCode := config.Config.SeaLabsPayMerchantCode
@@ -258,14 +269,54 @@ func (u *userSeaPayAccountServ) PayWithSeaLabsPay(userID uint, req *dto.Checkout
 	combinedString := req.AccountNumber + ":" + strconv.Itoa(int(totalTransaction)) + ":" + merchantCode
 
 	sign := helper.GenerateHMACSHA256(combinedString, apiKey)
-	redirectURL, _, err := helper.TransactionToSeaLabsPay(req.AccountNumber, strconv.Itoa(int(totalTransaction)), sign, "")
+	redirectURL, txnID, err := helper.TransactionToSeaLabsPay(req.AccountNumber, strconv.Itoa(int(totalTransaction)), sign, "/order/pay/sea-labs-pay/callback")
 	if err != nil {
 		tx.Rollback()
-		return "", 0, err
+		return "", nil, err
+	}
+
+	newData := &model.SeaLabsPayTransactionHolder{
+		UserID:        userID,
+		TransactionID: transaction.ID,
+		TxnID:         txnID,
+		Sign:          sign,
+		Total:         totalTransaction,
+	}
+
+	holder, err := u.seaLabsPayTransactionHolder.CreateTransactionHolder(tx, newData)
+	if err != nil {
+		tx.Rollback()
+		return "", nil, err
 	}
 
 	tx.Commit()
-	return redirectURL, int(totalTransaction), nil
+	return redirectURL, holder, nil
+}
+
+func (u *userSeaPayAccountServ) PayWithSeaLabsPayCallback(txnID uint, status string) (*model.Transaction, error) {
+	tx := u.db.Begin()
+	transactionHolder, topUpHolderError := u.seaLabsPayTransactionHolder.UpdateTransactionHolder(tx, txnID, status)
+	if topUpHolderError != nil {
+		tx.Rollback()
+		return nil, topUpHolderError
+	}
+
+	var transaction *model.Transaction
+	if status == dto.TXN_PAID {
+		transactionModel := &model.Transaction{
+			ID:            transactionHolder.TransactionID,
+			PaymentMethod: dto.SEA_LABS_PAY,
+			Status:        "Waiting for seller",
+		}
+		err := u.walletRepository.UpdateTransaction(tx, transactionModel)
+		if err != nil {
+			tx.Rollback()
+			return nil, err
+		}
+	}
+
+	tx.Commit()
+	return transaction, nil
 }
 
 func (u *userSeaPayAccountServ) TopUpWithSeaLabsPay(amount float64, userID uint, accountNumber string) (*model.SeaLabsPayTopUpHolder, string, error) {
@@ -295,6 +346,7 @@ func (u *userSeaPayAccountServ) TopUpWithSeaLabsPay(amount float64, userID uint,
 		UserID: userID,
 		TxnID:  txnId,
 		Total:  amount,
+		Sign:   sign,
 	}
 	holder, err := u.seaLabsPayTopUpHolderRepo.CreateTopUpHolder(tx, newData)
 	if err != nil {

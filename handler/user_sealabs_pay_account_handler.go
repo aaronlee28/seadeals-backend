@@ -119,6 +119,23 @@ func (h *Handler) PayWithSeaLabsPay(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, dto.StatusOKResponse(gin.H{"redirect_url": redirectURL, "total": total}))
 }
 
+func (h *Handler) PayWithSeaLabsPayCallback(ctx *gin.Context) {
+	value, _ := ctx.Get("payload")
+	json, _ := value.(*dto.SeaLabsPayReq)
+	txnID, err := strconv.ParseUint(json.TxnID, 10, 64)
+	if err != nil {
+		_ = ctx.Error(apperror.BadRequestError("Cannot convert txnID to uint"))
+		return
+	}
+	response, err := h.seaLabsPayAccServ.PayWithSeaLabsPayCallback(uint(txnID), json.Status)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(response))
+}
+
 func (h *Handler) TopUpWithSeaLabsPay(ctx *gin.Context) {
 	user, exists := ctx.Get("user")
 	if !exists {

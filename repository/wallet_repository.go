@@ -34,11 +34,11 @@ type WalletRepository interface {
 	StepUpPassword(tx *gorm.DB, userID uint, password string) error
 	GetCartItem(tx *gorm.DB, cartID uint) (*model.CartItem, error)
 	GetVoucher(tx *gorm.DB, voucherCode string) (*model.Voucher, error)
-	CreateTransaction(tx *gorm.DB, userID uint, globalVoucherID *uint) (*model.Transaction, error)
+	CreateTransaction(tx *gorm.DB, transaction *model.Transaction) (*model.Transaction, error)
 	CreateOrder(tx *gorm.DB, sellerID uint, voucherID *uint, transactionID uint, userID uint) (*model.Order, error)
 	CreateOrderItemAndRemoveFromCart(tx *gorm.DB, productVariantDetailID uint, product *model.Product, orderID uint, userID uint, quantity uint, subtotal float64, cartItem *model.CartItem) error
 	UpdateOrder(tx *gorm.DB, order *model.Order, total float64) error
-	UpdateTransaction(tx *gorm.DB, transaction *model.Transaction, total float64) error
+	UpdateTransaction(tx *gorm.DB, transaction *model.Transaction) error
 	UpdateStock(tx *gorm.DB, productVariantDetail *model.ProductVariantDetail, newStock uint) error
 	CreateWalletTransaction(tx *gorm.DB, walletID uint, transaction *model.Transaction) error
 	UpdateWalletBalance(tx *gorm.DB, wallet *model.Wallet, totalTransaction float64) error
@@ -407,20 +407,7 @@ func (w *walletRepository) CreateOrderItemAndRemoveFromCart(tx *gorm.DB, product
 	return nil
 
 }
-func (w *walletRepository) CreateTransaction(tx *gorm.DB, userID uint, globalVoucherID *uint) (*model.Transaction, error) {
-	transaction := &model.Transaction{
-		UserID:        userID,
-		Total:         0,
-		PaymentMethod: "wallet",
-		VoucherID:     nil,
-		CreatedAt:     time.Time{},
-		UpdatedAt:     time.Time{},
-		Status:        "Waiting for seller",
-	}
-
-	if globalVoucherID != nil {
-		transaction.VoucherID = globalVoucherID
-	}
+func (w *walletRepository) CreateTransaction(tx *gorm.DB, transaction *model.Transaction) (*model.Transaction, error) {
 	result := tx.Create(&transaction)
 	if result.Error != nil {
 		return nil, apperror.InternalServerError("Failed to create transaction")
@@ -454,8 +441,8 @@ func (w *walletRepository) UpdateOrder(tx *gorm.DB, order *model.Order, total fl
 	}
 	return nil
 }
-func (w *walletRepository) UpdateTransaction(tx *gorm.DB, transaction *model.Transaction, total float64) error {
-	result := tx.Model(&transaction).Update("total", total)
+func (w *walletRepository) UpdateTransaction(tx *gorm.DB, transaction *model.Transaction) error {
+	result := tx.Model(&transaction).Updates(&transaction)
 
 	if result.Error != nil {
 		return apperror.InternalServerError("failed to update transaction")
@@ -476,7 +463,7 @@ func (w *walletRepository) CreateWalletTransaction(tx *gorm.DB, walletID uint, t
 
 	walletTransaction := &model.WalletTransaction{
 		WalletID:      walletID,
-		TransactionID: &transaction.Id,
+		TransactionID: &transaction.ID,
 		Total:         transaction.Total,
 		PaymentMethod: transaction.PaymentMethod,
 		PaymentType:   "DEBIT",

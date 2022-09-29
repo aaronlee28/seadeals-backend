@@ -3,7 +3,7 @@ package model
 import "time"
 
 type Transaction struct {
-	Id            uint      `json:"id"`
+	ID            uint      `json:"id"`
 	UserID        uint      `json:"user_id"`
 	VoucherID     *uint     `json:"voucher_id"`
 	Total         float64   `json:"total"`
