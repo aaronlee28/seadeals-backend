@@ -76,6 +76,7 @@ func (h *Handler) FindVoucherBySellerID(ctx *gin.Context) {
 		Sort:   helper.GetQuery(ctx, "sort", model.SortVoucherDefault),
 		Limit:  helper.GetQueryToUint(ctx, "limit", model.LimitVoucherDefault),
 		Page:   helper.GetQueryToUint(ctx, "page", model.PageVoucherDefault),
+		Status: helper.GetQuery(ctx, "status", model.StatusVoucherDefault),
 	}
 	vouchers, err := h.voucherService.FindVoucherBySellerID(uint(sellerID), user.UserID, qp)
 	if err != nil {

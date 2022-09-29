@@ -5,12 +5,6 @@ import (
 	"time"
 )
 
-const (
-	statusUpcoming = "upcoming"
-	statusOnGoing  = "ongoing"
-	statusEnded    = "ended"
-)
-
 type GetVouchersRes struct {
 	Limit         uint             `json:"limit"`
 	Page          uint             `json:"page"`
@@ -34,11 +28,11 @@ type GetVoucherRes struct {
 }
 
 func (_ *GetVoucherRes) From(v *model.Voucher) *GetVoucherRes {
-	status := statusOnGoing
+	status := model.StatusOnGoing
 	if time.Now().After(v.EndDate) {
-		status = statusEnded
+		status = model.StatusEnded
 	} else if v.StartDate.After(time.Now()) {
-		status = statusUpcoming
+		status = model.StatusUpcoming
 	}
 
 	return &GetVoucherRes{

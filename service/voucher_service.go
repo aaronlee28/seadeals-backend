@@ -72,6 +72,9 @@ func validateVoucherQueryParam(qp *model.VoucherQueryParam) {
 	if qp.Limit == 0 {
 		qp.Limit = model.LimitVoucherDefault
 	}
+	if !(qp.Status == model.StatusUpcoming || qp.Status == model.StatusOnGoing || qp.Status == model.StatusEnded) {
+		qp.Status = ""
+	}
 }
 
 func validateVoucher(voucher *model.Voucher, req *dto.PostValidateVoucherReq) error {

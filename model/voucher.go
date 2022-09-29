@@ -12,6 +12,13 @@ const (
 	SortByVoucherDefault = "created_at"
 	LimitVoucherDefault  = 10
 	PageVoucherDefault   = 1
+	StatusVoucherDefault = ""
+)
+
+const (
+	StatusUpcoming = "upcoming"
+	StatusOnGoing  = "ongoing"
+	StatusEnded    = "ended"
 )
 
 type VoucherQueryParam struct {
@@ -19,6 +26,7 @@ type VoucherQueryParam struct {
 	SortBy string
 	Limit  uint
 	Page   uint
+	Status string
 }
 
 type Voucher struct {

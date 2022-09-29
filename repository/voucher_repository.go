@@ -7,6 +7,7 @@ import (
 	"gorm.io/gorm/clause"
 	"seadeals-backend/apperror"
 	"seadeals-backend/model"
+	"time"
 )
 
 type VoucherRepository interface {
@@ -64,8 +65,18 @@ func (r *voucherRepository) FindVoucherBySellerID(tx *gorm.DB, sellerID uint, qp
 	offset := (qp.Page - 1) * qp.Limit
 	orderStmt := fmt.Sprintf("%s %s", qp.SortBy, qp.Sort)
 
+	var queryDB = tx
+	switch qp.Status {
+	case model.StatusUpcoming:
+		queryDB = tx.Where("start_date > ?", time.Now())
+	case model.StatusOnGoing:
+		queryDB = tx.Where("start_date <= ? AND end_date >= ?", time.Now(), time.Now())
+	case model.StatusEnded:
+		queryDB = tx.Where("end_date < ?", time.Now())
+	}
+
 	var vouchers []*model.Voucher
-	result := tx.Limit(int(qp.Limit)).Offset(int(offset)).Where("seller_id = ?", sellerID).Preload("Seller.User").Order(orderStmt).Find(&vouchers)
+	result := queryDB.Limit(int(qp.Limit)).Offset(int(offset)).Where("seller_id = ?", sellerID).Preload("Seller.User").Order(orderStmt).Find(&vouchers)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		return nil, apperror.NotFoundError(new(apperror.VoucherNotFoundError).Error())
 	}
