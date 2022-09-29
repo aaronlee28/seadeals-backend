@@ -9,13 +9,20 @@ import (
 )
 
 func (h *Handler) FindSellerByID(ctx *gin.Context) {
-	idParam, err := strconv.Atoi(ctx.Param("id"))
+	sellerID, err := strconv.Atoi(ctx.Param("id"))
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, apperror.BadRequestError("Invalid id format"))
+		_ = ctx.Error(apperror.BadRequestError("Invalid id format"))
 		return
 	}
 
-	seller, err := h.sellerService.FindSellerByID(uint(idParam))
+	payload, _ := ctx.Get("user")
+	user, isValid := payload.(dto.UserJWT)
+	userID := uint(0)
+	if isValid {
+		userID = user.UserID
+	}
+
+	seller, err := h.sellerService.FindSellerByID(uint(sellerID), userID)
 	if err != nil {
 		_ = ctx.Error(err)
 		return

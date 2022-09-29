@@ -7,7 +7,7 @@ import (
 )
 
 type SellerService interface {
-	FindSellerByID(id uint) (*dto.GetSellerRes, error)
+	FindSellerByID(sellerID uint, userID uint) (*dto.GetSellerRes, error)
 }
 
 type sellerService struct {
@@ -33,9 +33,9 @@ func NewSellerService(c *SellerServiceConfig) SellerService {
 	}
 }
 
-func (s *sellerService) FindSellerByID(id uint) (*dto.GetSellerRes, error) {
+func (s *sellerService) FindSellerByID(sellerID uint, userID uint) (*dto.GetSellerRes, error) {
 	tx := s.db.Begin()
-	seller, err := s.sellerRepo.FindSellerByID(tx, id)
+	seller, err := s.sellerRepo.FindSellerByID(tx, sellerID, userID)
 	if err != nil {
 		tx.Rollback()
 		return nil, err
@@ -43,7 +43,7 @@ func (s *sellerService) FindSellerByID(id uint) (*dto.GetSellerRes, error) {
 
 	res := new(dto.GetSellerRes).From(seller)
 
-	averageReview, totalReview, err := s.reviewRepo.GetReviewsAvgAndCountBySellerID(tx, id)
+	averageReview, totalReview, err := s.reviewRepo.GetReviewsAvgAndCountBySellerID(tx, sellerID)
 	if err != nil {
 		tx.Rollback()
 		return nil, err
