@@ -25,11 +25,17 @@ func (h *Handler) WalletDataTransactions(ctx *gin.Context) {
 }
 
 func (h *Handler) TransactionDetails(ctx *gin.Context) {
-	value, _ := ctx.Get("payload")
-	json, _ := value.(*dto.TransactionDetailsReq)
-	transactionID := json.TransactionID
+	payload, _ := ctx.Get("user")
+	user, _ := payload.(dto.UserJWT)
+	userID := user.UserID
 
-	result, err := h.walletService.TransactionDetails(transactionID)
+	idParam, err := strconv.ParseUint(ctx.Param("id"), 10, 64)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, apperror.BadRequestError("Invalid id format"))
+		return
+	}
+
+	result, err := h.walletService.TransactionDetails(userID, uint(idParam))
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, err)
 		return

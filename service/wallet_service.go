@@ -17,7 +17,7 @@ import (
 
 type WalletService interface {
 	UserWalletData(id uint) (*dto.WalletDataRes, error)
-	TransactionDetails(id uint) (*dto.TransactionDetailsRes, error)
+	TransactionDetails(userID uint, transactionID uint) (*dto.TransactionDetailsRes, error)
 	PaginatedTransactions(q *repository.Query, userID uint) (*dto.PaginatedTransactionsRes, error)
 	GetWalletTransactionsByUserID(q *dto.WalletTransactionsQuery, userID uint) ([]*model.WalletTransaction, int64, int64, error)
 
@@ -80,16 +80,22 @@ func (w *walletService) UserWalletData(id uint) (*dto.WalletDataRes, error) {
 	return walletData, nil
 }
 
-func (w *walletService) TransactionDetails(id uint) (*dto.TransactionDetailsRes, error) {
+func (w *walletService) TransactionDetails(userID uint, transactionID uint) (*dto.TransactionDetailsRes, error) {
 	tx := w.db.Begin()
-	t, err := w.walletRepository.TransactionDetails(tx, id)
+	t, err := w.walletRepository.TransactionDetails(tx, transactionID)
 	if err != nil {
 		tx.Rollback()
 		return nil, err
 	}
+
+	if t.UserID != userID {
+		tx.Rollback()
+		return nil, apperror.UnauthorizedError("Cannot access another user transactions")
+	}
+
 	transaction := &dto.TransactionDetailsRes{
 		Id:            t.Id,
-		VoucherID:     *t.VoucherID,
+		VoucherID:     t.VoucherID,
 		Total:         t.Total,
 		PaymentMethod: t.PaymentMethod,
 		CreatedAt:     t.CreatedAt,

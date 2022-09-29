@@ -130,7 +130,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 
 	// WALLET
 	r.GET("/user-wallet", middleware.AuthorizeJWTFor(model.UserRoleName), h.WalletDataTransactions)
-	r.POST("/transaction-details", middleware.RequestValidator(func() any { return &dto.TransactionDetailsReq{} }), middleware.AuthorizeJWTFor("user"), h.TransactionDetails)
+	r.GET("/transactions/:id", middleware.AuthorizeJWTFor(model.UserRoleName), h.TransactionDetails)
 	r.GET("/paginated-transaction", middleware.AuthorizeJWTFor(model.UserRoleName), h.PaginatedTransactions)
 	r.GET("/user/wallet/transactions", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetWalletTransactions)
 	r.PATCH("/wallet-pin", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any { return &dto.PinReq{} }), h.WalletPin)
