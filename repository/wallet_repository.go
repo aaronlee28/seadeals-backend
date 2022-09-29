@@ -396,11 +396,14 @@ func (w *walletRepository) CreateOrderItemAndRemoveFromCart(tx *gorm.DB, product
 	if result.Error != nil {
 		return apperror.InternalServerError("Failed to create order")
 	}
-	result2 := tx.Model(&cartItem).Update("deleted_at", time.Now())
 
-	if result2.Error != nil {
-		return apperror.InternalServerError("Failed to delete order")
+	if cartItem != nil {
+		result2 := tx.Model(&cartItem).Update("deleted_at", time.Now())
+		if result2.Error != nil {
+			return apperror.InternalServerError("Failed to delete cart item")
+		}
 	}
+
 	return nil
 
 }

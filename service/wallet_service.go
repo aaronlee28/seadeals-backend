@@ -386,8 +386,14 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 				tx.Rollback()
 				return nil, err2
 			}
+
+			if cartItem.ProductVariantDetail.Product.SellerID != item.SellerID {
+				tx.Rollback()
+				return nil, apperror.BadRequestError("That cart item does not belong to that seller")
+			}
+
 			//check stock
-			newStock := cartItem.ProductVariantDetail.Stock - cartItem.Quantity
+			newStock := cartItem.ProductVariantDetail.Stock - int(cartItem.Quantity)
 			if newStock < 0 {
 				tx.Rollback()
 				return nil, apperror.InternalServerError(cartItem.ProductVariantDetail.Product.Name + "is out of stock")
@@ -401,7 +407,7 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 			totalOrder += totalOrderItem
 
 			// update stock
-			err10 := w.walletRepository.UpdateStock(tx, cartItem.ProductVariantDetail, newStock)
+			err10 := w.walletRepository.UpdateStock(tx, cartItem.ProductVariantDetail, uint(newStock))
 			if err10 != nil {
 				tx.Rollback()
 				return nil, err10
@@ -449,10 +455,7 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 		tx.Rollback()
 		return nil, err9
 	}
-	fmt.Println("total transaction")
-	fmt.Printf("%f\n", totalTransaction)
-	fmt.Println("total balance")
-	fmt.Printf("%f\n", wallet.Balance)
+
 	if req.PaymentMethod == "wallet" {
 		err11 := w.walletRepository.CreateWalletTransaction(tx, wallet.ID, transaction)
 		if err11 != nil {

@@ -94,26 +94,29 @@ func (h *Handler) GetSeaLabsPayAccount(ctx *gin.Context) {
 }
 
 func (h *Handler) PayWithSeaLabsPay(ctx *gin.Context) {
-	_, exists := ctx.Get("user")
-	if !exists {
-		_ = ctx.Error(apperror.BadRequestError("User is invalid"))
+	payload, _ := ctx.Get("user")
+	user, _ := payload.(dto.UserJWT)
+	userID := user.UserID
+
+	value, _ := ctx.Get("payload")
+	json, _ := value.(*dto.CheckoutCartReq)
+
+	if json.AccountNumber == "" {
+		_ = ctx.Error(apperror.BadRequestError("Invalid account number"))
 		return
 	}
 
-	value, _ := ctx.Get("payload")
-	json, _ := value.(*dto.PayWithSeaLabsPayReq)
-	redirectURL, err := h.seaLabsPayAccServ.PayWithSeaLabsPay(json.Amount, json.AccountNumber)
+	redirectURL, total, err := h.seaLabsPayAccServ.PayWithSeaLabsPay(userID, json)
 	if err != nil {
 		_ = ctx.Error(err)
 		return
 	}
-
 	if redirectURL == "" {
 		_ = ctx.Error(apperror.InternalServerError("Cannot send url"))
 		return
 	}
 
-	ctx.JSON(http.StatusOK, dto.StatusOKResponse(gin.H{"redirect_url": redirectURL}))
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(gin.H{"redirect_url": redirectURL, "total": total}))
 }
 
 func (h *Handler) TopUpWithSeaLabsPay(ctx *gin.Context) {

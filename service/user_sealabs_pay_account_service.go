@@ -1,22 +1,15 @@
 package service
 
 import (
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"gorm.io/gorm"
-	"io"
-	"net/http"
-	"net/url"
 	"seadeals-backend/apperror"
 	"seadeals-backend/config"
 	"seadeals-backend/dto"
+	"seadeals-backend/helper"
 	"seadeals-backend/model"
 	"seadeals-backend/repository"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -26,7 +19,7 @@ type UserSeaPayAccountServ interface {
 	UpdateSeaLabsAccountToMain(req *dto.UpdateSeaLabsPayToMainReq) (*model.UserSealabsPayAccount, error)
 	GetSeaLabsAccountByUserID(userID uint) ([]*model.UserSealabsPayAccount, error)
 
-	PayWithSeaLabsPay(amount int, accountNumber string) (string, error)
+	PayWithSeaLabsPay(userID uint, req *dto.CheckoutCartReq) (string, int, error)
 	TopUpWithSeaLabsPay(amount float64, userID uint, accountNumber string) (*model.SeaLabsPayTopUpHolder, string, error)
 	TopUpWithSeaLabsPayCallback(txnID uint, status string) (*model.WalletTransaction, error)
 }
@@ -54,77 +47,6 @@ func NewUserSeaPayAccountServ(c *UserSeaPayAccountServConfig) UserSeaPayAccountS
 		seaLabsPayTopUpHolderRepo: c.SeaLabsPayTopUpHolderRepo,
 		walletRepository:          c.WalletRepository,
 		walletTransactionRepo:     c.WalletTransactionRepo,
-	}
-}
-
-func generateHMACSHA256(value string, key string) string {
-	h := hmac.New(sha256.New, []byte(key))
-	h.Write([]byte(value))
-	buf := h.Sum(nil)
-	sign := hex.EncodeToString(buf)
-	return sign
-}
-
-func transactionToSeaLabsPay(accountNumber string, amount string, sign string, callback string) (string, uint, error) {
-	client := &http.Client{
-		Timeout: time.Second * 10,
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			return http.ErrUseLastResponse
-		},
-	}
-
-	data := url.Values{}
-	data.Set("card_number", accountNumber)
-	data.Set("amount", amount)
-	data.Set("merchant_code", config.Config.SeaLabsPayMerchantCode)
-	data.Set("redirect_url", "https://www.google.com")
-	data.Set("callback_url", config.Config.NgrokURL+callback)
-	data.Set("signature", sign)
-	encodeData := data.Encode()
-
-	fmt.Println(sign)
-	req, err := http.NewRequest(http.MethodPost, config.Config.SeaLabsPayTransactionURL, strings.NewReader(encodeData))
-	if err != nil {
-		return "", 0, err
-	}
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Add("Content-Length", strconv.Itoa(len(data.Encode())))
-	response, err := client.Do(req)
-	if err != nil {
-		return "", 0, err
-	}
-	defer func(Body io.ReadCloser) {
-		err2 := Body.Close()
-		if err2 != nil {
-			fmt.Println("Error Closing Client")
-		}
-	}(response.Body)
-
-	if response.StatusCode == http.StatusSeeOther {
-		redirectUrl, err2 := response.Location()
-		if err2 != nil {
-			return "", 0, err2
-		}
-
-		TxnID, err3 := strconv.ParseUint(redirectUrl.Query().Get("txn_id"), 10, 64)
-		if err3 != nil {
-			return "", 0, err3
-		}
-		return redirectUrl.String(), uint(TxnID), nil
-	} else {
-		type seaLabsPayError struct {
-			Code    string `json:"code"`
-			Message string `json:"message"`
-			Data    struct {
-			} `json:"data"`
-		}
-		var j seaLabsPayError
-		err = json.NewDecoder(response.Body).Decode(&j)
-		if err != nil {
-			panic(err)
-		}
-		fmt.Println(j.Message)
-		return "", 0, apperror.BadRequestError(j.Message)
 	}
 }
 
@@ -198,18 +120,152 @@ func (u *userSeaPayAccountServ) GetSeaLabsAccountByUserID(userID uint) ([]*model
 	return accounts, nil
 }
 
-func (u *userSeaPayAccountServ) PayWithSeaLabsPay(amount int, accountNumber string) (string, error) {
-	merchantCode := config.Config.SeaLabsPayMerchantCode
-	apiKey := config.Config.SeaLabsPayAPIKey
-	combinedString := accountNumber + ":" + strconv.Itoa(amount) + ":" + merchantCode
+func (u *userSeaPayAccountServ) PayWithSeaLabsPay(userID uint, req *dto.CheckoutCartReq) (string, int, error) {
+	tx := u.db.Begin()
 
-	sign := generateHMACSHA256(combinedString, apiKey)
-	redirectURL, _, err := transactionToSeaLabsPay(accountNumber, strconv.Itoa(amount), sign, "")
+	hasAccount, err := u.userSeaPayAccountRepo.HasExistsSeaLabsPayAccountWith(tx, userID, req.AccountNumber)
 	if err != nil {
-		return "", err
+		tx.Rollback()
+		return "", 0, err
+	}
+	if !hasAccount {
+		tx.Rollback()
+		return "", 0, apperror.BadRequestError("That sea labs pay account is not registered in your account")
 	}
 
-	return redirectURL, nil
+	globalVoucher, err := u.walletRepository.GetVoucher(tx, req.GlobalVoucherCode)
+	if err != nil {
+		tx.Rollback()
+		return "", 0, err
+	}
+	timeNow := time.Now()
+
+	if globalVoucher != nil {
+		if timeNow.After(globalVoucher.EndDate) || timeNow.Before(globalVoucher.StartDate) {
+			return "", 0, apperror.InternalServerError("Level 3 Voucher invalid")
+		}
+	}
+
+	//create transaction
+	var transaction *model.Transaction
+	var err5 error
+	if globalVoucher != nil {
+		transaction, err5 = u.walletRepository.CreateTransaction(tx, userID, &globalVoucher.ID)
+		if err5 != nil {
+			tx.Rollback()
+			return "", 0, err5
+		}
+
+	} else {
+		transaction, err5 = u.walletRepository.CreateTransaction(tx, userID, nil)
+		if err5 != nil {
+			tx.Rollback()
+			return "", 0, err5
+		}
+	}
+
+	var totalTransaction float64
+
+	for _, item := range req.Cart {
+		//check voucher if voucher still valid
+		voucher, err1 := u.walletRepository.GetVoucher(tx, item.VoucherCode)
+		if err1 != nil {
+			tx.Rollback()
+			return "", 0, err1
+		}
+		var order *model.Order
+		var err6 error
+		if voucher != nil {
+			if timeNow.After(voucher.EndDate) || timeNow.Before(voucher.StartDate) {
+				return "", 0, apperror.InternalServerError("Level 2 Voucher invalid")
+			}
+			order, err6 = u.walletRepository.CreateOrder(tx, item.SellerID, &voucher.ID, transaction.Id, userID)
+
+			if err6 != nil {
+				tx.Rollback()
+				return "", 0, err6
+			}
+
+		} else {
+			//create order before order_items
+			order, err6 = u.walletRepository.CreateOrder(tx, item.SellerID, nil, transaction.Id, userID)
+
+			if err6 != nil {
+				tx.Rollback()
+				return "", 0, err6
+			}
+		}
+		var totalOrder float64
+
+		for _, id := range item.CartItemID {
+			var totalOrderItem float64
+			cartItem, err2 := u.walletRepository.GetCartItem(tx, id)
+			if err2 != nil {
+				tx.Rollback()
+				return "", 0, err2
+			}
+
+			if cartItem.ProductVariantDetail.Product.SellerID != item.SellerID {
+				tx.Rollback()
+				return "", 0, apperror.BadRequestError("That cart item is not belong to that seller")
+			}
+			//check stock
+			newStock := cartItem.ProductVariantDetail.Stock - int(cartItem.Quantity)
+			if newStock < 0 {
+				tx.Rollback()
+				return "", 0, apperror.InternalServerError(cartItem.ProductVariantDetail.Product.Name + "is out of stock")
+			}
+			fmt.Println("stock", id)
+			if cartItem.ProductVariantDetail.Product.Promotion != nil {
+				totalOrderItem = (cartItem.ProductVariantDetail.Price - cartItem.ProductVariantDetail.Product.Promotion.Amount) * float64(cartItem.Quantity)
+			} else {
+				totalOrderItem = cartItem.ProductVariantDetail.Price * float64(cartItem.Quantity)
+			}
+			totalOrder += totalOrderItem
+
+			// update stock
+			err10 := u.walletRepository.UpdateStock(tx, cartItem.ProductVariantDetail, uint(newStock))
+			if err10 != nil {
+				tx.Rollback()
+				return "", 0, err10
+			}
+
+			//1. create order item and remove cart
+			err3 := u.walletRepository.CreateOrderItemAndRemoveFromCart(tx, cartItem.ProductVariantDetailID, cartItem.ProductVariantDetail.Product, order.ID, userID, cartItem.Quantity, totalOrderItem, cartItem)
+			if err3 != nil {
+				tx.Rollback()
+				return "", 0, err3
+			}
+
+		}
+
+		//order - voucher
+		if voucher != nil {
+			totalOrder -= voucher.Amount
+		}
+		//update order price with map - voucher id
+		err7 := u.walletRepository.UpdateOrder(tx, order, totalOrder)
+		if err7 != nil {
+			tx.Rollback()
+			return "", 0, err7
+		}
+
+		totalTransaction += totalOrder
+	}
+
+	merchantCode := config.Config.SeaLabsPayMerchantCode
+	apiKey := config.Config.SeaLabsPayAPIKey
+	combinedString := req.AccountNumber + ":" + strconv.Itoa(int(totalTransaction)) + ":" + merchantCode
+
+	sign := helper.GenerateHMACSHA256(combinedString, apiKey)
+	redirectURL, _, err := helper.TransactionToSeaLabsPay(req.AccountNumber, strconv.Itoa(int(totalTransaction)), sign, "")
+	if err != nil {
+		tx.Rollback()
+		return "", 0, err
+	}
+
+	tx.Commit()
+	return redirectURL, int(totalTransaction), nil
 }
 
 func (u *userSeaPayAccountServ) TopUpWithSeaLabsPay(amount float64, userID uint, accountNumber string) (*model.SeaLabsPayTopUpHolder, string, error) {
@@ -219,7 +275,6 @@ func (u *userSeaPayAccountServ) TopUpWithSeaLabsPay(amount float64, userID uint,
 	if err != nil {
 		return nil, "", err
 	}
-
 	if !hasAccount {
 		return nil, "", apperror.BadRequestError("That sea labs pay account is not registered in your account")
 	}
@@ -229,8 +284,8 @@ func (u *userSeaPayAccountServ) TopUpWithSeaLabsPay(amount float64, userID uint,
 	amountString := strconv.Itoa(int(amount))
 	combinedString := accountNumber + ":" + amountString + ":" + merchantCode
 
-	sign := generateHMACSHA256(combinedString, apiKey)
-	redirectURL, txnId, err := transactionToSeaLabsPay(accountNumber, amountString, sign, "/user/wallet/top-up/sea-labs-pay/callback")
+	sign := helper.GenerateHMACSHA256(combinedString, apiKey)
+	redirectURL, txnId, err := helper.TransactionToSeaLabsPay(accountNumber, amountString, sign, "/user/wallet/top-up/sea-labs-pay/callback")
 	if err != nil {
 		tx.Rollback()
 		return nil, "", err
