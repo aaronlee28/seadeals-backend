@@ -75,6 +75,9 @@ func validateVoucherQueryParam(qp *model.VoucherQueryParam) {
 	if !(qp.Status == model.StatusUpcoming || qp.Status == model.StatusOnGoing || qp.Status == model.StatusEnded) {
 		qp.Status = ""
 	}
+	if qp.Month == 0 {
+		qp.Month = model.MonthVoucherDefault
+	}
 }
 
 func validateVoucher(voucher *model.Voucher, req *dto.PostValidateVoucherReq) error {
@@ -96,7 +99,7 @@ func validateVoucher(voucher *model.Voucher, req *dto.PostValidateVoucherReq) er
 func (s *voucherService) CreateVoucher(req *dto.PostVoucherReq, userID uint) (*dto.GetVoucherRes, error) {
 	tx := s.db.Begin()
 
-	seller, err := s.sellerRepo.FindSellerByID(tx, req.SellerID, userID)
+	seller, err := s.sellerRepo.FindSellerByID(tx, req.SellerID)
 	if err != nil {
 		tx.Rollback()
 		return nil, err
@@ -172,7 +175,7 @@ func (s *voucherService) FindVoucherByID(id uint) (*dto.GetVoucherRes, error) {
 func (s *voucherService) FindVoucherBySellerID(sellerID, userID uint, qp *model.VoucherQueryParam) (*dto.GetVouchersRes, error) {
 	tx := s.db.Begin()
 
-	seller, err := s.sellerRepo.FindSellerByID(tx, sellerID, userID)
+	seller, err := s.sellerRepo.FindSellerByID(tx, sellerID)
 	if err != nil {
 		tx.Rollback()
 		return nil, err

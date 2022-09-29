@@ -3,8 +3,8 @@ package dto
 type UpdateAddressReq struct {
 	ID          uint   `json:"id" binding:"required"`
 	UserID      uint   `json:"user_id" binding:"required"`
-	CityID      string `json:"city_id"`
-	ProvinceID  string `json:"province_id"`
+	CityID      string `json:"city_id" binding:"omitempty,numeric"`
+	ProvinceID  string `json:"province_id" binding:"omitempty,numeric"`
 	Province    string `json:"province"`
 	City        string `json:"city"`
 	Type        string `json:"type"`

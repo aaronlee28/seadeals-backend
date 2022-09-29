@@ -35,7 +35,7 @@ func NewSellerService(c *SellerServiceConfig) SellerService {
 
 func (s *sellerService) FindSellerByID(sellerID uint, userID uint) (*dto.GetSellerRes, error) {
 	tx := s.db.Begin()
-	seller, err := s.sellerRepo.FindSellerByID(tx, sellerID, userID)
+	seller, err := s.sellerRepo.FindSellerDetailByID(tx, sellerID, userID)
 	if err != nil {
 		tx.Rollback()
 		return nil, err

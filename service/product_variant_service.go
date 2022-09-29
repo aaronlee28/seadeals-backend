@@ -77,10 +77,13 @@ func (s *productVariantService) GetVariantPriceAfterPromotionByProductID(product
 	id := uint(productID)
 
 	product, err := s.productRepo.GetProductDetail(tx, id)
-
 	if err != nil {
 		tx.Rollback()
 		return nil, err
+	}
+	if product.Promotion == nil {
+		tx.Rollback()
+		return nil, apperror.BadRequestError("no promotion for this product")
 	}
 
 	var variants []*dto.ProductVariantPromotionRes

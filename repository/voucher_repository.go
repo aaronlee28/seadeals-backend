@@ -75,7 +75,7 @@ func (r *voucherRepository) FindVoucherBySellerID(tx *gorm.DB, sellerID uint, qp
 		queryDB = tx.Where("end_date < ?", time.Now())
 	}
 
-	if qp.Month != 0 {
+	if qp.Month != -1 {
 		queryDB = queryDB.Where("extract (month from start_date) = ? OR extract (month from end_date) = ?", qp.Month, qp.Month)
 	}
 
