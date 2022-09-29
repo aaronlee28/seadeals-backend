@@ -17,7 +17,7 @@ import (
 
 type WalletService interface {
 	UserWalletData(id uint) (*dto.WalletDataRes, error)
-	TransactionDetails(id uint) (*dto.TransactionDetailsRes, error)
+	TransactionDetails(userID uint, transactionID uint) (*dto.TransactionDetailsRes, error)
 	PaginatedTransactions(q *repository.Query, userID uint) (*dto.PaginatedTransactionsRes, error)
 	GetWalletTransactionsByUserID(q *dto.WalletTransactionsQuery, userID uint) ([]*model.WalletTransaction, int64, int64, error)
 
@@ -80,16 +80,22 @@ func (w *walletService) UserWalletData(id uint) (*dto.WalletDataRes, error) {
 	return walletData, nil
 }
 
-func (w *walletService) TransactionDetails(id uint) (*dto.TransactionDetailsRes, error) {
+func (w *walletService) TransactionDetails(userID uint, transactionID uint) (*dto.TransactionDetailsRes, error) {
 	tx := w.db.Begin()
-	t, err := w.walletRepository.TransactionDetails(tx, id)
+	t, err := w.walletRepository.TransactionDetails(tx, transactionID)
 	if err != nil {
 		tx.Rollback()
 		return nil, err
 	}
+
+	if t.UserID != userID {
+		tx.Rollback()
+		return nil, apperror.UnauthorizedError("Cannot access another user transactions")
+	}
+
 	transaction := &dto.TransactionDetailsRes{
 		Id:            t.Id,
-		VoucherID:     *t.VoucherID,
+		VoucherID:     t.VoucherID,
 		Total:         t.Total,
 		PaymentMethod: t.PaymentMethod,
 		CreatedAt:     t.CreatedAt,
@@ -137,15 +143,18 @@ func (w *walletService) GetWalletTransactionsByUserID(q *dto.WalletTransactionsQ
 	tx := w.db.Begin()
 	wallet, err := w.walletRepository.GetWalletByUserID(tx, userID)
 	if err != nil {
+		tx.Rollback()
 		return nil, 0, 0, err
 	}
 
 	transactions, totalPage, totalData, err := w.walletTransRepo.GetTransactionsByWalletID(tx, q, wallet.ID)
 	if err != nil {
+		tx.Rollback()
 		return nil, 0, 0, err
 	}
 
 	if len(transactions) <= 0 {
+		tx.Rollback()
 		return nil, 0, 0, apperror.NotFoundError("No transactions were made")
 	}
 
@@ -275,6 +284,7 @@ func (w *walletService) ChangeWalletPinByEmail(userID uint, req *dto.ChangePinBy
 func (w *walletService) ValidateWalletPin(userID uint, pin string) (bool, error) {
 	tx := w.db.Begin()
 	if len(pin) != 6 {
+		tx.Rollback()
 		return false, apperror.BadRequestError("Pin has to be 6 digits long")
 	}
 
@@ -312,7 +322,7 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 	timeNow := time.Now()
 
 	if globalVoucher != nil {
-		if timeNow.After(globalVoucher.EndDate) {
+		if timeNow.After(globalVoucher.EndDate) || timeNow.Before(globalVoucher.StartDate) {
 			return nil, apperror.InternalServerError("Level 3 Voucher invalid")
 		}
 	}
@@ -347,7 +357,7 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 		var order *model.Order
 		var err6 error
 		if voucher != nil {
-			if timeNow.After(voucher.EndDate) {
+			if timeNow.After(voucher.EndDate) || timeNow.Before(voucher.StartDate) {
 				return nil, apperror.InternalServerError("Level 2 Voucher invalid")
 			}
 			order, err6 = w.walletRepository.CreateOrder(tx, item.SellerID, &voucher.ID, transaction.Id, userID)

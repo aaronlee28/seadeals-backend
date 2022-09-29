@@ -10,6 +10,7 @@ type Promotion struct {
 	ID          uint      `json:"id" gorm:"primaryKey"`
 	ProductID   uint      `json:"product_id"`
 	Product     *Product  `json:"product"`
+	SellerID    uint      `json:"seller_id"`
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
 	StartDate   time.Time `json:"start_date"`

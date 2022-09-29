@@ -23,7 +23,10 @@ type RouterConfig struct {
 	OrderItemService       service.CartItemService
 	RefreshTokenService    service.RefreshTokenService
 	SealabsPayService      service.SealabsPayService
+	FavoriteService        service.FavoriteService
+	SocialGraphService     service.SocialGraphService
 	VoucherService         service.VoucherService
+	PromotionService       service.PromotionService
 }
 
 func NewRouter(c *RouterConfig) *gin.Engine {
@@ -43,7 +46,10 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		OrderItemService:       c.OrderItemService,
 		RefreshTokenService:    c.RefreshTokenService,
 		SealabsPayService:      c.SealabsPayService,
+		FavoriteService:        c.FavoriteService,
+		SocialGraphService:     c.SocialGraphService,
 		VoucherService:         c.VoucherService,
+		PromotionService:       c.PromotionService,
 	})
 
 	r.Use(middleware.ErrorHandler)
@@ -93,6 +99,14 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.GET("/categories/:id/products", h.GetProductsByCategoryID)
 	r.GET("/products", h.SearchProducts)
 
+	// NOTIFICATION
+	r.POST("/products/favorites", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
+		return &dto.FavoriteProductReq{}
+	}), h.FavoriteToProduct)
+	r.POST("/sellers/follow", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
+		return &dto.FollowSellerReq{}
+	}), h.FollowToSeller)
+
 	// REVIEWS
 	r.GET("/products/:id/reviews", h.FindReviewByProductID)
 
@@ -113,9 +127,12 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	}), h.UpdateVoucher)
 	r.DELETE("/vouchers/:id", middleware.AuthorizeJWTFor(model.SellerRoleName), h.DeleteVoucherByID)
 
+	// PROMOTION
+	r.GET("/promotion-list", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetPromotion)
+
 	// WALLET
 	r.GET("/user-wallet", middleware.AuthorizeJWTFor(model.UserRoleName), h.WalletDataTransactions)
-	r.GET("/transaction-details", middleware.RequestValidator(func() any { return &dto.TransactionDetailsReq{} }), middleware.AuthorizeJWTFor("user"), h.TransactionDetails)
+	r.GET("/transactions/:id", middleware.AuthorizeJWTFor(model.UserRoleName), h.TransactionDetails)
 	r.GET("/paginated-transaction", middleware.AuthorizeJWTFor(model.UserRoleName), h.PaginatedTransactions)
 	r.GET("/user/wallet/transactions", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetWalletTransactions)
 	r.PATCH("/wallet-pin", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any { return &dto.PinReq{} }), h.WalletPin)

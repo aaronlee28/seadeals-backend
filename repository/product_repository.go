@@ -24,6 +24,7 @@ type ProductRepository interface {
 	SearchCity(tx *gorm.DB, productID uint) (string, error)
 	SearchCategory(tx *gorm.DB, productID uint) (string, error)
 	GetProductDetail(tx *gorm.DB, id uint) (*model.Product, error)
+	GetProductPhotoURL(tx *gorm.DB, productID uint) (string, error)
 }
 
 type productRepository struct{}
@@ -213,4 +214,14 @@ func (r *productRepository) SearchCategory(tx *gorm.DB, productID uint) (string,
 	}
 
 	return category, nil
+}
+
+func (r *productRepository) GetProductPhotoURL(tx *gorm.DB, productID uint) (string, error) {
+	var photoURL string
+	photoQuery := tx.Table("product_photos").Select("photo_url").Where("product_id = ?", productID).Limit(1).Find(&photoURL)
+	if photoQuery.Error != nil {
+		return "", apperror.InternalServerError("cannot find photo")
+	}
+
+	return photoURL, nil
 }

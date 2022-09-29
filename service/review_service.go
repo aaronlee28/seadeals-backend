@@ -53,6 +53,7 @@ func (s *reviewService) FindReviewByProductID(productID uint, qp *model.ReviewQu
 	tx := s.db.Begin()
 	reviews, err := s.reviewRepo.FindReviewByProductID(tx, productID, qp)
 	if err != nil {
+		tx.Rollback()
 		if errors.Is(err, &apperror.ReviewNotFoundError{}) {
 			return nil, apperror.NotFoundError(err.Error())
 		}
@@ -71,13 +72,14 @@ func (s *reviewService) FindReviewByProductID(productID uint, qp *model.ReviewQu
 	avgRating = avgRating / float64(totalReviews)
 
 	res := &dto.GetReviewsRes{
-		Limit:         uint(qp.Limit),
-		Page:          uint(qp.Page),
-		TotalPages:    uint(totalPages),
-		TotalReviews:  uint(totalReviews),
+		Limit:         qp.Limit,
+		Page:          qp.Page,
+		TotalPages:    totalPages,
+		TotalReviews:  totalReviews,
 		AverageRating: avgRating,
 		Reviews:       reviewsRes,
 	}
 
+	tx.Commit()
 	return res, nil
 }
