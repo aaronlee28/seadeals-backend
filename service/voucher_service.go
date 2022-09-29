@@ -13,6 +13,7 @@ import (
 type VoucherService interface {
 	CreateVoucher(req *dto.PostVoucherReq, userID uint) (*dto.GetVoucherRes, error)
 	FindVoucherDetailByID(id, userID uint) (*dto.GetVoucherRes, error)
+	FindVoucherByID(id uint) (*dto.GetVoucherRes, error)
 	UpdateVoucher(req *dto.PatchVoucherReq, id, userID uint) (*dto.GetVoucherRes, error)
 	DeleteVoucherByID(id, userID uint) (bool, error)
 }
@@ -110,6 +111,20 @@ func (s *voucherService) FindVoucherDetailByID(id, userID uint) (*dto.GetVoucher
 	if voucher.Seller.UserID != userID {
 		tx.Rollback()
 		return nil, apperror.UnauthorizedError("cannot fetch other shop detail voucher")
+	}
+
+	res := new(dto.GetVoucherRes).From(voucher)
+
+	tx.Commit()
+	return res, nil
+}
+
+func (s *voucherService) FindVoucherByID(id uint) (*dto.GetVoucherRes, error) {
+	tx := s.db.Begin()
+	voucher, err := s.voucherRepo.FindVoucherByID(tx, id)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
 	}
 
 	res := new(dto.GetVoucherRes).From(voucher)
