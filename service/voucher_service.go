@@ -172,7 +172,7 @@ func (s *voucherService) FindVoucherByID(id uint) (*dto.GetVoucherRes, error) {
 func (s *voucherService) FindVoucherBySellerID(sellerID, userID uint, qp *model.VoucherQueryParam) (*dto.GetVouchersRes, error) {
 	tx := s.db.Begin()
 
-	seller, err := s.sellerRepo.FindSellerByID(tx, sellerID, userID)
+	seller, err := s.sellerRepo.FindSellerByID(tx, sellerID)
 	if err != nil {
 		tx.Rollback()
 		return nil, err
