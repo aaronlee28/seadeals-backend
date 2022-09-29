@@ -86,6 +86,19 @@ func (h *Handler) FindVoucherBySellerID(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, dto.StatusOKResponse(vouchers))
 }
 
+func (h *Handler) ValidateVoucher(ctx *gin.Context) {
+	payload, _ := ctx.Get("payload")
+	req := payload.(*dto.PostValidateVoucherReq)
+
+	voucher, err := h.voucherService.ValidateVoucher(req)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(voucher))
+}
+
 func (h *Handler) UpdateVoucher(ctx *gin.Context) {
 	userJWT, _ := ctx.Get("user")
 	user := userJWT.(dto.UserJWT)

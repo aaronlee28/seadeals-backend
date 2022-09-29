@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"gorm.io/gorm"
 	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
@@ -15,6 +16,7 @@ type VoucherService interface {
 	FindVoucherDetailByID(id, userID uint) (*dto.GetVoucherRes, error)
 	FindVoucherByID(id uint) (*dto.GetVoucherRes, error)
 	FindVoucherBySellerID(sellerID, userID uint, qp *model.VoucherQueryParam) (*dto.GetVouchersRes, error)
+	ValidateVoucher(req *dto.PostValidateVoucherReq) (*dto.GetVoucherRes, error)
 	UpdateVoucher(req *dto.PatchVoucherReq, id, userID uint) (*dto.GetVoucherRes, error)
 	DeleteVoucherByID(id, userID uint) (bool, error)
 }
@@ -70,6 +72,22 @@ func validateVoucherQueryParam(qp *model.VoucherQueryParam) {
 	if qp.Limit == 0 {
 		qp.Limit = model.LimitVoucherDefault
 	}
+}
+
+func validateVoucher(voucher *model.Voucher, req *dto.PostValidateVoucherReq) error {
+	if !(voucher.StartDate.Before(time.Now()) && voucher.EndDate.After(time.Now())) {
+		return apperror.BadRequestError(new(apperror.VoucherNotFoundError).Error())
+	}
+	if voucher.SellerID != req.SellerID {
+		return apperror.BadRequestError("voucher cannot be used in this shop")
+	}
+	if (voucher.Quota - int(req.Quantity)) <= 0 {
+		return apperror.BadRequestError(fmt.Sprintf("the number of purchases exceeds the voucher quota (quota: %d)", voucher.Quota))
+	}
+	if voucher.MinSpending > req.Price {
+		return apperror.BadRequestError(fmt.Sprintf("need %.2f more spending", voucher.MinSpending-req.Price))
+	}
+	return nil
 }
 
 func (s *voucherService) CreateVoucher(req *dto.PostVoucherReq, userID uint) (*dto.GetVoucherRes, error) {
@@ -184,6 +202,26 @@ func (s *voucherService) FindVoucherBySellerID(sellerID, userID uint, qp *model.
 		TotalVouchers: totalVouchers,
 		Vouchers:      voucherRes,
 	}
+
+	tx.Commit()
+	return res, nil
+}
+
+func (s *voucherService) ValidateVoucher(req *dto.PostValidateVoucherReq) (*dto.GetVoucherRes, error) {
+	tx := s.db.Begin()
+	voucher, err := s.voucherRepo.FindVoucherByCode(tx, req.Code)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	err = validateVoucher(voucher, req)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	res := new(dto.GetVoucherRes).From(voucher)
 
 	tx.Commit()
 	return res, nil

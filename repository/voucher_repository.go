@@ -15,6 +15,7 @@ type VoucherRepository interface {
 	FindVoucherByID(tx *gorm.DB, id uint) (*model.Voucher, error)
 	FindVoucherDetailByID(tx *gorm.DB, id uint) (*model.Voucher, error)
 	FindVoucherBySellerID(tx *gorm.DB, sellerID uint, qp *model.VoucherQueryParam) ([]*model.Voucher, error)
+	FindVoucherByCode(tx *gorm.DB, code string) (*model.Voucher, error)
 	DeleteVoucherByID(tx *gorm.DB, id uint) (bool, error)
 }
 
@@ -69,6 +70,15 @@ func (r *voucherRepository) FindVoucherBySellerID(tx *gorm.DB, sellerID uint, qp
 		return nil, apperror.NotFoundError(new(apperror.VoucherNotFoundError).Error())
 	}
 	return vouchers, result.Error
+}
+
+func (r *voucherRepository) FindVoucherByCode(tx *gorm.DB, code string) (*model.Voucher, error) {
+	var v *model.Voucher
+	result := tx.Where("code = ?", code).First(&v)
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return nil, apperror.NotFoundError(new(apperror.VoucherNotFoundError).Error())
+	}
+	return v, result.Error
 }
 
 func (r *voucherRepository) DeleteVoucherByID(tx *gorm.DB, id uint) (bool, error) {
