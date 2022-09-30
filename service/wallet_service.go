@@ -1,7 +1,6 @@
 package service
 
 import (
-	"fmt"
 	"math"
 	"seadeals-backend/apperror"
 	"seadeals-backend/config"
@@ -58,10 +57,11 @@ func NewWalletService(c *WalletServiceConfig) WalletService {
 
 func (w *walletService) UserWalletData(id uint) (*dto.WalletDataRes, error) {
 	tx := w.db.Begin()
-	wallet, err := w.walletRepository.GetWalletByUserID(tx, id)
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
 
+	wallet, err := w.walletRepository.GetWalletByUserID(tx, id)
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 	transactions, err := w.walletRepository.GetTransactionsByUserID(tx, id)
@@ -83,15 +83,17 @@ func (w *walletService) UserWalletData(id uint) (*dto.WalletDataRes, error) {
 
 func (w *walletService) TransactionDetails(userID uint, transactionID uint) (*dto.TransactionDetailsRes, error) {
 	tx := w.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
+
 	t, err := w.walletRepository.TransactionDetails(tx, transactionID)
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 
 	if t.UserID != userID {
-		tx.Rollback()
-		return nil, apperror.UnauthorizedError("Cannot access another user transactions")
+		err = apperror.UnauthorizedError("Cannot access another user transactions")
+		return nil, err
 	}
 
 	transaction := &dto.TransactionDetailsRes{
@@ -103,7 +105,6 @@ func (w *walletService) TransactionDetails(userID uint, transactionID uint) (*dt
 		UpdatedAt:     t.UpdatedAt,
 	}
 
-	tx.Commit()
 	return transaction, nil
 }
 
@@ -114,13 +115,17 @@ func (w *walletService) PaginatedTransactions(q *repository.Query, userID uint) 
 	if q.Page == "" {
 		q.Page = "1"
 	}
+
 	tx := w.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
+
 	var ts []dto.TransactionsRes
 	l, t, err := w.walletRepository.PaginatedTransactions(tx, q, userID)
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
+
 	for _, transaction := range *t {
 		tr := new(dto.TransactionsRes).FromTransaction(&transaction)
 		ts = append(ts, *tr)
@@ -136,71 +141,73 @@ func (w *walletService) PaginatedTransactions(q *repository.Query, userID uint) 
 		Transactions: ts,
 	}
 
-	tx.Commit()
 	return &paginatedTransactions, nil
 }
 
 func (w *walletService) GetWalletTransactionsByUserID(q *dto.WalletTransactionsQuery, userID uint) ([]*model.WalletTransaction, int64, int64, error) {
 	tx := w.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
+
 	wallet, err := w.walletRepository.GetWalletByUserID(tx, userID)
 	if err != nil {
-		tx.Rollback()
 		return nil, 0, 0, err
 	}
 
 	transactions, totalPage, totalData, err := w.walletTransRepo.GetTransactionsByWalletID(tx, q, wallet.ID)
 	if err != nil {
-		tx.Rollback()
 		return nil, 0, 0, err
 	}
 
 	if len(transactions) <= 0 {
-		tx.Rollback()
-		return nil, 0, 0, apperror.NotFoundError("No transactions were made")
+		err = apperror.NotFoundError("No transactions were made")
+		return nil, 0, 0, err
 	}
 
-	tx.Commit()
 	return transactions, totalPage, totalData, nil
 }
 
 func (w *walletService) WalletPin(userID uint, pin string) error {
 	tx := w.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
+
 	if len(pin) != 6 {
-		return apperror.BadRequestError("Pin has to be 6 digits long")
+		err = apperror.BadRequestError("Pin has to be 6 digits long")
+		return err
 	}
-	err := w.walletRepository.WalletPin(tx, userID, pin)
+	err = w.walletRepository.WalletPin(tx, userID, pin)
 	if err != nil {
-		tx.Rollback()
 		return err
 	}
 
-	tx.Commit()
 	return nil
 }
 
 func (w *walletService) RequestPinChangeWithEmail(userID uint) (*mailjet.ResultsV31, string, error) {
 	tx := w.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
+
 	user, err := w.userRepository.GetUserByID(tx, userID)
 	if err != nil {
-		tx.Rollback()
 		return nil, "", err
 	}
 
 	wallet, err := w.walletRepository.GetWalletByUserID(tx, userID)
 	if err != nil {
-		tx.Rollback()
 		return nil, "", err
 	}
 
 	if wallet.Pin == nil {
-		return nil, "", apperror.NotFoundError("Pin is not setup yet")
+		err = apperror.NotFoundError("Pin is not setup yet")
+		return nil, "", err
 	}
 
 	randomString := helper.RandomString(12)
 	code := helper.RandomString(6)
 	err = w.walletRepository.RequestChangePinByEmail(user.ID, randomString, code)
 	if err != nil {
-		tx.Rollback()
 		return nil, "", err
 	}
 
@@ -231,10 +238,8 @@ func (w *walletService) RequestPinChangeWithEmail(userID uint) (*mailjet.Results
 
 	res, err := mailjetClient.SendMailV31(&messages)
 	if err != nil {
-		tx.Rollback()
 		return nil, "", err
 	}
-	tx.Commit()
 	return res, randomString, nil
 }
 
@@ -258,66 +263,70 @@ func (w *walletService) ValidateCodeToRequestByEmail(userID uint, req *dto.CodeK
 
 func (w *walletService) ChangeWalletPinByEmail(userID uint, req *dto.ChangePinByEmailReq) (*model.Wallet, error) {
 	tx := w.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
+
 	if len(req.Pin) != 6 {
-		return nil, apperror.BadRequestError("Pin has to be 6 digits long")
+		err = apperror.BadRequestError("Pin has to be 6 digits long")
+		return nil, err
 	}
 
 	wallet, err := w.walletRepository.GetWalletByUserID(tx, userID)
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 
 	if wallet.Pin == nil {
-		return nil, apperror.NotFoundError("Pin is not setup yet")
+		err = apperror.NotFoundError("Pin is not setup yet")
+		return nil, err
 	}
 
 	result, err := w.walletRepository.ChangeWalletPinByEmail(tx, userID, wallet.ID, req)
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 
-	tx.Commit()
 	return result, nil
 }
 
 func (w *walletService) ValidateWalletPin(userID uint, pin string) (bool, error) {
 	tx := w.db.Begin()
-	if len(pin) != 6 {
-		tx.Rollback()
-		return false, apperror.BadRequestError("Pin has to be 6 digits long")
-	}
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
 
-	err := w.walletRepository.ValidateWalletPin(tx, userID, pin)
-	if err != nil {
-		tx.Rollback()
+	if len(pin) != 6 {
+		err = apperror.BadRequestError("Pin has to be 6 digits long")
 		return false, err
 	}
 
-	tx.Commit()
+	err = w.walletRepository.ValidateWalletPin(tx, userID, pin)
+	if err != nil {
+		return false, err
+	}
+
 	return true, nil
 }
 
 func (w *walletService) GetWalletStatus(userID uint) (string, error) {
 	tx := w.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
 
 	status, err := w.walletRepository.GetWalletStatus(tx, userID)
 	if err != nil {
-		tx.Rollback()
 		return "", err
 	}
 
-	tx.Commit()
 	return status, nil
 }
 
 func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dto.CheckoutCartRes, error) {
 	tx := w.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
 
 	globalVoucher, err := w.walletRepository.GetVoucher(tx, req.GlobalVoucherCode)
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 	timeNow := time.Now()
@@ -340,65 +349,61 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 		PaymentMethod: "wallet",
 		Status:        "Waiting for Seller",
 	}
-	var err5 error
-	transaction, err5 = w.walletRepository.CreateTransaction(tx, transaction)
-	if err5 != nil {
-		tx.Rollback()
-		return nil, err5
+
+	transaction, err = w.walletRepository.CreateTransaction(tx, transaction)
+	if err != nil {
+		return nil, err
 	}
 
 	var totalTransaction float64
 	for _, item := range req.Cart {
 		//check voucher if voucher still valid
-		voucher, err1 := w.walletRepository.GetVoucher(tx, item.VoucherCode)
-		if err1 != nil {
-			tx.Rollback()
-			return nil, err1
+		var voucher *model.Voucher
+		voucher, err = w.walletRepository.GetVoucher(tx, item.VoucherCode)
+		if err != nil {
+			return nil, err
 		}
+
 		var order *model.Order
-		var err6 error
 		if voucher != nil {
 			if timeNow.After(voucher.EndDate) || timeNow.Before(voucher.StartDate) {
 				return nil, apperror.InternalServerError("Level 2 Voucher invalid")
 			}
-			order, err6 = w.walletRepository.CreateOrder(tx, item.SellerID, &voucher.ID, transaction.ID, userID)
+			order, err = w.walletRepository.CreateOrder(tx, item.SellerID, &voucher.ID, transaction.ID, userID)
 
-			if err6 != nil {
-				tx.Rollback()
-				return nil, err6
+			if err != nil {
+				return nil, err
 			}
 
 		} else {
 			//create order before order_items
-			order, err6 = w.walletRepository.CreateOrder(tx, item.SellerID, nil, transaction.ID, userID)
-
-			if err6 != nil {
-				tx.Rollback()
-				return nil, err6
+			order, err = w.walletRepository.CreateOrder(tx, item.SellerID, nil, transaction.ID, userID)
+			if err != nil {
+				return nil, err
 			}
 		}
 		var totalOrder float64
 
 		for _, id := range item.CartItemID {
 			var totalOrderItem float64
-			cartItem, err2 := w.walletRepository.GetCartItem(tx, id)
-			if err2 != nil {
-				tx.Rollback()
-				return nil, err2
+			var cartItem *model.CartItem
+			cartItem, err = w.walletRepository.GetCartItem(tx, id)
+			if err != nil {
+				return nil, err
 			}
 
 			if cartItem.ProductVariantDetail.Product.SellerID != item.SellerID {
-				tx.Rollback()
-				return nil, apperror.BadRequestError("That cart item does not belong to that seller")
+				err = apperror.BadRequestError("That cart item does not belong to that seller")
+				return nil, err
 			}
 
 			//check stock
 			newStock := cartItem.ProductVariantDetail.Stock - int(cartItem.Quantity)
 			if newStock < 0 {
-				tx.Rollback()
-				return nil, apperror.InternalServerError(cartItem.ProductVariantDetail.Product.Name + "is out of stock")
+				err = apperror.InternalServerError(cartItem.ProductVariantDetail.Product.Name + "is out of stock")
+				return nil, err
 			}
-			fmt.Println("price", cartItem.ProductVariantDetail.Price)
+
 			if cartItem.ProductVariantDetail.Product.Promotion != nil {
 				totalOrderItem = (cartItem.ProductVariantDetail.Price - cartItem.ProductVariantDetail.Product.Promotion.Amount) * float64(cartItem.Quantity)
 			} else {
@@ -407,17 +412,15 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 			totalOrder += totalOrderItem
 
 			// update stock
-			err10 := w.walletRepository.UpdateStock(tx, cartItem.ProductVariantDetail, uint(newStock))
-			if err10 != nil {
-				tx.Rollback()
-				return nil, err10
+			err = w.walletRepository.UpdateStock(tx, cartItem.ProductVariantDetail, uint(newStock))
+			if err != nil {
+				return nil, err
 			}
 
 			//1. create order item and remove cart
-			err3 := w.walletRepository.CreateOrderItemAndRemoveFromCart(tx, cartItem.ProductVariantDetailID, cartItem.ProductVariantDetail.Product, order.ID, userID, cartItem.Quantity, totalOrderItem, cartItem)
-			if err3 != nil {
-				tx.Rollback()
-				return nil, err3
+			err = w.walletRepository.CreateOrderItemAndRemoveFromCart(tx, cartItem.ProductVariantDetailID, cartItem.ProductVariantDetail.Product, order.ID, userID, cartItem.Quantity, totalOrderItem, cartItem)
+			if err != nil {
+				return nil, err
 			}
 
 		}
@@ -427,46 +430,42 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 			totalOrder -= voucher.Amount
 		}
 		//update order price with map - voucher id
-		err7 := w.walletRepository.UpdateOrder(tx, order, totalOrder)
-		if err7 != nil {
-			tx.Rollback()
-			return nil, err7
+		err = w.walletRepository.UpdateOrder(tx, order, totalOrder)
+		if err != nil {
+			return nil, err
 		}
 
 		totalTransaction += totalOrder
 	}
 	//total transaction - voucher
 	//4. check user wallet balance is sufficient
-	wallet, err8 := w.walletRepository.GetWalletByUserID(tx, userID)
-	if err8 != nil {
-		tx.Rollback()
-		return nil, err8
+	wallet, err := w.walletRepository.GetWalletByUserID(tx, userID)
+	if err != nil {
+		return nil, err
 	}
 	if globalVoucher != nil {
 		totalTransaction -= globalVoucher.Amount
 	}
 
 	if wallet.Balance-totalTransaction < 0 {
-		return nil, apperror.InternalServerError("Insufficient Balance")
+		err = apperror.InternalServerError("Insufficient Balance")
+		return nil, err
 	}
 	//5. update transaction
 	transaction.Total = totalTransaction
-	err9 := w.walletRepository.UpdateTransaction(tx, transaction)
-	if err9 != nil {
-		tx.Rollback()
-		return nil, err9
+	err = w.walletRepository.UpdateTransaction(tx, transaction)
+	if err != nil {
+		return nil, err
 	}
 
 	if req.PaymentMethod == "wallet" {
-		err11 := w.walletRepository.CreateWalletTransaction(tx, wallet.ID, transaction)
-		if err11 != nil {
-			tx.Rollback()
-			return nil, err11
+		err = w.walletRepository.CreateWalletTransaction(tx, wallet.ID, transaction)
+		if err != nil {
+			return nil, err
 		}
-		err12 := w.walletRepository.UpdateWalletBalance(tx, wallet, totalTransaction)
-		if err12 != nil {
-			tx.Rollback()
-			return nil, err12
+		err = w.walletRepository.UpdateWalletBalance(tx, wallet, totalTransaction)
+		if err != nil {
+			return nil, err
 		}
 	}
 	//6. create response
@@ -477,7 +476,5 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 		PaymentMethod: transaction.PaymentMethod,
 		CreatedAt:     transaction.CreatedAt,
 	}
-
-	tx.Commit()
 	return &transRes, nil
 }

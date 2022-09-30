@@ -5,6 +5,7 @@ import (
 	"gorm.io/gorm"
 	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
+	"seadeals-backend/helper"
 	"seadeals-backend/repository"
 )
 
@@ -38,10 +39,11 @@ func NewProductVariantService(c *ProductVariantServiceConfig) ProductVariantServ
 
 func (s *productVariantService) FindAllProductVariantByProductID(productID uint) (*dto.ProductVariantRes, error) {
 	tx := s.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
 
 	productVariants, err := s.productVariantRepo.FindAllProductVariantByProductID(tx, productID)
 	if err != nil {
-		tx.Rollback()
 		if errors.Is(err, &apperror.ProductNotFoundError{}) {
 			return nil, apperror.NotFoundError(err.Error())
 		}
@@ -68,22 +70,22 @@ func (s *productVariantService) FindAllProductVariantByProductID(productID uint)
 		ProductVariants: productVariantRes,
 	}
 
-	tx.Commit()
 	return res, nil
 }
 
 func (s *productVariantService) GetVariantPriceAfterPromotionByProductID(productID int) (*dto.ProductVariantPriceRes, error) {
 	tx := s.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
 	id := uint(productID)
 
 	product, err := s.productRepo.GetProductDetail(tx, id)
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 	if product.Promotion == nil {
-		tx.Rollback()
-		return nil, apperror.BadRequestError("no promotion for this product")
+		err = apperror.BadRequestError("no promotion for this product")
+		return nil, err
 	}
 
 	var variants []*dto.ProductVariantPromotionRes
@@ -99,7 +101,6 @@ func (s *productVariantService) GetVariantPriceAfterPromotionByProductID(product
 		ProductPromotion: product.Promotion.Amount,
 		ProductVariant:   variants,
 	}
-
-	tx.Commit()
+	
 	return &res, nil
 }

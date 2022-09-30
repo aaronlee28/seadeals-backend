@@ -2,6 +2,7 @@ package service
 
 import (
 	"gorm.io/gorm"
+	"seadeals-backend/helper"
 	"seadeals-backend/model"
 	"seadeals-backend/repository"
 )
@@ -29,13 +30,13 @@ func NewFavoriteService(c *FavoriteServiceConfig) FavoriteService {
 
 func (f *favoriteService) FavoriteToProduct(userID uint, productID uint) (*model.Favorite, error) {
 	tx := f.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
 
 	favorite, err := f.favoriteRepository.FavoriteToProduct(tx, userID, productID)
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
-
-	tx.Commit()
+	
 	return favorite, nil
 }

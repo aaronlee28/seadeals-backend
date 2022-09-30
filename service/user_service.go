@@ -8,6 +8,7 @@ import (
 	"seadeals-backend/apperror"
 	"seadeals-backend/config"
 	"seadeals-backend/dto"
+	"seadeals-backend/helper"
 	"seadeals-backend/model"
 	"seadeals-backend/repository"
 	"strings"
@@ -84,6 +85,7 @@ func (u *userService) Register(req *dto.RegisterRequest) (*dto.RegisterResponse,
 	}
 
 	tx := u.db.Begin()
+
 	birthDate, _ := time.Parse("2006-01-02", req.BirthDate)
 	newUser := &model.User{
 		FullName:  req.FullName,
@@ -140,44 +142,46 @@ func (u *userService) Register(req *dto.RegisterRequest) (*dto.RegisterResponse,
 }
 
 func (u *userService) CheckGoogleAccount(email string) (*model.User, error) {
-	_, err := mail.ParseAddress(email)
+	tx := u.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
+
+	_, err = mail.ParseAddress(email)
 	if err != nil {
-		return nil, apperror.BadRequestError("Email is not valid")
+		err = apperror.BadRequestError("Email is not valid")
+		return nil, err
 	}
 
-	tx := u.db.Begin()
 	isEmailExist, err := u.userRepository.HasExistEmail(tx, email)
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 
 	if !isEmailExist {
-		return nil, apperror.NotFoundError("email doesn't exist")
+		err = apperror.NotFoundError("email doesn't exist")
+		return nil, err
 	}
 
 	user, err := u.userRepository.GetUserByEmail(tx, email)
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 
-	tx.Commit()
 	return user, nil
 }
 
 func (u *userService) RegisterAsSeller(req *dto.RegisterAsSellerReq) (*model.Seller, string, error) {
 	tx := u.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
 
 	user, err := u.userRepository.GetUserByID(tx, req.UserID)
 	if err != nil {
-		tx.Rollback()
 		return nil, "", err
 	}
 
 	address, err := u.addressRepo.GetUserMainAddress(tx, user.ID)
 	if err != nil {
-		tx.Rollback()
 		return nil, "", err
 	}
 
@@ -187,7 +191,6 @@ func (u *userService) RegisterAsSeller(req *dto.RegisterAsSellerReq) (*model.Sel
 	}
 	_, err = u.userRoleRepo.CreateRoleToUser(tx, newUserRole)
 	if err != nil {
-		tx.Rollback()
 		return nil, "", err
 	}
 
@@ -203,15 +206,14 @@ func (u *userService) RegisterAsSeller(req *dto.RegisterAsSellerReq) (*model.Sel
 
 	createdSeller, err := u.userRepository.RegisterAsSeller(tx, newSeller)
 	if err != nil {
-		tx.Rollback()
 		return nil, "", err
 	}
 
 	wallet, err := u.walletRepository.GetWalletByUserID(tx, user.ID)
 	if err != nil {
-		tx.Rollback()
 		return nil, "", err
 	}
+
 	userJWT := &dto.UserJWT{
 		UserID:   user.ID,
 		Email:    user.Email,
@@ -221,7 +223,6 @@ func (u *userService) RegisterAsSeller(req *dto.RegisterAsSellerReq) (*model.Sel
 
 	userRoles, err := u.userRoleRepo.GetRolesByUserID(tx, user.ID)
 	if err != nil {
-		tx.Rollback()
 		return nil, "", err
 	}
 	var roles []string
@@ -231,6 +232,5 @@ func (u *userService) RegisterAsSeller(req *dto.RegisterAsSellerReq) (*model.Sel
 	rolesString := strings.Join(roles[:], " ")
 	accessToken, err := u.generateJWTToken(userJWT, rolesString, config.Config.JWTExpiredInMinuteTime*60, dto.JWTAccessToken)
 
-	tx.Commit()
 	return createdSeller, accessToken, nil
 }

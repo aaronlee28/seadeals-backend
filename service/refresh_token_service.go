@@ -2,6 +2,7 @@ package service
 
 import (
 	"gorm.io/gorm"
+	"seadeals-backend/helper"
 	"seadeals-backend/repository"
 )
 
@@ -28,12 +29,13 @@ func NewRefreshTokenService(c *RefreshTokenServiceConfig) RefreshTokenService {
 
 func (r *refreshTokenService) CheckIfTokenExist(token string) (bool, uint, error) {
 	tx := r.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
+	
 	result, userID, err := r.refreshTokenRepo.CheckIfTokenExist(tx, token)
 	if err != nil {
-		tx.Rollback()
 		return false, 0, err
 	}
 
-	tx.Commit()
 	return result, userID, nil
 }

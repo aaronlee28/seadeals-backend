@@ -5,6 +5,7 @@ import (
 	"gorm.io/gorm"
 	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
+	"seadeals-backend/helper"
 	"seadeals-backend/model"
 	"seadeals-backend/repository"
 )
@@ -51,9 +52,11 @@ func (s *reviewService) FindReviewByProductID(productID uint, qp *model.ReviewQu
 	validateReviewQueryParam(qp)
 
 	tx := s.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
+
 	reviews, err := s.reviewRepo.FindReviewByProductID(tx, productID, qp)
 	if err != nil {
-		tx.Rollback()
 		if errors.Is(err, &apperror.ReviewNotFoundError{}) {
 			return nil, apperror.NotFoundError(err.Error())
 		}
@@ -80,6 +83,5 @@ func (s *reviewService) FindReviewByProductID(productID uint, qp *model.ReviewQu
 		Reviews:       reviewsRes,
 	}
 
-	tx.Commit()
 	return res, nil
 }

@@ -5,6 +5,7 @@ import (
 	"gorm.io/gorm"
 	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
+	"seadeals-backend/helper"
 	"seadeals-backend/model"
 	"seadeals-backend/repository"
 	"strings"
@@ -98,16 +99,17 @@ func validateVoucher(voucher *model.Voucher, req *dto.PostValidateVoucherReq) er
 
 func (s *voucherService) CreateVoucher(req *dto.PostVoucherReq, userID uint) (*dto.GetVoucherRes, error) {
 	tx := s.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
 
 	seller, err := s.sellerRepo.FindSellerByID(tx, req.SellerID)
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 
 	if seller.UserID != userID {
-		tx.Rollback()
-		return nil, apperror.UnauthorizedError("cannot add other shop voucher")
+		err = apperror.UnauthorizedError("cannot add other shop voucher")
+		return nil, err
 	}
 
 	voucher := &model.Voucher{
@@ -129,67 +131,64 @@ func (s *voucherService) CreateVoucher(req *dto.PostVoucherReq, userID uint) (*d
 
 	voucher, err = s.voucherRepo.CreateVoucher(tx, voucher)
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 
 	res := new(dto.GetVoucherRes).From(voucher)
-
-	tx.Commit()
 	return res, nil
 }
 
 func (s *voucherService) FindVoucherDetailByID(id, userID uint) (*dto.GetVoucherRes, error) {
 	tx := s.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
+
 	voucher, err := s.voucherRepo.FindVoucherDetailByID(tx, id)
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 
 	if voucher.Seller.UserID != userID {
-		tx.Rollback()
-		return nil, apperror.UnauthorizedError("cannot fetch other shop detail voucher")
+		err = apperror.UnauthorizedError("cannot fetch other shop detail voucher")
+		return nil, err
 	}
 
 	res := new(dto.GetVoucherRes).From(voucher)
-
-	tx.Commit()
 	return res, nil
 }
 
 func (s *voucherService) FindVoucherByID(id uint) (*dto.GetVoucherRes, error) {
 	tx := s.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
+
 	voucher, err := s.voucherRepo.FindVoucherByID(tx, id)
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 
 	res := new(dto.GetVoucherRes).From(voucher)
-
-	tx.Commit()
 	return res, nil
 }
 
 func (s *voucherService) FindVoucherBySellerID(sellerID, userID uint, qp *model.VoucherQueryParam) (*dto.GetVouchersRes, error) {
 	tx := s.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
 
 	seller, err := s.sellerRepo.FindSellerByID(tx, sellerID)
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 
 	if seller.UserID != userID {
-		tx.Rollback()
-		return nil, apperror.UnauthorizedError("cannot fetch other shop voucher")
+		err = apperror.UnauthorizedError("cannot fetch other shop voucher")
+		return nil, err
 	}
 
 	validateVoucherQueryParam(qp)
 	vouchers, err := s.voucherRepo.FindVoucherBySellerID(tx, sellerID, qp)
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 
@@ -209,42 +208,41 @@ func (s *voucherService) FindVoucherBySellerID(sellerID, userID uint, qp *model.
 		Vouchers:      voucherRes,
 	}
 
-	tx.Commit()
 	return res, nil
 }
 
 func (s *voucherService) ValidateVoucher(req *dto.PostValidateVoucherReq) (*dto.GetVoucherRes, error) {
 	tx := s.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
+
 	voucher, err := s.voucherRepo.FindVoucherByCode(tx, req.Code)
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 
 	err = validateVoucher(voucher, req)
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 
 	res := new(dto.GetVoucherRes).From(voucher)
-
-	tx.Commit()
 	return res, nil
 }
 
 func (s *voucherService) UpdateVoucher(req *dto.PatchVoucherReq, id, userID uint) (*dto.GetVoucherRes, error) {
 	tx := s.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
 
 	v, err := s.voucherRepo.FindVoucherDetailByID(tx, id)
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 
 	if v.Seller.UserID != userID {
-		tx.Rollback()
-		return nil, apperror.UnauthorizedError("cannot update other shop voucher")
+		err = apperror.UnauthorizedError("cannot update other shop voucher")
+		return nil, err
 	}
 
 	voucher := &model.Voucher{
@@ -259,52 +257,46 @@ func (s *voucherService) UpdateVoucher(req *dto.PatchVoucherReq, id, userID uint
 
 	err = validateModel(voucher, v.Seller)
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 
 	v, err = s.voucherRepo.UpdateVoucher(tx, voucher, id)
 	if err != nil {
-		tx.Callback()
 		return nil, err
 	}
 
 	res := new(dto.GetVoucherRes).From(v)
-
-	tx.Commit()
 	return res, nil
 }
 
 func (s *voucherService) DeleteVoucherByID(id, userID uint) (bool, error) {
 	tx := s.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
 
 	v, err := s.voucherRepo.FindVoucherDetailByID(tx, id)
 	if err != nil {
-		tx.Rollback()
 		return false, err
 	}
 
 	if v.Seller.User.ID != userID {
-		tx.Rollback()
-		return false, apperror.UnauthorizedError("cannot delete other shop voucher")
+		err = apperror.UnauthorizedError("cannot delete other shop voucher")
+		return false, err
 	}
 
 	voucher, err := s.voucherRepo.FindVoucherDetailByID(tx, id)
 	if err != nil {
-		tx.Rollback()
 		return false, err
 	}
 	if voucher.StartDate.Before(time.Now()) {
-		tx.Rollback()
-		return false, apperror.BadRequestError("cannot delete voucher that has been started")
+		err = apperror.BadRequestError("cannot delete voucher that has been started")
+		return false, err
 	}
 
 	isDeleted, err := s.voucherRepo.DeleteVoucherByID(tx, id)
 	if err != nil {
-		tx.Rollback()
 		return false, err
 	}
 
-	tx.Commit()
 	return isDeleted, nil
 }
