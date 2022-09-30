@@ -69,6 +69,10 @@ func (p *promotionService) CreatePromotion(id uint, req *dto.CreatePromotionReq)
 	if req.AmountType == "percentage" && req.Amount > 100 {
 		return nil, apperror.BadRequestError("percentage amount exceeds 100%")
 	}
+	if req.AmountType != "percentage" || req.AmountType != "nominal" {
+		req.AmountType = "nominal"
+	}
+
 	createPromo, err2 := p.promotionRepository.CreatePromotion(tx, req, sellerID)
 	if err2 != nil {
 		tx.Rollback()
