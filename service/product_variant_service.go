@@ -1,7 +1,6 @@
 package service
 
 import (
-	"errors"
 	"gorm.io/gorm"
 	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
@@ -44,13 +43,10 @@ func (s *productVariantService) FindAllProductVariantByProductID(productID uint)
 
 	productVariants, err := s.productVariantRepo.FindAllProductVariantByProductID(tx, productID)
 	if err != nil {
-		if errors.Is(err, &apperror.ProductNotFoundError{}) {
-			return nil, apperror.NotFoundError(err.Error())
-		}
 		return nil, err
 	}
 
-	var productVariantRes []*dto.GetProductVariantRes
+	var productVariantRes = make([]*dto.GetProductVariantRes, 0)
 	minPrice := productVariants[0].Price
 	maxPrice := minPrice
 
@@ -88,19 +84,19 @@ func (s *productVariantService) GetVariantPriceAfterPromotionByProductID(product
 		return nil, err
 	}
 
-	var variants []*dto.ProductVariantPromotionRes
+	var variants = make([]*dto.ProductVariantPromotionRes, 0)
 	for _, variant := range product.ProductVariantDetail {
-
 		vr := new(dto.ProductVariantPromotionRes).FromProductVariantDetail(*variant)
 		vr.PriceAfterPromotion = vr.Price - product.Promotion.Amount
 		variants = append(variants, vr)
 	}
+
 	res := dto.ProductVariantPriceRes{
 		ProductID:        product.ID,
 		ProductName:      product.Name,
 		ProductPromotion: product.Promotion.Amount,
 		ProductVariant:   variants,
 	}
-	
+
 	return &res, nil
 }

@@ -92,7 +92,7 @@ func (a *addressService) GetAddressesByUserID(userID uint) ([]*dto.GetAddressRes
 		return nil, err
 	}
 
-	var res []*dto.GetAddressRes
+	var res = make([]*dto.GetAddressRes, 0)
 	for _, addr := range addresses {
 		res = append(res, new(dto.GetAddressRes).From(addr))
 	}
@@ -123,7 +123,7 @@ func (a *addressService) ChangeMainAddress(ID, userID uint) (*dto.GetAddressRes,
 	if err != nil {
 		return nil, err
 	}
-	
+
 	res := new(dto.GetAddressRes).From(addr)
 	return res, nil
 }

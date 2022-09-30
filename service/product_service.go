@@ -1,9 +1,7 @@
 package service
 
 import (
-	"errors"
 	"gorm.io/gorm"
-	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
 	"seadeals-backend/helper"
 	"seadeals-backend/model"
@@ -69,12 +67,8 @@ func (p *productService) GetProductsBySellerID(query *dto.SellerProductSearchQue
 	if err != nil {
 		return nil, 0, 0, err
 	}
-	if totalData == 0 {
-		err = apperror.NotFoundError("No Products were found")
-		return nil, 0, 0, err
-	}
 
-	var productsRes []*dto.ProductRes
+	var productsRes = make([]*dto.ProductRes, 0)
 	for _, variantDetail := range variantDetails {
 		var photoURL string
 		if len(variantDetail.Product.ProductPhotos) > 0 {
@@ -111,12 +105,8 @@ func (p *productService) GetProductsByCategoryID(query *dto.SellerProductSearchQ
 	if err != nil {
 		return nil, 0, 0, err
 	}
-	if totalData == 0 {
-		err = apperror.NotFoundError("No Products were found")
-		return nil, 0, 0, err
-	}
 
-	var productsRes []*dto.ProductRes
+	var productsRes = make([]*dto.ProductRes, 0)
 	for _, variantDetail := range variantDetails {
 		var photoURL string
 		if len(variantDetail.Product.ProductPhotos) > 0 {
@@ -149,33 +139,35 @@ func (p *productService) FindSimilarProducts(productID uint) ([]*dto.ProductRes,
 	var err error
 	defer helper.CommitOrRollback(tx, &err)
 
-	products, err := p.productRepo.FindSimilarProduct(tx, productID)
+	product, err := p.productRepo.FindProductByID(tx, productID)
 	if err != nil {
-		if errors.Is(err, &apperror.ProductNotFoundError{}) {
-			return nil, apperror.NotFoundError(err.Error())
-		}
 		return nil, err
 	}
 
-	var productsRes []*dto.ProductRes
-	for _, product := range products {
-		if product.ID == productID {
+	products, err := p.productRepo.FindSimilarProduct(tx, product.CategoryID)
+	if err != nil {
+		return nil, err
+	}
+
+	var productsRes = make([]*dto.ProductRes, 0)
+	for _, pdt := range products {
+		if pdt.ID == productID {
 			continue
 		}
 
 		var photoURL string
-		if len(product.ProductPhotos) > 0 {
-			photoURL = product.ProductPhotos[0].PhotoURL
+		if len(pdt.ProductPhotos) > 0 {
+			photoURL = pdt.ProductPhotos[0].PhotoURL
 		}
 
 		var minPrice, maxPrice uint
-		minPrice, maxPrice, err = p.productRepo.SearchMinMaxPrice(tx, product.ID)
+		minPrice, maxPrice, err = p.productRepo.SearchMinMaxPrice(tx, pdt.ID)
 		if err != nil {
 			return nil, err
 		}
 
 		var ratings []int
-		ratings, err = p.productRepo.SearchRating(tx, product.ID)
+		ratings, err = p.productRepo.SearchRating(tx, pdt.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -186,14 +178,14 @@ func (p *productService) FindSimilarProducts(productID uint) ([]*dto.ProductRes,
 			MinPrice: float64(minPrice),
 			MaxPrice: float64(maxPrice),
 			Product: &dto.GetProductRes{
-				ID:            product.ID,
+				ID:            pdt.ID,
 				Price:         float64(minPrice),
-				Name:          product.Name,
-				Slug:          product.Slug,
+				Name:          pdt.Name,
+				Slug:          pdt.Slug,
 				MediaURL:      photoURL,
 				Rating:        avgRating,
 				TotalReviewer: int64(reviewCount),
-				TotalSold:     uint(product.SoldCount),
+				TotalSold:     uint(pdt.SoldCount),
 			},
 		}
 		productsRes = append(productsRes, dtoProduct)
@@ -211,12 +203,8 @@ func (p *productService) GetProducts(query *repository.SearchQuery) ([]*dto.Prod
 	if err != nil {
 		return nil, 0, 0, err
 	}
-	if totalData == 0 {
-		err = apperror.NotFoundError("No Products were found")
-		return nil, 0, 0, err
-	}
 
-	var productsRes []*dto.ProductRes
+	var productsRes = make([]*dto.ProductRes, 0)
 	for _, variantDetail := range variantDetails {
 		var photoURL string
 		if len(variantDetail.ProductPhotos) > 0 {

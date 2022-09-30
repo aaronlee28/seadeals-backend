@@ -76,11 +76,6 @@ func (h *Handler) GetProductsBySellerID(ctx *gin.Context) {
 		return
 	}
 
-	if len(res) == 0 {
-		_ = ctx.Error(apperror.NotFoundError("No products were found"))
-		return
-	}
-
 	ctx.JSON(http.StatusOK, dto.StatusOKResponse(gin.H{"products": res, "total_data": totalData, "total_page": totalPage, "current_page": productQuery.Page, "limit": productQuery.Limit}))
 }
 
@@ -110,11 +105,6 @@ func (h *Handler) GetProductsByCategoryID(ctx *gin.Context) {
 	res, totalPage, totalData, err := h.productService.GetProductsByCategoryID(productQuery, uint(categoryID))
 	if err != nil {
 		_ = ctx.Error(err)
-		return
-	}
-
-	if len(res) == 0 {
-		_ = ctx.Error(apperror.NotFoundError("No products were found"))
 		return
 	}
 
@@ -171,12 +161,7 @@ func (h *Handler) SearchRecommendProduct(ctx *gin.Context) {
 
 	result, err := h.productService.SearchRecommendProduct(query)
 	if err != nil {
-		e := ctx.Error(err)
-		ctx.JSON(http.StatusBadRequest, e)
-		return
-	}
-	if result.TotalLength == 0 {
-		_ = ctx.Error(apperror.NotFoundError("No products were found"))
+		_ = ctx.Error(err)
 		return
 	}
 

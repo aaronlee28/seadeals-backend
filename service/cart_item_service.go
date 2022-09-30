@@ -2,7 +2,6 @@ package service
 
 import (
 	"gorm.io/gorm"
-	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
 	"seadeals-backend/helper"
 	"seadeals-backend/model"
@@ -72,12 +71,7 @@ func (o *cartItemService) GetCartItems(query *repository.Query, userID uint) ([]
 		return nil, 0, 0, err
 	}
 
-	if len(orderItems) == 0 {
-		err = apperror.NotFoundError("Cart is empty")
-		return nil, 0, 0, err
-	}
-
-	var cartItems []*dto.CartItemRes
+	var cartItems = make([]*dto.CartItemRes, 0)
 	for _, item := range orderItems {
 		subtotal := float64(item.Quantity) * item.ProductVariantDetail.Price
 		now := time.Now()
