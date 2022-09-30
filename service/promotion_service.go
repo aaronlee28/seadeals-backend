@@ -2,6 +2,7 @@ package service
 
 import (
 	"gorm.io/gorm"
+	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
 	"seadeals-backend/repository"
 )
@@ -65,6 +66,9 @@ func (p *promotionService) CreatePromotion(id uint, req *dto.CreatePromotionReq)
 		return nil, err
 	}
 	sellerID := seller.ID
+	if req.AmountType == "percentage" && req.Amount > 100 {
+		return nil, apperror.BadRequestError("percentage amount exceeds 100%")
+	}
 	createPromo, err2 := p.promotionRepository.CreatePromotion(tx, req, sellerID)
 	if err2 != nil {
 		tx.Rollback()
