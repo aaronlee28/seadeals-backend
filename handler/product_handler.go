@@ -12,8 +12,13 @@ import (
 	"strconv"
 )
 
-func (h *Handler) FindProductDetailBySlug(ctx *gin.Context) {
-	slug := ctx.Param("slug")
+func (h *Handler) FindProductDetailByID(ctx *gin.Context) {
+	idParam := ctx.Param("id")
+	productID, err := strconv.ParseUint(idParam, 10, 32)
+	if err != nil {
+		_ = ctx.Error(apperror.BadRequestError("Product id is invalid"))
+		return
+	}
 
 	payload, _ := ctx.Get("user")
 	user, isValid := payload.(dto.UserJWT)
@@ -22,7 +27,7 @@ func (h *Handler) FindProductDetailBySlug(ctx *gin.Context) {
 		userID = user.UserID
 	}
 
-	res, err := h.productService.FindProductDetailBySlug(slug, userID)
+	res, err := h.productService.FindProductDetailByID(uint(productID), userID)
 	if err != nil {
 		_ = ctx.Error(err)
 		return
