@@ -2,7 +2,7 @@ package service
 
 import (
 	"gorm.io/gorm"
-	"seadeals-backend/apperror"
+	"seadeals-backend/helper"
 	"seadeals-backend/model"
 	"seadeals-backend/repository"
 )
@@ -30,13 +30,13 @@ func NewProductCategoryService(c *ProductCategoryServiceConfig) ProductCategoryS
 
 func (s *productCategoryService) FindAllProductCategories(query *model.CategoryQuery) ([]*model.ProductCategory, int64, int64, error) {
 	tx := s.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
 
 	categories, totalPage, totalData, err := s.productCategoryRepository.FindAllProductCategories(tx, query)
 	if err != nil {
-		tx.Rollback()
-		return nil, 0, 0, apperror.InternalServerError(err.Error())
+		return nil, 0, 0, err
 	}
 
-	tx.Commit()
 	return categories, totalPage, totalData, nil
 }

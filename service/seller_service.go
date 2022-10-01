@@ -3,6 +3,7 @@ package service
 import (
 	"gorm.io/gorm"
 	"seadeals-backend/dto"
+	"seadeals-backend/helper"
 	"seadeals-backend/repository"
 )
 
@@ -35,9 +36,11 @@ func NewSellerService(c *SellerServiceConfig) SellerService {
 
 func (s *sellerService) FindSellerByID(sellerID uint, userID uint) (*dto.GetSellerRes, error) {
 	tx := s.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
+
 	seller, err := s.sellerRepo.FindSellerDetailByID(tx, sellerID, userID)
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 
@@ -45,7 +48,6 @@ func (s *sellerService) FindSellerByID(sellerID uint, userID uint) (*dto.GetSell
 
 	averageReview, totalReview, err := s.reviewRepo.GetReviewsAvgAndCountBySellerID(tx, sellerID)
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 	res.TotalReviewer = uint(totalReview)
@@ -53,18 +55,15 @@ func (s *sellerService) FindSellerByID(sellerID uint, userID uint) (*dto.GetSell
 
 	followers, err := s.socialGraphRepo.GetFollowerCountBySellerID(tx, seller.ID)
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 	res.Followers = uint(followers)
 
 	following, err := s.socialGraphRepo.GetFollowingCountByUserID(tx, seller.UserID)
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 	res.Following = uint(following)
-
-	tx.Commit()
+	
 	return res, nil
 }

@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"errors"
 	"fmt"
 	"gorm.io/gorm"
 	"seadeals-backend/apperror"
@@ -11,9 +10,10 @@ import (
 )
 
 type ProductRepository interface {
+	FindProductByID(tx *gorm.DB, productID uint) (*model.Product, error)
 	FindProductDetailByID(tx *gorm.DB, productID uint, userID uint) (*model.Product, error)
 	FindProductBySlug(tx *gorm.DB, slug string) (*model.Product, error)
-	FindSimilarProduct(tx *gorm.DB, productID uint) ([]*model.Product, error)
+	FindSimilarProduct(tx *gorm.DB, categoryID uint) ([]*model.Product, error)
 
 	SearchProduct(tx *gorm.DB, q *SearchQuery) (*[]model.Product, error)
 	SearchRecommendProduct(tx *gorm.DB, q *SearchQuery) ([]*dto.SearchedProductRes, error)
@@ -48,6 +48,15 @@ type SearchQuery struct {
 	CategoryID uint
 }
 
+func (r *productRepository) FindProductByID(tx *gorm.DB, productID uint) (*model.Product, error) {
+	var product *model.Product
+	result := tx.First(&product, productID)
+	if result.Error == gorm.ErrRecordNotFound {
+		return nil, apperror.NotFoundError(new(apperror.ProductNotFoundError).Error())
+	}
+	return product, result.Error
+}
+
 func (r *productRepository) FindProductDetailByID(tx *gorm.DB, productID uint, userID uint) (*model.Product, error) {
 	var product *model.Product
 	result := tx.Preload("ProductPhotos", "product_id = ?", productID)
@@ -68,13 +77,7 @@ func (r *productRepository) FindProductDetailByID(tx *gorm.DB, productID uint, u
 func (r *productRepository) FindSimilarProduct(tx *gorm.DB, categoryID uint) ([]*model.Product, error) {
 	var products []*model.Product
 	result := tx.Limit(24).Where("category_id = ?", categoryID).Preload("ProductVariantDetail").Preload("ProductPhotos").Find(&products)
-	if result.Error != nil {
-		return nil, result.Error
-	}
-	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, &apperror.ProductNotFoundError{}
-	}
-	return products, nil
+	return products, result.Error
 }
 
 func (r *productRepository) GetProductDetail(tx *gorm.DB, id uint) (*model.Product, error) {
@@ -117,7 +120,7 @@ func (r *productRepository) SearchRecommendProduct(tx *gorm.DB, q *SearchQuery) 
 	page, _ := strconv.Atoi(q.Page)
 	offset := (limit * page) - limit
 
-	var res []*dto.SearchedProductRes
+	var res = make([]*dto.SearchedProductRes, 0)
 	result := tx.Raw("SELECT product_id as id, product_name as name, slug, media_url, min_price as price, min_price, max_price, total_sold, views_count as views, promo_price, rating, count as total_reviewer, city, category, updated_at FROM " +
 		"(SELECT j.product_id as product_id, product_name, slug, media_url, min_price, max_price, total_sold, promo_price, rating, count, k.city as city, category_id, views_count, updated_at FROM " +
 		"(SELECT h.product_id, product_name, slug, media_url, min_price, max_price, total_sold, promo_price, rating, count, updated_at FROM" +
@@ -157,7 +160,7 @@ func (r *productRepository) SearchRecommendProduct(tx *gorm.DB, q *SearchQuery) 
 		q.Sort).Scan(&res)
 
 	if result.Error != nil {
-		return nil, apperror.InternalServerError("cannot find product")
+		return nil, result.Error
 	}
 	return res, nil
 }

@@ -8,7 +8,7 @@ import (
 )
 
 type PromotionRepository interface {
-	GetPromotionBySellerID(tx *gorm.DB, sellerID uint) (*[]model.Promotion, error)
+	GetPromotionBySellerID(tx *gorm.DB, sellerID uint) ([]*model.Promotion, error)
 	CreatePromotion(tx *gorm.DB, req *dto.CreatePromotionReq, sellerID uint) (*model.Promotion, error)
 }
 
@@ -18,13 +18,10 @@ func NewPromotionRepository() PromotionRepository {
 	return &promotionRepository{}
 }
 
-func (p *promotionRepository) GetPromotionBySellerID(tx *gorm.DB, sellerID uint) (*[]model.Promotion, error) {
-	var promotion *[]model.Promotion
+func (p *promotionRepository) GetPromotionBySellerID(tx *gorm.DB, sellerID uint) ([]*model.Promotion, error) {
+	var promotion []*model.Promotion
 	result := tx.Where("seller_id = ?", sellerID).Find(&promotion)
-	if result.Error != nil {
-		return nil, result.Error
-	}
-	return promotion, nil
+	return promotion, result.Error
 }
 
 func (p *promotionRepository) CreatePromotion(tx *gorm.DB, req *dto.CreatePromotionReq, sellerID uint) (*model.Promotion, error) {

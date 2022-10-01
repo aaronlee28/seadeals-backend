@@ -7,6 +7,7 @@ import (
 	"seadeals-backend/apperror"
 	"seadeals-backend/config"
 	"seadeals-backend/dto"
+	"seadeals-backend/helper"
 	"seadeals-backend/model"
 	"seadeals-backend/repository"
 	"strings"
@@ -106,9 +107,11 @@ func (a *authService) AuthAfterRegister(user *model.User, wallet *model.Wallet, 
 
 func (a *authService) SignInWithGoogle(user *model.User) (string, string, error) {
 	tx := a.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
+
 	wallet, err := a.walletRepository.GetWalletByUserID(tx, user.ID)
 	if err != nil {
-		tx.Rollback()
 		return "", "", err
 	}
 	userJWT := &dto.UserJWT{
@@ -120,7 +123,6 @@ func (a *authService) SignInWithGoogle(user *model.User) (string, string, error)
 
 	userRoles, err := a.userRoleRepo.GetRolesByUserID(tx, user.ID)
 	if err != nil {
-		tx.Rollback()
 		return "", "", err
 	}
 	var roles []string
@@ -137,26 +139,27 @@ func (a *authService) SignInWithGoogle(user *model.User) (string, string, error)
 	}
 	err = a.refreshTokenRepo.CreateRefreshToken(tx, user.ID, refreshToken)
 	if err != nil {
-		tx.Rollback()
-		return "", "", apperror.InternalServerError("Cannot add refresh token")
+		err = apperror.InternalServerError("Cannot add refresh token")
+		return "", "", err
 	}
 
-	tx.Commit()
 	return token, refreshToken, err
 }
 
 func (a *authService) SignIn(req *dto.SignInReq) (string, string, error) {
 	tx := a.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
+
 	user, err := a.userRepository.MatchingCredential(tx, req.Email, req.Password)
 	if err != nil || user == nil {
-		tx.Rollback()
 		return "", "", err
 	}
 	wallet, err := a.walletRepository.GetWalletByUserID(tx, user.ID)
 	if err != nil {
-		tx.Rollback()
 		return "", "", err
 	}
+
 	userJWT := &dto.UserJWT{
 		UserID:   user.ID,
 		Email:    user.Email,
@@ -166,7 +169,6 @@ func (a *authService) SignIn(req *dto.SignInReq) (string, string, error) {
 
 	userRoles, err := a.userRoleRepo.GetRolesByUserID(tx, user.ID)
 	if err != nil {
-		tx.Rollback()
 		return "", "", err
 	}
 	var roles []string
@@ -182,34 +184,32 @@ func (a *authService) SignIn(req *dto.SignInReq) (string, string, error) {
 	}
 	err = a.refreshTokenRepo.CreateRefreshToken(tx, user.ID, refreshToken)
 	if err != nil {
-		tx.Rollback()
 		return "", "", err
 	}
 
-	tx.Commit()
 	return token, refreshToken, err
 }
 
 func (a *authService) SignOut(userID uint) error {
 	tx := a.db.Begin()
-	err := a.refreshTokenRepo.DeleteRefreshToken(tx, userID)
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
+
+	err = a.refreshTokenRepo.DeleteRefreshToken(tx, userID)
 	if err != nil {
-		tx.Rollback()
 		return err
 	}
-
-	tx.Commit()
 	return nil
 }
 func (a *authService) StepUpPassword(userID uint, req *dto.StepUpPasswordRes) error {
 	tx := a.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
 
-	err := a.walletRepository.StepUpPassword(tx, userID, req.Password)
+	err = a.walletRepository.StepUpPassword(tx, userID, req.Password)
 	if err != nil {
-		tx.Rollback()
 		return err
 	}
 
-	tx.Commit()
 	return nil
 }

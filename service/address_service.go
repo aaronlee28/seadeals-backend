@@ -3,6 +3,7 @@ package service
 import (
 	"gorm.io/gorm"
 	"seadeals-backend/dto"
+	"seadeals-backend/helper"
 	"seadeals-backend/model"
 	"seadeals-backend/repository"
 )
@@ -34,7 +35,11 @@ func NewAddressService(config *AddressServiceConfig) AddressService {
 
 func (a *addressService) CreateAddress(req *dto.CreateAddressReq, userID uint) (*model.Address, error) {
 	tx := a.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
+
 	newAddress := &model.Address{
+		UserID:      userID,
 		CityID:      req.CityID,
 		ProvinceID:  req.ProvinceID,
 		Province:    req.Province,
@@ -43,18 +48,20 @@ func (a *addressService) CreateAddress(req *dto.CreateAddressReq, userID uint) (
 		PostalCode:  req.PostalCode,
 		SubDistrict: req.SubDistrict,
 		Address:     req.Address,
+		IsMain:      false,
 	}
 	address, err := a.addressRepository.CreateAddress(tx, newAddress)
 	if err != nil {
 		return nil, err
 	}
 
-	tx.Commit()
 	return address, nil
 }
 
 func (a *addressService) UpdateAddress(req *dto.UpdateAddressReq) (*model.Address, error) {
 	tx := a.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
 
 	newAddress := &model.Address{
 		ID:          req.ID,
@@ -69,54 +76,54 @@ func (a *addressService) UpdateAddress(req *dto.UpdateAddressReq) (*model.Addres
 	}
 	address, err := a.addressRepository.UpdateAddress(tx, newAddress)
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 
-	tx.Commit()
 	return address, nil
 }
 
 func (a *addressService) GetAddressesByUserID(userID uint) ([]*dto.GetAddressRes, error) {
 	tx := a.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
+
 	addresses, err := a.addressRepository.GetAddressesByUserID(tx, userID)
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 
-	var res []*dto.GetAddressRes
+	var res = make([]*dto.GetAddressRes, 0)
 	for _, addr := range addresses {
 		res = append(res, new(dto.GetAddressRes).From(addr))
 	}
 
-	tx.Commit()
 	return res, nil
 }
 
 func (a *addressService) GetUserMainAddress(userID uint) (*dto.GetAddressRes, error) {
 	tx := a.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
+
 	addr, err := a.addressRepository.GetUserMainAddress(tx, userID)
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 
 	res := new(dto.GetAddressRes).From(addr)
-
-	tx.Commit()
 	return res, nil
 }
 
 func (a *addressService) ChangeMainAddress(ID, userID uint) (*dto.GetAddressRes, error) {
 	tx := a.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
+
 	addr, err := a.addressRepository.ChangeMainAddress(tx, ID, userID)
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
-	res := new(dto.GetAddressRes).From(addr)
 
-	tx.Commit()
+	res := new(dto.GetAddressRes).From(addr)
 	return res, nil
 }

@@ -20,11 +20,8 @@ func NewProductVariantRepository() ProductVariantRepository {
 func (r *productVariantRepository) FindAllProductVariantByProductID(tx *gorm.DB, productID uint) ([]*model.ProductVariantDetail, error) {
 	var productVariantDetails []*model.ProductVariantDetail
 	result := tx.Where("product_id = ?", productID).Preload("ProductVariant1").Preload("ProductVariant2").Find(&productVariantDetails)
-	if result.Error != nil {
-		return nil, result.Error
-	}
 	if int(result.RowsAffected) == 0 {
-		return nil, new(apperror.ProductNotFoundError)
+		return nil, apperror.NotFoundError(new(apperror.ProductNotFoundError).Error())
 	}
-	return productVariantDetails, nil
+	return productVariantDetails, result.Error
 }

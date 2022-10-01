@@ -2,6 +2,7 @@ package service
 
 import (
 	"gorm.io/gorm"
+	"seadeals-backend/helper"
 	"seadeals-backend/model"
 	"seadeals-backend/repository"
 )
@@ -29,13 +30,13 @@ func NewSocialGraphService(c *SocialGraphServiceConfig) SocialGraphService {
 
 func (s *socialGraphService) FollowToSeller(userID uint, sellerID uint) (*model.SocialGraph, error) {
 	tx := s.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
 
 	favorite, err := s.socialGraphRepository.FollowToSeller(tx, userID, sellerID)
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 
-	tx.Commit()
 	return favorite, nil
 }

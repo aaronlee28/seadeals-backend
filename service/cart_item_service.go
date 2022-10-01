@@ -2,8 +2,8 @@ package service
 
 import (
 	"gorm.io/gorm"
-	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
+	"seadeals-backend/helper"
 	"seadeals-backend/model"
 	"seadeals-backend/repository"
 	"time"
@@ -34,17 +34,21 @@ func NewCartItemService(config *CartItemServiceConfig) CartItemService {
 
 func (o *cartItemService) DeleteCartItem(orderItemID uint, userID uint) (*model.CartItem, error) {
 	tx := o.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
+
 	deleteOrder, err := o.cartItemRepository.DeleteCartItem(tx, orderItemID, userID)
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
-	tx.Commit()
 	return deleteOrder, nil
 }
 
 func (o *cartItemService) AddToCart(userID uint, req *dto.AddToCartReq) (*model.CartItem, error) {
 	tx := o.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
+
 	cartItem := &model.CartItem{
 		ProductVariantDetailID: req.ProductVariantDetailID,
 		UserID:                 userID,
@@ -52,26 +56,22 @@ func (o *cartItemService) AddToCart(userID uint, req *dto.AddToCartReq) (*model.
 	}
 	addedItem, err := o.cartItemRepository.AddToCart(tx, cartItem)
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
-	tx.Commit()
 	return addedItem, nil
 }
 
 func (o *cartItemService) GetCartItems(query *repository.Query, userID uint) ([]*dto.CartItemRes, int64, int64, error) {
 	tx := o.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
+
 	orderItems, totalPage, totalData, err := o.cartItemRepository.GetCartItem(tx, query, userID)
 	if err != nil {
-		tx.Rollback()
 		return nil, 0, 0, err
 	}
 
-	if len(orderItems) == 0 {
-		return nil, 0, 0, apperror.NotFoundError("Cart is empty")
-	}
-
-	var cartItems []*dto.CartItemRes
+	var cartItems = make([]*dto.CartItemRes, 0)
 	for _, item := range orderItems {
 		subtotal := float64(item.Quantity) * item.ProductVariantDetail.Price
 		now := time.Now()
@@ -96,6 +96,5 @@ func (o *cartItemService) GetCartItems(query *repository.Query, userID uint) ([]
 		cartItems = append(cartItems, cartItem)
 	}
 
-	tx.Commit()
 	return cartItems, totalPage, totalData, nil
 }

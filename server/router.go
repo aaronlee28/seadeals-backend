@@ -132,8 +132,8 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.DELETE("/vouchers/:id", middleware.AuthorizeJWTFor(model.SellerRoleName), h.DeleteVoucherByID)
 
 	// PROMOTION
-	r.GET("/promotion-list", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetPromotion)
-	r.POST("/create-promotion", middleware.RequestValidator(func() any { return &dto.CreatePromotionReq{} }), middleware.AuthorizeJWTFor(model.UserRoleName), h.CreatePromotion)
+	r.GET("/promotions", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetPromotion)
+	r.POST("/promotions", middleware.RequestValidator(func() any { return &dto.CreatePromotionReq{} }), middleware.AuthorizeJWTFor(model.UserRoleName), h.CreatePromotion)
 
 	// WALLET
 	r.GET("/user-wallet", middleware.AuthorizeJWTFor(model.UserRoleName), h.WalletDataTransactions)

@@ -1,10 +1,10 @@
 package service
 
 import (
-	"errors"
+	"fmt"
 	"gorm.io/gorm"
-	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
+	"seadeals-backend/helper"
 	"seadeals-backend/model"
 	"seadeals-backend/repository"
 )
@@ -51,25 +51,26 @@ func (s *reviewService) FindReviewByProductID(productID uint, qp *model.ReviewQu
 	validateReviewQueryParam(qp)
 
 	tx := s.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
+
 	reviews, err := s.reviewRepo.FindReviewByProductID(tx, productID, qp)
 	if err != nil {
-		tx.Rollback()
-		if errors.Is(err, &apperror.ReviewNotFoundError{}) {
-			return nil, apperror.NotFoundError(err.Error())
-		}
 		return nil, err
 	}
 
 	totalReviews := uint(len(reviews))
 	totalPages := (totalReviews + qp.Limit - 1) / qp.Limit
 
-	var reviewsRes []*dto.GetReviewRes
+	var reviewsRes = make([]*dto.GetReviewRes, 0)
 	var avgRating float64
 	for _, review := range reviews {
 		reviewsRes = append(reviewsRes, new(dto.GetReviewRes).From(review))
 		avgRating += float64(review.Rating)
 	}
-	avgRating = avgRating / float64(totalReviews)
+	if totalReviews > 0 {
+		avgRating = avgRating / float64(totalReviews)
+	}
 
 	res := &dto.GetReviewsRes{
 		Limit:         qp.Limit,
@@ -79,7 +80,7 @@ func (s *reviewService) FindReviewByProductID(productID uint, qp *model.ReviewQu
 		AverageRating: avgRating,
 		Reviews:       reviewsRes,
 	}
+	fmt.Println(res)
 
-	tx.Commit()
 	return res, nil
 }

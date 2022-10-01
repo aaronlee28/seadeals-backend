@@ -28,7 +28,7 @@ func (w *walletTransactionRepository) CreateTransaction(tx *gorm.DB, model *mode
 }
 
 func (w *walletTransactionRepository) GetTransactionsByWalletID(tx *gorm.DB, query *dto.WalletTransactionsQuery, walletID uint) ([]*model.WalletTransaction, int64, int64, error) {
-	var transactions []*model.WalletTransaction
+	var transactions = make([]*model.WalletTransaction, 0)
 	result := tx.Model(&transactions).Where("wallet_id = ?", walletID)
 
 	orderByString := query.SortBy
@@ -49,9 +49,6 @@ func (w *walletTransactionRepository) GetTransactionsByWalletID(tx *gorm.DB, que
 	var totalData int64
 	result = result.Order(orderByString).Order("id")
 	table := tx.Table("(?) as s1", result).Count(&totalData)
-	if table.Error != nil {
-		return nil, 0, 0, apperror.InternalServerError("cannot fetch transactions count")
-	}
 
 	limit, _ := strconv.Atoi(query.Limit)
 	if limit == 0 {
@@ -67,7 +64,7 @@ func (w *walletTransactionRepository) GetTransactionsByWalletID(tx *gorm.DB, que
 
 	table = table.Unscoped().Find(&transactions)
 	if table.Error != nil {
-		return nil, 0, 0, apperror.InternalServerError("cannot fetch transactions")
+		return nil, 0, 0, table.Error
 	}
 
 	totalPage := totalData / int64(limit)

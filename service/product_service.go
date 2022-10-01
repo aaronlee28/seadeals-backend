@@ -1,9 +1,7 @@
 package service
 
 import (
-	"errors"
 	"gorm.io/gorm"
-	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
 	"seadeals-backend/helper"
 	"seadeals-backend/model"
@@ -44,37 +42,33 @@ func NewProductService(config *ProductConfig) ProductService {
 
 func (p *productService) FindProductDetailBySlug(slug string, userID uint) (*model.Product, error) {
 	tx := p.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
 
 	product, err := p.productRepo.FindProductBySlug(tx, slug)
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 
 	product, err = p.productRepo.FindProductDetailByID(tx, product.ID, userID)
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 
-	tx.Commit()
 	return product, nil
 }
 
 func (p *productService) GetProductsBySellerID(query *dto.SellerProductSearchQuery, sellerID uint) ([]*dto.ProductRes, int64, int64, error) {
 	tx := p.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
 
 	variantDetails, totalPage, totalData, err := p.productVarDetRepo.GetProductsBySellerID(tx, query, sellerID)
 	if err != nil {
-		tx.Rollback()
 		return nil, 0, 0, err
 	}
-	if totalData == 0 {
-		tx.Rollback()
-		return nil, 0, 0, apperror.NotFoundError("No Products were found")
-	}
 
-	var productsRes []*dto.ProductRes
+	var productsRes = make([]*dto.ProductRes, 0)
 	for _, variantDetail := range variantDetails {
 		var photoURL string
 		if len(variantDetail.Product.ProductPhotos) > 0 {
@@ -99,24 +93,20 @@ func (p *productService) GetProductsBySellerID(query *dto.SellerProductSearchQue
 		productsRes = append(productsRes, dtoProduct)
 	}
 
-	tx.Commit()
 	return productsRes, totalPage, totalData, nil
 }
 
 func (p *productService) GetProductsByCategoryID(query *dto.SellerProductSearchQuery, categoryID uint) ([]*dto.ProductRes, int64, int64, error) {
 	tx := p.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
 
 	variantDetails, totalPage, totalData, err := p.productVarDetRepo.GetProductsByCategoryID(tx, query, categoryID)
 	if err != nil {
-		tx.Rollback()
 		return nil, 0, 0, err
 	}
-	if totalData == 0 {
-		tx.Rollback()
-		return nil, 0, 0, apperror.NotFoundError("No Products were found")
-	}
 
-	var productsRes []*dto.ProductRes
+	var productsRes = make([]*dto.ProductRes, 0)
 	for _, variantDetail := range variantDetails {
 		var photoURL string
 		if len(variantDetail.Product.ProductPhotos) > 0 {
@@ -141,42 +131,44 @@ func (p *productService) GetProductsByCategoryID(query *dto.SellerProductSearchQ
 		productsRes = append(productsRes, dtoProduct)
 	}
 
-	tx.Commit()
 	return productsRes, totalPage, totalData, nil
 }
 
 func (p *productService) FindSimilarProducts(productID uint) ([]*dto.ProductRes, error) {
 	tx := p.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
 
-	products, err := p.productRepo.FindSimilarProduct(tx, productID)
+	product, err := p.productRepo.FindProductByID(tx, productID)
 	if err != nil {
-		tx.Rollback()
-		if errors.Is(err, &apperror.ProductNotFoundError{}) {
-			return nil, apperror.NotFoundError(err.Error())
-		}
 		return nil, err
 	}
 
-	var productsRes []*dto.ProductRes
-	for _, product := range products {
-		if product.ID == productID {
+	products, err := p.productRepo.FindSimilarProduct(tx, product.CategoryID)
+	if err != nil {
+		return nil, err
+	}
+
+	var productsRes = make([]*dto.ProductRes, 0)
+	for _, pdt := range products {
+		if pdt.ID == productID {
 			continue
 		}
 
 		var photoURL string
-		if len(product.ProductPhotos) > 0 {
-			photoURL = product.ProductPhotos[0].PhotoURL
+		if len(pdt.ProductPhotos) > 0 {
+			photoURL = pdt.ProductPhotos[0].PhotoURL
 		}
 
-		minPrice, maxPrice, err := p.productRepo.SearchMinMaxPrice(tx, product.ID)
+		var minPrice, maxPrice uint
+		minPrice, maxPrice, err = p.productRepo.SearchMinMaxPrice(tx, pdt.ID)
 		if err != nil {
-			tx.Rollback()
 			return nil, err
 		}
 
-		ratings, err := p.productRepo.SearchRating(tx, product.ID)
+		var ratings []int
+		ratings, err = p.productRepo.SearchRating(tx, pdt.ID)
 		if err != nil {
-			tx.Rollback()
 			return nil, err
 		}
 		reviewCount := len(ratings)
@@ -186,37 +178,33 @@ func (p *productService) FindSimilarProducts(productID uint) ([]*dto.ProductRes,
 			MinPrice: float64(minPrice),
 			MaxPrice: float64(maxPrice),
 			Product: &dto.GetProductRes{
-				ID:            product.ID,
+				ID:            pdt.ID,
 				Price:         float64(minPrice),
-				Name:          product.Name,
-				Slug:          product.Slug,
+				Name:          pdt.Name,
+				Slug:          pdt.Slug,
 				MediaURL:      photoURL,
 				Rating:        avgRating,
 				TotalReviewer: int64(reviewCount),
-				TotalSold:     uint(product.SoldCount),
+				TotalSold:     uint(pdt.SoldCount),
 			},
 		}
 		productsRes = append(productsRes, dtoProduct)
 	}
 
-	tx.Commit()
 	return productsRes, nil
 }
 
 func (p *productService) GetProducts(query *repository.SearchQuery) ([]*dto.ProductRes, int64, int64, error) {
 	tx := p.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
 
 	variantDetails, totalPage, totalData, err := p.productVarDetRepo.SearchProducts(tx, query)
 	if err != nil {
-		tx.Rollback()
 		return nil, 0, 0, err
 	}
-	if totalData == 0 {
-		tx.Rollback()
-		return nil, 0, 0, apperror.NotFoundError("No Products were found")
-	}
 
-	var productsRes []*dto.ProductRes
+	var productsRes = make([]*dto.ProductRes, 0)
 	for _, variantDetail := range variantDetails {
 		var photoURL string
 		if len(variantDetail.ProductPhotos) > 0 {
@@ -241,16 +229,16 @@ func (p *productService) GetProducts(query *repository.SearchQuery) ([]*dto.Prod
 		productsRes = append(productsRes, dtoProduct)
 	}
 
-	tx.Commit()
 	return productsRes, totalPage, totalData, nil
 }
 
 func (p *productService) SearchRecommendProduct(q *repository.SearchQuery) (*dto.SearchedSortFilterProduct, error) {
 	tx := p.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
 
 	products, err := p.productRepo.SearchRecommendProduct(tx, q)
 	if err != nil {
-		tx.Rollback()
 		return nil, err
 	}
 
@@ -258,7 +246,5 @@ func (p *productService) SearchRecommendProduct(q *repository.SearchQuery) (*dto
 		TotalLength:     len(products),
 		SearchedProduct: products,
 	}
-
-	tx.Commit()
 	return &searchedSortFilterProducts, nil
 }

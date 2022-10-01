@@ -42,5 +42,8 @@ func (r *sellerRepository) FindSellerByID(tx *gorm.DB, sellerID uint) (*model.Se
 func (r *sellerRepository) FindSellerByUserID(tx *gorm.DB, userID uint) (*model.Seller, error) {
 	var seller *model.Seller
 	result := tx.Where("user_id = ?", userID).Preload("Address").Preload("User").First(&seller)
+	if result.Error == gorm.ErrRecordNotFound {
+		return nil, apperror.NotFoundError("Seller doesn't exists")
+	}
 	return seller, result.Error
 }
