@@ -73,12 +73,5 @@ func (r *reviewRepository) FindReviewByProductID(tx *gorm.DB, productID uint, qp
 	}
 
 	result := queryDB.Limit(int(qp.Limit)).Offset(int(offset)).Where("product_id = ?", productID).Order(orderStmt).Preload("Images").Preload("User").Find(&reviews)
-	if result.Error != nil {
-		return nil, result.Error
-	}
-	if result.RowsAffected == 0 {
-		return nil, &apperror.ReviewNotFoundError{}
-	}
-
-	return reviews, nil
+	return reviews, result.Error
 }

@@ -195,7 +195,7 @@ func (s *voucherService) FindVoucherBySellerID(sellerID, userID uint, qp *model.
 	totalVouchers := uint(len(vouchers))
 	totalPages := (totalVouchers + qp.Limit - 1) / qp.Limit
 
-	var voucherRes []*dto.GetVoucherRes
+	var voucherRes = make([]*dto.GetVoucherRes, 0)
 	for _, voucher := range vouchers {
 		voucherRes = append(voucherRes, new(dto.GetVoucherRes).From(voucher))
 	}

@@ -9,7 +9,7 @@ import (
 )
 
 type PromotionService interface {
-	GetPromotionByUserID(id uint) (*[]dto.GetPromotionRes, error)
+	GetPromotionByUserID(id uint) ([]*dto.GetPromotionRes, error)
 	CreatePromotion(id uint, req *dto.CreatePromotionReq) (*dto.CreatePromotionRes, error)
 }
 
@@ -36,7 +36,7 @@ func NewPromotionService(c *PromotionServiceConfig) PromotionService {
 	}
 }
 
-func (p *promotionService) GetPromotionByUserID(id uint) (*[]dto.GetPromotionRes, error) {
+func (p *promotionService) GetPromotionByUserID(id uint) ([]*dto.GetPromotionRes, error) {
 	tx := p.db.Begin()
 	var err error
 	defer helper.CommitOrRollback(tx, &err)
@@ -52,18 +52,18 @@ func (p *promotionService) GetPromotionByUserID(id uint) (*[]dto.GetPromotionRes
 		return nil, err
 	}
 
-	var promoRes []dto.GetPromotionRes
-	for _, promotion := range *prs {
-		pr := new(dto.GetPromotionRes).FromPromotion(&promotion)
+	var promoRes = make([]*dto.GetPromotionRes, 0)
+	for _, promotion := range prs {
+		pr := new(dto.GetPromotionRes).FromPromotion(promotion)
 		var photo string
 		photo, err = p.productRepo.GetProductPhotoURL(tx, promotion.ProductID)
 		if err != nil {
 			return nil, err
 		}
 		pr.ProductPhotoURL = photo
-		promoRes = append(promoRes, *pr)
+		promoRes = append(promoRes, pr)
 	}
-	return &promoRes, nil
+	return promoRes, nil
 }
 
 func (p *promotionService) CreatePromotion(id uint, req *dto.CreatePromotionReq) (*dto.CreatePromotionRes, error) {

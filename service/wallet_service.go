@@ -120,7 +120,7 @@ func (w *walletService) PaginatedTransactions(q *repository.Query, userID uint) 
 	var err error
 	defer helper.CommitOrRollback(tx, &err)
 
-	var ts []dto.TransactionsRes
+	var ts = make([]dto.TransactionsRes, 0)
 	l, t, err := w.walletRepository.PaginatedTransactions(tx, q, userID)
 	if err != nil {
 		return nil, err
@@ -156,11 +156,6 @@ func (w *walletService) GetWalletTransactionsByUserID(q *dto.WalletTransactionsQ
 
 	transactions, totalPage, totalData, err := w.walletTransRepo.GetTransactionsByWalletID(tx, q, wallet.ID)
 	if err != nil {
-		return nil, 0, 0, err
-	}
-
-	if len(transactions) <= 0 {
-		err = apperror.NotFoundError("No transactions were made")
 		return nil, 0, 0, err
 	}
 

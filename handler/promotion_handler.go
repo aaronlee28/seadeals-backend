@@ -13,7 +13,7 @@ func (h *Handler) GetPromotion(ctx *gin.Context) {
 
 	result, err := h.promotionService.GetPromotionByUserID(userID)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, err)
+		_ = ctx.Error(err)
 		return
 	}
 	successResponse := dto.StatusOKResponse(result)
