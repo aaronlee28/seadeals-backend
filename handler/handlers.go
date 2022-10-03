@@ -20,6 +20,7 @@ type Handler struct {
 	socialGraphService     service.SocialGraphService
 	voucherService         service.VoucherService
 	promotionService       service.PromotionService
+	courierService         service.CourierService
 }
 
 type Config struct {
@@ -40,6 +41,7 @@ type Config struct {
 	SocialGraphService     service.SocialGraphService
 	VoucherService         service.VoucherService
 	PromotionService       service.PromotionService
+	CourierService         service.CourierService
 }
 
 func New(config *Config) *Handler {
@@ -61,5 +63,6 @@ func New(config *Config) *Handler {
 		socialGraphService:     config.SocialGraphService,
 		voucherService:         config.VoucherService,
 		promotionService:       config.PromotionService,
+		courierService:         config.CourierService,
 	}
 }

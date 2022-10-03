@@ -14,4 +14,5 @@ type Order struct {
 	UserID        uint         `json:"user_id"`
 	User          *User        `json:"user"`
 	Total         float64      `json:"total"`
+	Status        string       `json:"status"`
 }
