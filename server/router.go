@@ -27,6 +27,7 @@ type RouterConfig struct {
 	SocialGraphService     service.SocialGraphService
 	VoucherService         service.VoucherService
 	PromotionService       service.PromotionService
+	CourierService         service.CourierService
 }
 
 func NewRouter(c *RouterConfig) *gin.Engine {
@@ -50,6 +51,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		SocialGraphService:     c.SocialGraphService,
 		VoucherService:         c.VoucherService,
 		PromotionService:       c.PromotionService,
+		CourierService:         c.CourierService,
 	})
 
 	r.Use(middleware.ErrorHandler)
@@ -85,6 +87,9 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.PATCH("/user/profiles/addresses/:id", middleware.AuthorizeJWTFor(model.UserRoleName), h.ChangeMainAddress)
 	r.GET("/user/profiles/addresses/main", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetUserMainAddress)
 	r.GET("/user/profiles/addresses", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetAddressesByUserID)
+
+	// COURIER
+	r.GET("/couriers", middleware.AuthorizeJWTFor(model.SellerRoleName), h.GetAllCouriers)
 
 	// CATEGORIES
 	r.GET("/categories", h.FindAllProductCategories)
@@ -196,6 +201,6 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	}), h.DeleteCartItem)
 
 	// PAYMENT
-	r.POST("/checkout-cart", middleware.RequestValidator(func() any { return &dto.CheckoutCartReq{} }), middleware.AuthorizeJWTFor(model.UserRoleName), h.CheckoutCart)
+	r.POST("/checkout-cart", middleware.RequestValidator(func() any { return &dto.CheckoutCartReq{} }), middleware.AuthorizeJWTFor(model.Level1RoleName), h.CheckoutCart)
 	return r
 }
