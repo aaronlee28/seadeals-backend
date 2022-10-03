@@ -11,6 +11,7 @@ import (
 type PromotionService interface {
 	GetPromotionByUserID(id uint) ([]*dto.GetPromotionRes, error)
 	CreatePromotion(id uint, req *dto.CreatePromotionReq) (*dto.CreatePromotionRes, error)
+	ViewDetailPromotionByID(id uint) (*dto.GetPromotionRes, error)
 }
 
 type promotionService struct {
@@ -95,4 +96,15 @@ func (p *promotionService) CreatePromotion(id uint, req *dto.CreatePromotionReq)
 		Name:      createPromo.Name,
 	}
 	return &ret, nil
+}
+
+func (p *promotionService) ViewDetailPromotionByID(id uint) (*dto.GetPromotionRes, error) {
+	tx := p.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
+
+	promo, err := p.promotionRepository.ViewDetailPromotionByID(tx, id)
+	promoRes := new(dto.GetPromotionRes).FromPromotion(promo)
+
+	return promoRes, nil
 }
