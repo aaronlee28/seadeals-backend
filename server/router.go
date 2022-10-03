@@ -201,6 +201,6 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	}), h.DeleteCartItem)
 
 	// PAYMENT
-	r.POST("/checkout-cart", middleware.RequestValidator(func() any { return &dto.CheckoutCartReq{} }), middleware.AuthorizeJWTFor(model.UserRoleName), h.CheckoutCart)
+	r.POST("/checkout-cart", middleware.RequestValidator(func() any { return &dto.CheckoutCartReq{} }), middleware.AuthorizeJWTFor(model.Level1RoleName), h.CheckoutCart)
 	return r
 }
