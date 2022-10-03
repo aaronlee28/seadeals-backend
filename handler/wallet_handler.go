@@ -182,13 +182,13 @@ func (h *Handler) ValidateWalletPin(ctx *gin.Context) {
 		_ = ctx.Error(apperror.BadRequestError("User is invalid"))
 		return
 	}
-	userID := user.(dto.UserJWT).UserID
+	userJwt := user.(dto.UserJWT)
 
 	value, _ := ctx.Get("payload")
 	json, _ := value.(*dto.PinReq)
 	pin := json.Pin
 
-	result, err := h.walletService.ValidateWalletPin(userID, pin)
+	idToken, result, err := h.walletService.ValidateWalletPin(&userJwt, pin)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, err)
 		return
@@ -198,7 +198,7 @@ func (h *Handler) ValidateWalletPin(ctx *gin.Context) {
 		status = "failed"
 	}
 
-	successResponse := dto.StatusOKResponse(gin.H{"status": status})
+	successResponse := dto.StatusOKResponse(gin.H{"status": status, "id_token": idToken})
 	ctx.JSON(http.StatusOK, successResponse)
 }
 

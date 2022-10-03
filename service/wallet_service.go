@@ -9,6 +9,7 @@ import (
 	"seadeals-backend/model"
 	"seadeals-backend/repository"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/mailjet/mailjet-apiv3-go"
@@ -26,7 +27,7 @@ type WalletService interface {
 	ValidateRequestIsValid(userID uint, key string) (string, error)
 	ValidateCodeToRequestByEmail(userID uint, req *dto.CodeKeyRequestByEmailReq) (string, error)
 	ChangeWalletPinByEmail(userID uint, req *dto.ChangePinByEmailReq) (*model.Wallet, error)
-	ValidateWalletPin(userID uint, pin string) (bool, error)
+	ValidateWalletPin(user *dto.UserJWT, pin string) (string, bool, error)
 
 	GetWalletStatus(userID uint) (string, error)
 	CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dto.CheckoutCartRes, error)
@@ -37,6 +38,7 @@ type walletService struct {
 	walletRepository repository.WalletRepository
 	userRepository   repository.UserRepository
 	walletTransRepo  repository.WalletTransactionRepository
+	userRoleRepo     repository.UserRoleRepository
 }
 
 type WalletServiceConfig struct {
@@ -44,6 +46,7 @@ type WalletServiceConfig struct {
 	WalletRepository repository.WalletRepository
 	UserRepository   repository.UserRepository
 	WalletTransRepo  repository.WalletTransactionRepository
+	UserRoleRepo     repository.UserRoleRepository
 }
 
 func NewWalletService(c *WalletServiceConfig) WalletService {
@@ -52,6 +55,7 @@ func NewWalletService(c *WalletServiceConfig) WalletService {
 		walletRepository: c.WalletRepository,
 		userRepository:   c.UserRepository,
 		walletTransRepo:  c.WalletTransRepo,
+		userRoleRepo:     c.UserRoleRepo,
 	}
 }
 
@@ -284,22 +288,38 @@ func (w *walletService) ChangeWalletPinByEmail(userID uint, req *dto.ChangePinBy
 	return result, nil
 }
 
-func (w *walletService) ValidateWalletPin(userID uint, pin string) (bool, error) {
+func (w *walletService) ValidateWalletPin(user *dto.UserJWT, pin string) (string, bool, error) {
 	tx := w.db.Begin()
 	var err error
 	defer helper.CommitOrRollback(tx, &err)
 
 	if len(pin) != 6 {
 		err = apperror.BadRequestError("Pin has to be 6 digits long")
-		return false, err
+		return "", false, err
 	}
 
-	err = w.walletRepository.ValidateWalletPin(tx, userID, pin)
+	err = w.walletRepository.ValidateWalletPin(tx, user.UserID, pin)
 	if err != nil {
-		return false, err
+		return "", false, err
 	}
 
-	return true, nil
+	userRoles, err := w.userRoleRepo.GetRolesByUserID(tx, user.UserID)
+	if err != nil {
+		return "", false, err
+	}
+	var roles []string
+	for _, role := range userRoles {
+		roles = append(roles, role.Role.Name)
+	}
+	rolesString := strings.Join(roles[:], " ")
+	rolesString += " level1"
+
+	idToken, err := helper.GenerateJWTToken(user, rolesString, config.Config.JWTExpiredInMinuteTime*60, dto.JWTAccessToken)
+	if err != nil {
+		return "", false, err
+	}
+
+	return idToken, true, nil
 }
 
 func (w *walletService) GetWalletStatus(userID uint) (string, error) {

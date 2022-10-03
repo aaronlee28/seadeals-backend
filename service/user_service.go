@@ -1,7 +1,6 @@
 package service
 
 import (
-	"github.com/golang-jwt/jwt/v4"
 	"gorm.io/gorm"
 	"net/mail"
 	"regexp"
@@ -48,29 +47,6 @@ func NewUserService(c *UserServiceConfig) UserService {
 		walletRepository: c.WalletRepository,
 		appConfig:        c.AppConfig,
 	}
-}
-
-func (u *userService) generateJWTToken(user *dto.UserJWT, role string, idExp int64, jwtType string) (string, error) {
-	// 1 minutes times JWTExpireInMinutes
-	unixTime := time.Now().Unix()
-	tokenExp := unixTime + idExp
-
-	timeExpire := jwt.NumericDate{Time: time.Unix(tokenExp, 0)}
-	timeNow := jwt.NumericDate{Time: time.Now()}
-	accessClaims := &idTokenClaims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: &timeExpire,
-			IssuedAt:  &timeNow,
-			Issuer:    u.appConfig.AppName,
-		},
-		User:  user,
-		Scope: role,
-		Type:  jwtType,
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims)
-	tokenString, _ := token.SignedString(u.appConfig.JWTSecret)
-
-	return tokenString, nil
 }
 
 func (u *userService) Register(req *dto.RegisterRequest) (*dto.RegisterResponse, *gorm.DB, error) {
@@ -230,7 +206,7 @@ func (u *userService) RegisterAsSeller(req *dto.RegisterAsSellerReq) (*model.Sel
 		roles = append(roles, role.Role.Name)
 	}
 	rolesString := strings.Join(roles[:], " ")
-	accessToken, err := u.generateJWTToken(userJWT, rolesString, config.Config.JWTExpiredInMinuteTime*60, dto.JWTAccessToken)
+	accessToken, err := helper.GenerateJWTToken(userJWT, rolesString, config.Config.JWTExpiredInMinuteTime*60, dto.JWTAccessToken)
 
 	return createdSeller, accessToken, nil
 }
