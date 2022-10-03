@@ -11,6 +11,7 @@ type PromotionRepository interface {
 	GetPromotionBySellerID(tx *gorm.DB, sellerID uint) ([]*model.Promotion, error)
 	CreatePromotion(tx *gorm.DB, req *dto.CreatePromotionReq, sellerID uint) (*model.Promotion, error)
 	ViewDetailPromotionByID(tx *gorm.DB, id uint) (*model.Promotion, error)
+	UpdatePromotion(tx *gorm.DB, promoID uint, updatePromo *model.Promotion) (*model.Promotion, error)
 }
 
 type promotionRepository struct{}
@@ -47,6 +48,12 @@ func (p *promotionRepository) CreatePromotion(tx *gorm.DB, req *dto.CreatePromot
 
 func (p *promotionRepository) ViewDetailPromotionByID(tx *gorm.DB, id uint) (*model.Promotion, error) {
 	var promotion *model.Promotion
-	result := tx.Where("id = ?", id).First(&promotion)
+	result := tx.Where("id = ?", id).Preload("Product.Seller").First(&promotion)
 	return promotion, result.Error
+}
+
+func (p *promotionRepository) UpdatePromotion(tx *gorm.DB, promoID uint, updatePromo *model.Promotion) (*model.Promotion, error) {
+	var updatedPromotion *model.Promotion
+	result := tx.First(&updatedPromotion, promoID).Updates(&updatePromo)
+	return updatedPromotion, result.Error
 }
