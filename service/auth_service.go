@@ -1,7 +1,6 @@
 package service
 
 import (
-	"github.com/golang-jwt/jwt/v4"
 	"gorm.io/gorm"
 	"os"
 	"seadeals-backend/apperror"
@@ -11,7 +10,6 @@ import (
 	"seadeals-backend/model"
 	"seadeals-backend/repository"
 	"strings"
-	"time"
 )
 
 type AuthService interface {
@@ -51,36 +49,6 @@ func NewAuthService(config *AuthSConfig) AuthService {
 	}
 }
 
-type idTokenClaims struct {
-	jwt.RegisteredClaims
-	User  *dto.UserJWT `json:"user"`
-	Scope string       `json:"scope"`
-	Type  string       `json:"type"`
-}
-
-func (a *authService) generateJWTToken(user *dto.UserJWT, role string, idExp int64, jwtType string) (string, error) {
-	// 1 minutes times JWTExpireInMinutes
-	unixTime := time.Now().Unix()
-	tokenExp := unixTime + idExp
-
-	timeExpire := jwt.NumericDate{Time: time.Unix(tokenExp, 0)}
-	timeNow := jwt.NumericDate{Time: time.Now()}
-	accessClaims := &idTokenClaims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: &timeExpire,
-			IssuedAt:  &timeNow,
-			Issuer:    a.appConfig.AppName,
-		},
-		User:  user,
-		Scope: role,
-		Type:  jwtType,
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims)
-	tokenString, _ := token.SignedString(a.appConfig.JWTSecret)
-
-	return tokenString, nil
-}
-
 func (a *authService) AuthAfterRegister(user *model.User, wallet *model.Wallet, tx *gorm.DB) (string, string, error) {
 	userJWT := &dto.UserJWT{
 		UserID:   user.ID,
@@ -88,8 +56,8 @@ func (a *authService) AuthAfterRegister(user *model.User, wallet *model.Wallet, 
 		Username: user.Username,
 		WalletID: wallet.ID,
 	}
-	token, err := a.generateJWTToken(userJWT, model.UserRoleName, config.Config.JWTExpiredInMinuteTime*60, dto.JWTAccessToken)
-	refreshToken, err := a.generateJWTToken(userJWT, model.UserRoleName, 24*60*60, dto.JWTRefreshToken)
+	token, err := helper.GenerateJWTToken(userJWT, model.UserRoleName, config.Config.JWTExpiredInMinuteTime*60, dto.JWTAccessToken)
+	refreshToken, err := helper.GenerateJWTToken(userJWT, model.UserRoleName, 24*60*60, dto.JWTRefreshToken)
 	if os.Getenv("ENV") == "testing" {
 		token = "test"
 		refreshToken = "test"
@@ -131,8 +99,8 @@ func (a *authService) SignInWithGoogle(user *model.User) (string, string, error)
 	}
 	rolesString := strings.Join(roles[:], " ")
 
-	token, err := a.generateJWTToken(userJWT, rolesString, config.Config.JWTExpiredInMinuteTime*60, dto.JWTAccessToken)
-	refreshToken, err := a.generateJWTToken(userJWT, rolesString, 24*60*60, dto.JWTRefreshToken)
+	token, err := helper.GenerateJWTToken(userJWT, rolesString, config.Config.JWTExpiredInMinuteTime*60, dto.JWTAccessToken)
+	refreshToken, err := helper.GenerateJWTToken(userJWT, rolesString, 24*60*60, dto.JWTRefreshToken)
 	if os.Getenv("ENV") == "testing" {
 		token = "test"
 		refreshToken = "test"
@@ -176,8 +144,8 @@ func (a *authService) SignIn(req *dto.SignInReq) (string, string, error) {
 		roles = append(roles, role.Role.Name)
 	}
 	rolesString := strings.Join(roles[:], " ")
-	token, err := a.generateJWTToken(userJWT, rolesString, config.Config.JWTExpiredInMinuteTime*60, dto.JWTAccessToken)
-	refreshToken, err := a.generateJWTToken(userJWT, rolesString, 24*60*60, dto.JWTRefreshToken)
+	token, err := helper.GenerateJWTToken(userJWT, rolesString, config.Config.JWTExpiredInMinuteTime*60, dto.JWTAccessToken)
+	refreshToken, err := helper.GenerateJWTToken(userJWT, rolesString, 24*60*60, dto.JWTRefreshToken)
 	if os.Getenv("ENV") == "testing" {
 		token = "test"
 		refreshToken = "test"

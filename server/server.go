@@ -90,6 +90,7 @@ func Init() {
 		WalletRepository: walletRepository,
 		UserRepository:   userRepository,
 		WalletTransRepo:  walletTransactionRepo,
+		UserRoleRepo:     userRoleRepository,
 	})
 
 	userSeaLabsPayAccountServ := service.NewUserSeaPayAccountServ(&service.UserSeaPayAccountServConfig{
