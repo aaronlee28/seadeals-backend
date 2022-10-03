@@ -5,12 +5,15 @@ import (
 	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
 	"seadeals-backend/helper"
+	"seadeals-backend/model"
 	"seadeals-backend/repository"
 )
 
 type PromotionService interface {
 	GetPromotionByUserID(id uint) ([]*dto.GetPromotionRes, error)
 	CreatePromotion(id uint, req *dto.CreatePromotionReq) (*dto.CreatePromotionRes, error)
+	ViewDetailPromotionByID(id uint) (*dto.GetPromotionRes, error)
+	UpdatePromotion(req *dto.PatchPromotionReq, promoID uint, userID uint) (*dto.PatchPromotionRes, error)
 }
 
 type promotionService struct {
@@ -95,4 +98,50 @@ func (p *promotionService) CreatePromotion(id uint, req *dto.CreatePromotionReq)
 		Name:      createPromo.Name,
 	}
 	return &ret, nil
+}
+
+func (p *promotionService) ViewDetailPromotionByID(id uint) (*dto.GetPromotionRes, error) {
+	tx := p.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
+
+	promo, err := p.promotionRepository.ViewDetailPromotionByID(tx, id)
+
+	photo, err2 := p.productRepo.GetProductPhotoURL(tx, promo.ProductID)
+	if err2 != nil {
+		return nil, err2
+	}
+	promoRes := new(dto.GetPromotionRes).FromPromotion(promo)
+	promoRes.ProductPhotoURL = photo
+
+	return promoRes, nil
+}
+
+func (p *promotionService) UpdatePromotion(req *dto.PatchPromotionReq, promoID uint, userID uint) (*dto.PatchPromotionRes, error) {
+	tx := p.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
+
+	promo, err := p.promotionRepository.ViewDetailPromotionByID(tx, promoID)
+	if promo.Product.Seller.UserID != userID {
+		err = apperror.UnauthorizedError("cannot update other shop promotion")
+		return nil, err
+	}
+
+	updatePromotion := &model.Promotion{
+		Name:        req.Name,
+		Description: req.Description,
+		StartDate:   req.StartDate,
+		EndDate:     req.EndDate,
+		Quota:       req.Quota,
+		MaxOrder:    req.MaxOrder,
+		AmountType:  req.AmountType,
+		Amount:      req.Amount,
+	}
+	updatedPromotion, err2 := p.promotionRepository.UpdatePromotion(tx, promoID, updatePromotion)
+	if err2 != nil {
+		return nil, err2
+	}
+	updatePromoRes := new(dto.PatchPromotionRes).PatchFromPromotion(updatedPromotion)
+	return updatePromoRes, nil
 }
