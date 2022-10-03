@@ -6,6 +6,7 @@ import (
 	"seadeals-backend/dto"
 	"seadeals-backend/model"
 	"strconv"
+	"strings"
 )
 
 type ProductVariantDetailRepository interface {
@@ -179,9 +180,14 @@ func (p *productVariantDetailRepository) SearchProducts(tx *gorm.DB, query *Sear
 	s2 = s2.Select("count(*), AVG(rating), product_id")
 	s2 = s2.Group("product_id")
 
+	seller := tx.Model(&model.Seller{})
+	seller = seller.Joins("Address")
+	seller = seller.Select("city, city_id, sellers.id, name")
+
 	result := tx.Model(&dto.SellerProductsCustomTable{})
-	result = result.Select("products.name, min, max, products.id, products.slug, products.category_id, products.seller_id, products.sold_count, avg, count, parent_id, products.created_at")
+	result = result.Select("products.name, min, max, city, city_id, products.id, products.slug, products.category_id, products.seller_id, products.sold_count, avg, count, parent_id, products.created_at")
 	result = result.Joins("JOIN product_categories as c ON products.category_id = c.id")
+	result = result.Joins("JOIN (?) as seller ON products.seller_id = seller.id", seller)
 	result = result.Joins("JOIN (?) as s1 ON products.id = s1.product_id", s1)
 	result = result.Joins("LEFT JOIN (?) as s2 ON products.id = s2.product_id", s2)
 
@@ -191,6 +197,10 @@ func (p *productVariantDetailRepository) SearchProducts(tx *gorm.DB, query *Sear
 	}
 	if query.SellerID != 0 {
 		result = result.Where("seller_id = ?", query.SellerID)
+	}
+	if query.City != "" {
+		citiesSplit := strings.Split(query.City, ",")
+		result = result.Where("city IN ?", citiesSplit)
 	}
 
 	orderByString := query.SortBy
