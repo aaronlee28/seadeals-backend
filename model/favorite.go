@@ -1,7 +1,10 @@
 package model
 
+import "gorm.io/gorm"
+
 type Favorite struct {
-	ID         uint     `json:"id"`
+	gorm.Model `json:"-"`
+	ID         uint     `json:"id" gorm:"primaryKey"`
 	IsFavorite bool     `json:"is_favorite"`
 	UserID     uint     `json:"user_id"`
 	User       *User    `json:"user"`
