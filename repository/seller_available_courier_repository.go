@@ -10,7 +10,7 @@ import (
 
 type SellerAvailableCourierRepository interface {
 	AddSellerAvailableDeliveryMethod(tx *gorm.DB, req *dto.AddDeliveryReq, sellerID uint) (*model.SellerAvailableCourier, error)
-	GetAllSellerCourier(tx *gorm.DB, sellerID uint) (*model.SellerAvailableCourier, error)
+	GetAllSellerAvailableCourier(tx *gorm.DB, sellerID uint) ([]*model.SellerAvailableCourier, error)
 }
 
 type sellerAvailableCourierRepository struct{}
@@ -50,7 +50,11 @@ func (s *sellerAvailableCourierRepository) AddSellerAvailableDeliveryMethod(tx *
 	return courier, nil
 }
 
-func (s *sellerAvailableCourierRepository) GetAllSellerCourier(tx *gorm.DB, sellerID uint) (*model.SellerAvailableCourier, error) {
-
-	return nil, nil
+func (s *sellerAvailableCourierRepository) GetAllSellerAvailableCourier(tx *gorm.DB, sellerID uint) ([]*model.SellerAvailableCourier, error) {
+	var couriers []*model.SellerAvailableCourier
+	result := tx.Model(&couriers).Where("seller_id = ?", sellerID).Where("is_selected IS TRUE").Find(&couriers)
+	if result.Error != nil {
+		return nil, apperror.InternalServerError("Cannot find seller available method")
+	}
+	return couriers, nil
 }

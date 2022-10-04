@@ -10,6 +10,7 @@ import (
 
 type SellerAvailableCourService interface {
 	CreateOrUpdateCourier(req *dto.AddDeliveryReq, userID uint) (*model.SellerAvailableCourier, error)
+	GetSellerAvailableCourier(userID uint) ([]*model.SellerAvailableCourier, error)
 }
 
 type sellerAvailableCourService struct {
@@ -48,4 +49,22 @@ func (s *sellerAvailableCourService) CreateOrUpdateCourier(req *dto.AddDeliveryR
 	}
 
 	return courier, nil
+}
+
+func (s *sellerAvailableCourService) GetSellerAvailableCourier(userID uint) ([]*model.SellerAvailableCourier, error) {
+	tx := s.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
+
+	seller, err := s.sellerRepository.FindSellerByUserID(tx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	couriers, err := s.sellerAvailCourRepo.GetAllSellerAvailableCourier(tx, seller.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return couriers, nil
 }
