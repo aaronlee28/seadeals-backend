@@ -15,4 +15,5 @@ type Order struct {
 	User          *User        `json:"user"`
 	Total         float64      `json:"total"`
 	Status        string       `json:"status"`
+	OrderItems    []*OrderItem `json:"order_items"`
 }

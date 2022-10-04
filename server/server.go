@@ -30,6 +30,7 @@ func Init() {
 	voucherRepo := repository.NewVoucherRepository()
 	promotionRepository := repository.NewPromotionRepository()
 	courierRepository := repository.NewCourierRepository()
+	orderRepository := repository.NewOrderRepo()
 
 	userService := service.NewUserService(&service.UserServiceConfig{
 		DB:               db.Get(),
@@ -144,6 +145,12 @@ func Init() {
 		CourierRepository: courierRepository,
 	})
 
+	orderService := service.NewOrderService(&service.OrderServiceConfig{
+		DB:               db.Get(),
+		OrderRepository:  orderRepository,
+		SellerRepository: sellerRepository,
+	})
+
 	router := NewRouter(&RouterConfig{
 		UserService:            userService,
 		AuthService:            authService,
@@ -163,6 +170,7 @@ func Init() {
 		VoucherService:         voucherService,
 		PromotionService:       promotionService,
 		CourierService:         courierService,
+		OrderService:           orderService,
 	})
 	log.Fatalln(router.Run(":" + config.Config.Port))
 }

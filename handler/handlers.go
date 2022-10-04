@@ -21,6 +21,7 @@ type Handler struct {
 	voucherService         service.VoucherService
 	promotionService       service.PromotionService
 	courierService         service.CourierService
+	orderService           service.OrderService
 }
 
 type Config struct {
@@ -42,6 +43,7 @@ type Config struct {
 	VoucherService         service.VoucherService
 	PromotionService       service.PromotionService
 	CourierService         service.CourierService
+	OrderService           service.OrderService
 }
 
 func New(config *Config) *Handler {
@@ -64,5 +66,6 @@ func New(config *Config) *Handler {
 		voucherService:         config.VoucherService,
 		promotionService:       config.PromotionService,
 		courierService:         config.CourierService,
+		orderService:           config.OrderService,
 	}
 }

@@ -28,6 +28,7 @@ type RouterConfig struct {
 	VoucherService         service.VoucherService
 	PromotionService       service.PromotionService
 	CourierService         service.CourierService
+	OrderService           service.OrderService
 }
 
 func NewRouter(c *RouterConfig) *gin.Engine {
@@ -52,6 +53,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		VoucherService:         c.VoucherService,
 		PromotionService:       c.PromotionService,
 		CourierService:         c.CourierService,
+		OrderService:           c.OrderService,
 	})
 
 	r.Use(middleware.ErrorHandler)
@@ -120,6 +122,9 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.POST("/sellers", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.RegisterAsSellerReq{}
 	}), h.RegisterAsSeller)
+
+	// ORDER
+	r.GET("/sellers/orders", middleware.AuthorizeJWTFor(model.SellerRoleName), h.GetSellerOrders)
 
 	// VOUCHER
 	r.POST("/vouchers", middleware.AuthorizeJWTFor(model.SellerRoleName), middleware.RequestValidator(func() any {
