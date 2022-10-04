@@ -24,7 +24,7 @@ func (h *Handler) CreateOrUpdateSellerAvailableCour(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, dto.StatusCreatedResponse(result))
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(result))
 }
 
 func (h *Handler) GetSellerAvailableCourier(ctx *gin.Context) {
@@ -41,5 +41,5 @@ func (h *Handler) GetSellerAvailableCourier(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, dto.StatusCreatedResponse(result))
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(result))
 }
