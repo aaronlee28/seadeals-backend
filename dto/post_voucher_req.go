@@ -3,7 +3,6 @@ package dto
 import "time"
 
 type PostVoucherReq struct {
-	SellerID    uint      `json:"seller_id" binding:"required"`
 	Name        string    `json:"name" binding:"required"`
 	Code        string    `json:"code" binding:"required,alphanum,min=1,max=5"`
 	StartDate   time.Time `json:"start_date" binding:"required,ltefield=EndDate,gte"`
