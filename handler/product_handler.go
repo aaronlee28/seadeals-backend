@@ -174,3 +174,23 @@ func (h *Handler) SearchRecommendProduct(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, successResponse)
 
 }
+
+func (h *Handler) CreateSellerProduct(ctx *gin.Context) {
+
+	userPayload, _ := ctx.Get("user")
+	user, isValid := userPayload.(dto.UserJWT)
+	userID := uint(0)
+	if isValid {
+		userID = user.UserID
+	}
+	value, _ := ctx.Get("payload")
+	json, _ := value.(*dto.PostCreateProductReq)
+	res, err := h.productService.CreateSellerProduct(userID, json)
+
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(res))
+}

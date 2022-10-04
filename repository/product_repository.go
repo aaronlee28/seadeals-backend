@@ -25,6 +25,11 @@ type ProductRepository interface {
 	SearchCategory(tx *gorm.DB, productID uint) (string, error)
 	GetProductDetail(tx *gorm.DB, id uint) (*model.Product, error)
 	GetProductPhotoURL(tx *gorm.DB, productID uint) (string, error)
+	CreateProduct(tx *gorm.DB, name string, categoryID uint, sellerID uint, bulk bool, minQuantity uint, maxQuantity uint) (*model.Product, error)
+	CreateProductDetail(tx *gorm.DB, productID uint, req *dto.ProductDetailReq) (*model.ProductDetail, error)
+	CreateProductPhoto(tx *gorm.DB, productID uint, req *dto.ProductPhoto) (*model.ProductPhoto, error)
+	CreateProductVariant(tx *gorm.DB, name string) (*model.ProductVariant, error)
+	CreateProductVariantDetail(tx *gorm.DB, productID uint, variant1ID *uint, variant2 *model.ProductVariant, req *dto.ProductVariantDetail) (*model.ProductVariantDetail, error)
 }
 
 type productRepository struct{}
@@ -238,4 +243,89 @@ func (r *productRepository) GetProductPhotoURL(tx *gorm.DB, productID uint) (str
 	}
 
 	return photoURL, nil
+}
+
+func (r *productRepository) CreateProduct(tx *gorm.DB, name string, categoryID uint, sellerID uint, bulk bool, minQuantity uint, maxQuantity uint) (*model.Product, error) {
+	product := &model.Product{
+		Name:          name,
+		CategoryID:    categoryID,
+		SellerID:      sellerID,
+		IsBulkEnabled: bulk,
+		MinQuantity:   minQuantity,
+		MaxQuantity:   maxQuantity,
+	}
+	result := tx.Create(&product)
+	if result.Error != nil {
+		return nil, apperror.InternalServerError("Cannot create product")
+	}
+	return product, nil
+}
+func (r *productRepository) CreateProductDetail(tx *gorm.DB, productID uint, req *dto.ProductDetailReq) (*model.ProductDetail, error) {
+
+	productDetail := &model.ProductDetail{
+		ProductID:       productID,
+		Description:     req.Description,
+		VideoURL:        req.VideoURL,
+		IsHazardous:     *req.IsHazardous,
+		ConditionStatus: req.ConditionStatus,
+		Length:          req.Length,
+		Width:           req.Width,
+		Height:          req.Height,
+		Weight:          req.Weight,
+	}
+	result := tx.Create(&productDetail)
+	if result.Error != nil {
+		return nil, apperror.InternalServerError("Cannot create product details")
+	}
+	return productDetail, nil
+}
+
+func (r *productRepository) CreateProductPhoto(tx *gorm.DB, productID uint, req *dto.ProductPhoto) (*model.ProductPhoto, error) {
+
+	productPhoto := &model.ProductPhoto{
+		ProductID: productID,
+		PhotoURL:  req.PhotoURL,
+		Name:      req.Name,
+	}
+	result := tx.Create(&productPhoto)
+	if result.Error != nil {
+		return nil, apperror.InternalServerError("Cannot create product photo")
+	}
+	return productPhoto, nil
+}
+
+func (r *productRepository) CreateProductVariant(tx *gorm.DB, name string) (*model.ProductVariant, error) {
+
+	productVariant := &model.ProductVariant{
+		Name: name,
+	}
+	result := tx.Create(&productVariant)
+	if result.Error != nil {
+		return nil, apperror.InternalServerError("Cannot create product variant")
+	}
+	return productVariant, nil
+}
+
+func (r *productRepository) CreateProductVariantDetail(tx *gorm.DB, productID uint, variant1ID *uint, variant2 *model.ProductVariant, req *dto.ProductVariantDetail) (*model.ProductVariantDetail, error) {
+
+	productVariantDetail := &model.ProductVariantDetail{
+		ProductID:     productID,
+		Price:         req.Price,
+		Variant1Value: req.Variant1Value,
+		Variant1ID:    variant1ID,
+		VariantCode:   req.VariantCode,
+		PictureURL:    req.PictureURL,
+		Stock:         req.Stock,
+	}
+	if req.Variant2Value != nil {
+		productVariantDetail.Variant2Value = req.Variant2Value
+	}
+	if variant2 != nil {
+		productVariantDetail.Variant2ID = variant2.ID
+	}
+	result := tx.Create(&productVariantDetail)
+	if result.Error != nil {
+		return nil, apperror.InternalServerError("Cannot create product variant detail")
+	}
+	return productVariantDetail, nil
 }

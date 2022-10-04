@@ -10,7 +10,6 @@ type ProductDetail struct {
 	VideoURL        string  `json:"video_url"`
 	IsHazardous     bool    `json:"is_hazardous"`
 	ConditionStatus string  `json:"condition_status"`
-	SKU             string  `json:"sku"`
 	Length          float64 `json:"length"`
 	Width           float64 `json:"width"`
 	Height          float64 `json:"height"`

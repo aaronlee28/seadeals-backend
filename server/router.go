@@ -103,6 +103,9 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.GET("/sellers/:id/products", h.GetProductsBySellerID)
 	r.GET("/categories/:id/products", h.GetProductsByCategoryID)
 	r.GET("/products", h.SearchProducts)
+	r.POST("/sellers/create-product", middleware.OptionalAuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
+		return &dto.PostCreateProductReq{}
+	}), h.CreateSellerProduct)
 
 	// NOTIFICATION
 	r.POST("/products/favorites", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {

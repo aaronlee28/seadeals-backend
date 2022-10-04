@@ -2,6 +2,7 @@ package model
 
 import (
 	"gorm.io/gorm"
+	"strconv"
 )
 
 type Product struct {
@@ -22,6 +23,8 @@ type Product struct {
 	ProductPhotos        []*ProductPhoto         `json:"product_photos"`
 	Promotion            *Promotion              `json:"promotion"`
 	Favorite             *Favorite               `json:"favorite"`
+	MinQuantity          uint                    `json:"min_quantity"`
+	MaxQuantity          uint                    `json:"max_quantity"`
 }
 
 type SellerProductQuery struct {
@@ -30,4 +33,9 @@ type SellerProductQuery struct {
 	Search string `json:"search"`
 	Page   int    `json:"page"`
 	Limit  int    `json:"limit"`
+}
+
+func (u *Product) AfterCreate(tx *gorm.DB) (err error) {
+	tx.Model(u).Update("slug", u.Name+"."+strconv.FormatUint(uint64(u.ID), 10))
+	return
 }
