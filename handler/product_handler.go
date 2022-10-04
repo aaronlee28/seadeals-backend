@@ -153,7 +153,7 @@ func (h *Handler) SearchRecommendProduct(ctx *gin.Context) {
 		Search:     helper.GetQuery(ctx, "s", ""),
 		SortBy:     helper.GetQuery(ctx, "sortBy", "total_sold"),
 		Sort:       helper.GetQuery(ctx, "sort", model.SortByReviewDefault),
-		Limit:      helper.GetQuery(ctx, "limit", "30"),
+		Limit:      helper.GetQuery(ctx, "limit", "18"),
 		Page:       helper.GetQuery(ctx, "page", "1"),
 		MinAmount:  helper.GetQueryToFloat64(ctx, "minAmount", 0),
 		MaxAmount:  helper.GetQueryToFloat64(ctx, "maxAmount", math.MaxFloat64),
@@ -163,16 +163,22 @@ func (h *Handler) SearchRecommendProduct(ctx *gin.Context) {
 		CategoryID: helper.GetQueryToUint(ctx, "categoryID", 0),
 		SellerID:   helper.GetQueryToUint(ctx, "sellerID", 0),
 	}
+	limit, _ := strconv.ParseUint(query.Limit, 10, 64)
+	if limit == 0 {
+		limit = 18
+	}
+	page, _ := strconv.ParseUint(query.Page, 10, 64)
+	if page == 0 {
+		page = 1
+	}
 
-	result, err := h.productService.SearchRecommendProduct(query)
+	result, totalPage, totalData, err := h.productService.SearchRecommendProduct(query)
 	if err != nil {
 		_ = ctx.Error(err)
 		return
 	}
 
-	successResponse := dto.StatusOKResponse(result)
-	ctx.JSON(http.StatusOK, successResponse)
-
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(gin.H{"products": result, "total_data": totalData, "total_page": totalPage, "current_data": page, "limit": limit}))
 }
 
 func (h *Handler) CreateSellerProduct(ctx *gin.Context) {
