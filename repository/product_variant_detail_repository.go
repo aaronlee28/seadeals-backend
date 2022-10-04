@@ -185,7 +185,7 @@ func (p *productVariantDetailRepository) SearchProducts(tx *gorm.DB, query *Sear
 	seller = seller.Select("city, city_id, sellers.id, name")
 
 	result := tx.Model(&dto.SellerProductsCustomTable{})
-	result = result.Select("products.name, min, max, city, city_id, products.id, products.slug, products.category_id, products.seller_id, products.sold_count, avg, count, parent_id, products.created_at")
+	result = result.Select("products.name, min, max, city, city_id, products.id, products.slug, products.category_id, products.favorite_count, products.seller_id, products.sold_count, avg, count, parent_id, products.created_at")
 	result = result.Joins("JOIN product_categories as c ON products.category_id = c.id")
 	result = result.Joins("JOIN (?) as seller ON products.seller_id = seller.id", seller)
 	result = result.Joins("JOIN (?) as s1 ON products.id = s1.product_id", s1)
@@ -204,15 +204,20 @@ func (p *productVariantDetailRepository) SearchProducts(tx *gorm.DB, query *Sear
 	}
 
 	orderByString := query.SortBy
-	if query.SortBy == "price" {
-		orderByString = "min"
+	if query.SortBy == "" {
+		orderByString = "sold_count"
 	} else {
-		if query.SortBy == "" {
-			orderByString = "sold_count"
-		} else {
-			orderByString = "sold_count"
-			if query.SortBy == "date" {
-				orderByString = "products.created_at"
+		orderByString = "sold_count"
+		if query.SortBy == "price" {
+			orderByString = "min"
+		}
+		if query.SortBy == "date" {
+			orderByString = "products.created_at"
+		}
+		if query.SortBy == "favorite" {
+			orderByString = "products.favorite_count"
+			if query.Sort == "" {
+				orderByString += " desc"
 			}
 		}
 	}
