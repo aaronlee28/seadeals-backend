@@ -31,6 +31,7 @@ func Init() {
 	promotionRepository := repository.NewPromotionRepository()
 	courierRepository := repository.NewCourierRepository()
 	orderRepository := repository.NewOrderRepo()
+	sellerAvailableCourRepo := repository.NewSellerAvailableCourierRepository()
 
 	userService := service.NewUserService(&service.UserServiceConfig{
 		DB:               db.Get(),
@@ -151,6 +152,12 @@ func Init() {
 		SellerRepository: sellerRepository,
 	})
 
+	sellerAvailableCourServ := service.NewSellerAvailableCourService(&service.SellerAvailableCourServiceConfig{
+		DB:                  db.Get(),
+		SellerAvailCourRepo: sellerAvailableCourRepo,
+		SellerRepository:    sellerRepository,
+	})
+
 	router := NewRouter(&RouterConfig{
 		UserService:            userService,
 		AuthService:            authService,
@@ -171,6 +178,7 @@ func Init() {
 		PromotionService:       promotionService,
 		CourierService:         courierService,
 		OrderService:           orderService,
+		SellerAvailableCourServ: sellerAvailableCourServ,
 	})
 	log.Fatalln(router.Run(":" + config.Config.Port))
 }

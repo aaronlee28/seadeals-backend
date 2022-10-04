@@ -102,18 +102,12 @@ func (s *voucherService) CreateVoucher(req *dto.PostVoucherReq, userID uint) (*d
 	var err error
 	defer helper.CommitOrRollback(tx, &err)
 
-	seller, err := s.sellerRepo.FindSellerByID(tx, req.SellerID)
+	seller, err := s.sellerRepo.FindSellerByUserID(tx, userID)
 	if err != nil {
 		return nil, err
 	}
 
-	if seller.UserID != userID {
-		err = apperror.UnauthorizedError("cannot add other shop voucher")
-		return nil, err
-	}
-
 	voucher := &model.Voucher{
-		SellerID:    req.SellerID,
 		Name:        req.Name,
 		Code:        req.Code,
 		StartDate:   req.StartDate,
