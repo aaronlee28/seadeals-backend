@@ -23,6 +23,17 @@ func GetQueryToUint(c *gin.Context, key string, defaultVal uint) uint {
 	return defaultVal
 }
 
+func GetQueryToInt(c *gin.Context, key string, defaultVal int) int {
+	if s, ok := c.GetQuery(key); ok {
+		value, _ := strconv.Atoi(s)
+		if value == 0 {
+			return defaultVal
+		}
+		return value
+	}
+	return defaultVal
+}
+
 func GetQueryToFloat64(c *gin.Context, key string, defaultVal float64) float64 {
 	if s, ok := c.GetQuery(key); ok {
 		value, _ := strconv.ParseFloat(s, 64)

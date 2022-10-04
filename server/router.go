@@ -10,24 +10,25 @@ import (
 )
 
 type RouterConfig struct {
-	UserService             service.UserService
-	AuthService             service.AuthService
-	AddressService          service.AddressService
-	WalletService           service.WalletService
-	ProductCategoryService  service.ProductCategoryService
-	ProductService          service.ProductService
-	ProductVariantService   service.ProductVariantService
-	ReviewService           service.ReviewService
-	SellerService           service.SellerService
-	UserSeaLabsPayAccServ   service.UserSeaPayAccountServ
-	OrderItemService        service.CartItemService
-	RefreshTokenService     service.RefreshTokenService
-	SealabsPayService       service.SealabsPayService
-	FavoriteService         service.FavoriteService
-	SocialGraphService      service.SocialGraphService
-	VoucherService          service.VoucherService
-	PromotionService        service.PromotionService
-	CourierService          service.CourierService
+	UserService            service.UserService
+	AuthService            service.AuthService
+	AddressService         service.AddressService
+	WalletService          service.WalletService
+	ProductCategoryService service.ProductCategoryService
+	ProductService         service.ProductService
+	ProductVariantService  service.ProductVariantService
+	ReviewService          service.ReviewService
+	SellerService          service.SellerService
+	UserSeaLabsPayAccServ  service.UserSeaPayAccountServ
+	OrderItemService       service.CartItemService
+	RefreshTokenService    service.RefreshTokenService
+	SealabsPayService      service.SealabsPayService
+	FavoriteService        service.FavoriteService
+	SocialGraphService     service.SocialGraphService
+	VoucherService         service.VoucherService
+	PromotionService       service.PromotionService
+	CourierService         service.CourierService
+	OrderService           service.OrderService
 	SellerAvailableCourServ service.SellerAvailableCourService
 }
 
@@ -35,24 +36,25 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r := gin.Default()
 
 	h := handler.New(&handler.Config{
-		UserService:             c.UserService,
-		AuthService:             c.AuthService,
-		AddressService:          c.AddressService,
-		ProductCategoryService:  c.ProductCategoryService,
-		ProductService:          c.ProductService,
-		ProductVariantService:   c.ProductVariantService,
-		ReviewService:           c.ReviewService,
-		SellerService:           c.SellerService,
-		WalletService:           c.WalletService,
-		SeaLabsPayAccServ:       c.UserSeaLabsPayAccServ,
-		OrderItemService:        c.OrderItemService,
-		RefreshTokenService:     c.RefreshTokenService,
-		SealabsPayService:       c.SealabsPayService,
-		FavoriteService:         c.FavoriteService,
-		SocialGraphService:      c.SocialGraphService,
-		VoucherService:          c.VoucherService,
-		PromotionService:        c.PromotionService,
-		CourierService:          c.CourierService,
+		UserService:            c.UserService,
+		AuthService:            c.AuthService,
+		AddressService:         c.AddressService,
+		ProductCategoryService: c.ProductCategoryService,
+		ProductService:         c.ProductService,
+		ProductVariantService:  c.ProductVariantService,
+		ReviewService:          c.ReviewService,
+		SellerService:          c.SellerService,
+		WalletService:          c.WalletService,
+		SeaLabsPayAccServ:      c.UserSeaLabsPayAccServ,
+		OrderItemService:       c.OrderItemService,
+		RefreshTokenService:    c.RefreshTokenService,
+		SealabsPayService:      c.SealabsPayService,
+		FavoriteService:        c.FavoriteService,
+		SocialGraphService:     c.SocialGraphService,
+		VoucherService:         c.VoucherService,
+		PromotionService:       c.PromotionService,
+		CourierService:         c.CourierService,
+		OrderService:           c.OrderService,
 		SellerAvailableCourServ: c.SellerAvailableCourServ,
 	})
 
@@ -126,6 +128,9 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		return &dto.AddDeliveryReq{}
 	}), h.CreateOrUpdateSellerAvailableCour)
 	r.GET("/sellers/couriers", middleware.AuthorizeJWTFor(model.SellerRoleName), h.GetSellerAvailableCourier)
+
+	// ORDER
+	r.GET("/sellers/orders", middleware.AuthorizeJWTFor(model.SellerRoleName), h.GetSellerOrders)
 
 	// VOUCHER
 	r.POST("/vouchers", middleware.AuthorizeJWTFor(model.SellerRoleName), middleware.RequestValidator(func() any {
