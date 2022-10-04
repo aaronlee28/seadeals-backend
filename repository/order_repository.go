@@ -44,7 +44,7 @@ func (o *orderRepository) GetOrderBySellerID(tx *gorm.DB, sellerID uint, query *
 		result = result.Offset((query.Page - 1) * limit)
 	}
 
-	result = result.Preload("OrderItems").Find(&orders)
+	result = result.Preload("OrderItems").Order("created_at desc").Order("id").Find(&orders)
 	if result.Error != nil {
 		return nil, 0, 0, apperror.InternalServerError("Cannot find order")
 	}

@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"fmt"
 	"gorm.io/gorm"
 	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
@@ -16,7 +15,7 @@ type ProductRepository interface {
 	FindSimilarProduct(tx *gorm.DB, categoryID uint) ([]*model.Product, error)
 
 	SearchProduct(tx *gorm.DB, q *SearchQuery) (*[]model.Product, error)
-	SearchRecommendProduct(tx *gorm.DB, q *SearchQuery) ([]*dto.SearchedProductRes, error)
+	SearchRecommendProduct(tx *gorm.DB, q *SearchQuery) ([]*dto.SellerProductsCustomTable, int64, int64, error)
 	SearchImageURL(tx *gorm.DB, productID uint) (string, error)
 	SearchMinMaxPrice(tx *gorm.DB, productID uint) (uint, uint, error)
 	SearchPromoPrice(tx *gorm.DB, productID uint) (float64, error)
@@ -112,57 +111,66 @@ func (r *productRepository) SearchProduct(tx *gorm.DB, q *SearchQuery) (*[]model
 	return p, nil
 }
 
-func (r *productRepository) SearchRecommendProduct(tx *gorm.DB, q *SearchQuery) ([]*dto.SearchedProductRes, error) {
-	search := "%" + q.Search + "%"
-	city := "%" + q.City + "%"
-	category := "%" + q.Category + "%"
-	limit, _ := strconv.Atoi(q.Limit)
-	page, _ := strconv.Atoi(q.Page)
-	offset := (limit * page) - limit
+func (r *productRepository) SearchRecommendProduct(tx *gorm.DB, query *SearchQuery) ([]*dto.SellerProductsCustomTable, int64, int64, error) {
+	var products []*dto.SellerProductsCustomTable
 
-	var res = make([]*dto.SearchedProductRes, 0)
-	result := tx.Raw("SELECT product_id as id, product_name as name, slug, media_url, min_price as price, min_price, max_price, total_sold, views_count as views, promo_price, rating, count as total_reviewer, city, category, updated_at FROM " +
-		"(SELECT j.product_id as product_id, product_name, slug, media_url, min_price, max_price, total_sold, promo_price, rating, count, k.city as city, category_id, views_count, updated_at FROM " +
-		"(SELECT h.product_id, product_name, slug, media_url, min_price, max_price, total_sold, promo_price, rating, count, updated_at FROM" +
-		"(SELECT f.product_id, product_name, slug, media_url, min_price, max_price, total_sold, updated_at, min as promo_price FROM " +
-		"(SELECT d.product_id, product_name, slug, media_url, min_price, max as max_price, total_sold, updated_at FROM " +
-		"(SELECT b.product_id, name as product_name, slug, media_url, min as min_price, total_sold, updated_at FROM " +
-		"(SELECT a.product_id as product_id, seller_id, name, slug, category_id, views_count, total_sold, updated_at, media_url  FROM " +
-		"(SELECT id as product_id, seller_id, name, slug, category_id, views_count, sold_count as total_sold, updated_at FROM Products WHERE UPPER(name) like UPPER('" + search + "') Limit " + strconv.Itoa(limit) + " Offset " + strconv.Itoa(offset) + ") a " +
-		"left join (select ab.product_id, ab.photo_url as media_url FROM (SELECT product_id, min(id) AS First FROM product_photos GROUP BY product_id) foo join product_photos ab on foo.product_id = ab.product_id and foo.First = ab.id) as one_photo_url on a.product_id = one_photo_url.product_id) b left join (select min(price), product_id from product_variant_details group by product_id) c on b.product_id = c.product_id) d " +
-		"left join (select max(price), product_id from product_variant_details group by product_id) e on d.product_id = e.product_id) f " +
-		"left join (select product_id, min(amount) from promotions group by product_id) g on f.product_id = g.product_id) h " +
-		"left join (select avg(rating) as rating, count(rating) as count, product_id from reviews group by product_id) i on h.product_id = i.product_id) j " +
-		"left join (SELECT product_id, addresses.city, category_id, views_count FROM (SELECT products.id as product_id, sellers.address_id, products.category_id as category_id, products.views_count FROM products JOIN sellers ON products.seller_id = sellers.id) aa JOIN addresses on aa.address_id = addresses.id) k " +
-		"on j.product_id = k.product_id) l " +
-		"left join (SELECT id as category_id, name as category from product_categories) m " +
-		"on l.category_id = m.category_id" +
-		" where min_price >= " +
-		fmt.Sprintf("%f", q.MinAmount) +
-		" and " +
-		"max_price <= " +
-		fmt.Sprintf("%f", q.MaxAmount) +
-		" and " +
-		"UPPER(city) like UPPER('" +
-		city +
-		"')" +
-		" and " +
-		"rating >= " +
-		q.Rating +
-		" or rating is null " +
-		"and " +
-		"UPPER(category) like UPPER('" +
-		category +
-		"')" +
-		" order by " +
-		q.SortBy +
-		" " +
-		q.Sort).Scan(&res)
+	s1 := tx.Model(&model.ProductVariantDetail{})
+	s1 = s1.Select("min(price), max(price), product_id")
+	s1 = s1.Group("product_id")
 
-	if result.Error != nil {
-		return nil, result.Error
+	s2 := tx.Model(&model.Review{})
+	s2 = s2.Select("count(*), AVG(rating), product_id")
+	s2 = s2.Group("product_id")
+
+	seller := tx.Model(&model.Seller{})
+	seller = seller.Joins("Address")
+	seller = seller.Select("city, city_id, sellers.id, name")
+
+	result := tx.Model(&dto.SellerProductsCustomTable{})
+	result = result.Select("products.name, min, max, city, city_id, products.id, products.slug, products.category_id, products.favorite_count, products.seller_id, products.sold_count, avg, count, parent_id, products.created_at")
+	result = result.Joins("JOIN product_categories as c ON products.category_id = c.id")
+	result = result.Joins("JOIN (?) as seller ON products.seller_id = seller.id", seller)
+	result = result.Joins("JOIN (?) as s1 ON products.id = s1.product_id", s1)
+	result = result.Joins("LEFT JOIN (?) as s2 ON products.id = s2.product_id", s2)
+	orderByString := "favorite_count desc"
+
+	var totalData int64
+	result = result.Order(orderByString).Order("products.id")
+	result = result.Where("min >= ?", query.MinAmount).Where("min <= ?", query.MaxAmount).Where("products.name ILIKE ?", "%"+query.Search+"%")
+
+	rating, _ := strconv.Atoi(query.Rating)
+	if rating != 0 {
+		result = result.Where("avg >= ? AND avg IS NOT NULL", rating)
 	}
-	return res, nil
+
+	table := tx.Table("(?) as s3", result).Count(&totalData)
+	if table.Error != nil {
+		return nil, 0, 0, apperror.InternalServerError("cannot fetch products count")
+	}
+
+	limit, _ := strconv.Atoi(query.Limit)
+	if limit == 0 {
+		limit = 18
+	}
+	table = table.Limit(limit)
+
+	page, _ := strconv.Atoi(query.Page)
+	if page == 0 {
+		page = 1
+	}
+	table = table.Offset((page - 1) * limit)
+
+	table = table.Preload("ProductPhotos").Preload("Seller.Address")
+	table = table.Unscoped().Find(&products)
+	if table.Error != nil {
+		return nil, 0, 0, apperror.InternalServerError("cannot fetch products")
+	}
+
+	totalPage := totalData / int64(limit)
+	if totalData%int64(limit) != 0 {
+		totalPage += 1
+	}
+	return products, totalPage, totalData, nil
 }
 
 func (r *productRepository) SearchImageURL(tx *gorm.DB, productID uint) (string, error) {
