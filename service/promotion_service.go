@@ -103,7 +103,9 @@ func (p *promotionService) CreatePromotion(id uint, req *dto.CreatePromotionReq)
 func (p *promotionService) ViewDetailPromotionByID(id uint) (*dto.GetPromotionRes, error) {
 	tx := p.db.Begin()
 	var err error
+	var err2 error
 	defer helper.CommitOrRollback(tx, &err)
+	defer helper.CommitOrRollback(tx, &err2)
 
 	promo, err := p.promotionRepository.ViewDetailPromotionByID(tx, id)
 
@@ -120,7 +122,9 @@ func (p *promotionService) ViewDetailPromotionByID(id uint) (*dto.GetPromotionRe
 func (p *promotionService) UpdatePromotion(req *dto.PatchPromotionReq, promoID uint, userID uint) (*dto.PatchPromotionRes, error) {
 	tx := p.db.Begin()
 	var err error
+	var err2 error
 	defer helper.CommitOrRollback(tx, &err)
+	defer helper.CommitOrRollback(tx, &err2)
 
 	promo, err := p.promotionRepository.ViewDetailPromotionByID(tx, promoID)
 	if promo.Product.Seller.UserID != userID {

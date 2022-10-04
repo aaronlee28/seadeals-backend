@@ -49,7 +49,7 @@ func (_ *GetProductVariantRes) From(pv *model.ProductVariantDetail) *GetProductV
 		Variant2Name:  name2,
 		Variant1Value: variant1Value,
 		Variant2Value: variant2Value,
-		VariantCode:   pv.VariantCode,
+		VariantCode:   *pv.VariantCode,
 		PictureURL:    pictureURL,
 		Stock:         uint(pv.Stock),
 	}

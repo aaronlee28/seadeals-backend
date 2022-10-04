@@ -66,6 +66,7 @@ func Init() {
 		ProductRepo:       productRepository,
 		ReviewRepo:        reviewRepository,
 		ProductVarDetRepo: productVarDetRepo,
+		SellerRepo:        sellerRepository,
 	})
 
 	productVariantService := service.NewProductVariantService(&service.ProductVariantServiceConfig{

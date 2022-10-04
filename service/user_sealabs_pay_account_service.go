@@ -206,7 +206,7 @@ func (u *userSeaPayAccountServ) PayWithSeaLabsPay(userID uint, req *dto.Checkout
 				return "", nil, err
 			}
 			//check stock
-			newStock := cartItem.ProductVariantDetail.Stock - int(cartItem.Quantity)
+			newStock := cartItem.ProductVariantDetail.Stock - cartItem.Quantity
 			if newStock < 0 {
 				err = apperror.InternalServerError(cartItem.ProductVariantDetail.Product.Name + "is out of stock")
 				return "", nil, err
