@@ -28,6 +28,8 @@ type RouterConfig struct {
 	VoucherService         service.VoucherService
 	PromotionService       service.PromotionService
 	CourierService         service.CourierService
+	OrderService           service.OrderService
+	SellerAvailableCourServ service.SellerAvailableCourService
 }
 
 func NewRouter(c *RouterConfig) *gin.Engine {
@@ -52,6 +54,8 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		VoucherService:         c.VoucherService,
 		PromotionService:       c.PromotionService,
 		CourierService:         c.CourierService,
+		OrderService:           c.OrderService,
+		SellerAvailableCourServ: c.SellerAvailableCourServ,
 	})
 
 	r.Use(middleware.ErrorHandler)
@@ -123,6 +127,13 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.POST("/sellers", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.RegisterAsSellerReq{}
 	}), h.RegisterAsSeller)
+	r.POST("/sellers/couriers", middleware.AuthorizeJWTFor(model.SellerRoleName), middleware.RequestValidator(func() any {
+		return &dto.AddDeliveryReq{}
+	}), h.CreateOrUpdateSellerAvailableCour)
+	r.GET("/sellers/couriers", middleware.AuthorizeJWTFor(model.SellerRoleName), h.GetSellerAvailableCourier)
+
+	// ORDER
+	r.GET("/sellers/orders", middleware.AuthorizeJWTFor(model.SellerRoleName), h.GetSellerOrders)
 
 	// VOUCHER
 	r.POST("/vouchers", middleware.AuthorizeJWTFor(model.SellerRoleName), middleware.RequestValidator(func() any {
@@ -146,6 +157,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.PATCH("/patch-promotion/:id", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.PatchPromotionReq{}
 	}), h.UpdatePromotion)
+
 	// WALLET
 	r.GET("/user-wallet", middleware.AuthorizeJWTFor(model.UserRoleName), h.WalletDataTransactions)
 	r.GET("/transactions/:id", middleware.AuthorizeJWTFor(model.UserRoleName), h.TransactionDetails)
