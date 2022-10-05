@@ -85,12 +85,19 @@ func (o *cartItemService) GetCartItems(query *repository.Query, userID uint) ([]
 				subtotal = float64(item.Quantity) * (pricePerItem)
 			}
 		}
+
+		var imageURL string
+		if len(item.ProductVariantDetail.Product.ProductPhotos) > 0 {
+			imageURL = item.ProductVariantDetail.Product.ProductPhotos[0].PhotoURL
+		}
 		cartItem := &dto.CartItemRes{
 			ID:           item.ID,
 			Quantity:     item.Quantity,
 			Subtotal:     subtotal,
 			PricePerItem: pricePerItem,
 			SellerID:     item.ProductVariantDetail.Product.SellerID,
+			ImageURL:     imageURL,
+			SellerName:   item.ProductVariantDetail.Product.Seller.Name,
 			ProductName:  item.ProductVariantDetail.Product.Name,
 		}
 		cartItems = append(cartItems, cartItem)
