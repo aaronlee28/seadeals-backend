@@ -10,7 +10,7 @@ import (
 
 type ProductRepository interface {
 	FindProductByID(tx *gorm.DB, productID uint) (*model.Product, error)
-	FindProductDetailByID(tx *gorm.DB, productID uint, userID uint) (*model.Product, error)
+	FindProductDetailByID(tx *gorm.DB, productID uint, userID uint) (*dto.ProductDetailRes, error)
 	FindProductBySlug(tx *gorm.DB, slug string) (*model.Product, error)
 	FindSimilarProduct(tx *gorm.DB, categoryID uint) ([]*model.Product, error)
 
@@ -61,16 +61,27 @@ func (r *productRepository) FindProductByID(tx *gorm.DB, productID uint) (*model
 	return product, result.Error
 }
 
-func (r *productRepository) FindProductDetailByID(tx *gorm.DB, productID uint, userID uint) (*model.Product, error) {
-	var product *model.Product
-	result := tx.Preload("ProductPhotos", "product_id = ?", productID)
+func (r *productRepository) FindProductDetailByID(tx *gorm.DB, productID uint, userID uint) (*dto.ProductDetailRes, error) {
+	var productVariantDetail *model.ProductVariantDetail
+	variant := tx.Model(&productVariantDetail)
+	variant = variant.Select("SUM(product_variant_details.stock) as total_stock, product_variant_details.product_id")
+	variant = variant.Group("product_variant_details.product_id")
+
+	var product *dto.ProductDetailRes
+	result := tx.Model(&product)
+	result = result.Select("*")
+	result = result.Preload("ProductPhotos", "product_id = ?", productID)
 	result = result.Preload("ProductDetail", "product_id = ?", productID)
 	result = result.Preload("ProductVariantDetail", "product_id = ?", productID, func(db *gorm.DB) *gorm.DB {
 		return db.Order("product_variant_details.price")
 	})
+	result = result.Preload("Category")
+	result = result.Preload("Seller")
+	result = result.Preload("Promotion")
 	result = result.Preload("ProductVariantDetail.ProductVariant1")
 	result = result.Preload("ProductVariantDetail.ProductVariant2")
 	result = result.Preload("Favorite", "product_id = ? AND user_id = ? AND is_favorite IS TRUE", productID, userID)
+	result = result.Joins("JOIN (?) AS s1 ON s1.product_id = products.id", variant)
 	result = result.First(&product, productID)
 	if result.Error != nil {
 		return nil, result.Error

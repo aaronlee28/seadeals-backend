@@ -9,7 +9,7 @@ import (
 )
 
 type ProductService interface {
-	FindProductDetailByID(productID uint, userID uint) (*model.Product, error)
+	FindProductDetailByID(productID uint, userID uint) (*dto.ProductDetailRes, error)
 	FindSimilarProducts(productID uint) ([]*dto.ProductRes, error)
 	SearchRecommendProduct(q *repository.SearchQuery) ([]*dto.ProductRes, int64, int64, error)
 	GetProductsBySellerID(query *dto.SellerProductSearchQuery, sellerID uint) ([]*dto.ProductRes, int64, int64, error)
@@ -44,7 +44,7 @@ func NewProductService(config *ProductConfig) ProductService {
 	}
 }
 
-func (p *productService) FindProductDetailByID(productID uint, userID uint) (*model.Product, error) {
+func (p *productService) FindProductDetailByID(productID uint, userID uint) (*dto.ProductDetailRes, error) {
 	tx := p.db.Begin()
 	var err error
 	defer helper.CommitOrRollback(tx, &err)
