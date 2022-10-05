@@ -1,13 +1,11 @@
 package service
 
 import (
-	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ses"
 	"math"
-	"os"
 	"seadeals-backend/apperror"
 	"seadeals-backend/config"
 	"seadeals-backend/dto"
@@ -37,13 +35,6 @@ type WalletService interface {
 	GetWalletStatus(userID uint) (string, error)
 	CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dto.CheckoutCartRes, error)
 }
-
-var (
-	sender   = config.Config.AWSMail
-	textBody = "This email is for SeaDeals wallet pin email verification"
-	subject  = "SeaDeals Wallet PIN Verification"
-	charSet  = "UTF-8"
-)
 
 type walletService struct {
 	db               *gorm.DB
@@ -222,14 +213,16 @@ func (w *walletService) RequestPinChangeWithEmail(userID uint) (string, string, 
 		return "", "", err
 	}
 
-	//mailjetClient := mailjet.NewMailjetClient(config.Config.MailJetPublicKey, config.Config.MailJetSecretKey)
 	html := "<p>Berikut adalah kode untuk reset pin kamu:</p><h3>" + code + "</h3>"
 
-	fmt.Println(os.Getenv("AWS_MAIL"))
-	fmt.Println(user.Email)
 	sess, err := session.NewSession(&aws.Config{
-		Region: aws.String("ap-southeast-1"),
-	})
+		Region: aws.String("ap-southeast-1")},
+	)
+
+	sender := config.Config.AWSMail
+	textBody := "This email is for SeaDeals wallet pin email verification"
+	subject := "SeaDeals Wallet PIN Verification"
+	charSet := "UTF-8"
 
 	svc := ses.New(sess)
 
@@ -259,8 +252,7 @@ func (w *walletService) RequestPinChangeWithEmail(userID uint) (string, string, 
 		Source: aws.String(sender),
 	}
 
-	result, err := svc.SendEmail(input)
-
+	_, err = svc.SendEmail(input)
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
@@ -278,36 +270,6 @@ func (w *walletService) RequestPinChangeWithEmail(userID uint) (string, string, 
 		}
 	}
 
-	//messagesInfo := []mailjet.InfoMessagesV31{
-	//	{
-	//		From: &mailjet.RecipientV31{
-	//			Email: "seadeals04@gmail.com",
-	//			Name:  "SeaDeals No Reply",
-	//		},
-	//		To: &mailjet.RecipientsV31{
-	//			mailjet.RecipientV31{
-	//				Email: user.Email,
-	//				Name:  user.FullName,
-	//			},
-	//		},
-	//		Subject:  "Wallet Pin Reset Request",
-	//		TextPart: "request password for user" + user.FullName,
-	//		HTMLPart: html,
-	//		Priority: 0,
-	//		CustomID: config.Config.AppName,
-	//	},
-	//}
-	//messages := mailjet.MessagesV31{
-	//	Info: messagesInfo,
-	//}
-	//
-	//res, err := mailjetClient.SendMailV31(&messages)
-	//if err != nil {
-	//	return nil, "", err
-	//}
-
-	fmt.Println("Email send to ", user.Email)
-	fmt.Println(result)
 	return user.Email, randomString, nil
 }
 
