@@ -18,3 +18,7 @@ type CategoryQuery struct {
 	SellerID uint
 	ParentID uint
 }
+
+func (a ProductCategory) TableName() string {
+	return "product_categories"
+}
