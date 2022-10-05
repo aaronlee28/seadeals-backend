@@ -2,6 +2,7 @@ package service
 
 import (
 	"gorm.io/gorm"
+	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
 	"seadeals-backend/helper"
 	"seadeals-backend/model"
@@ -16,6 +17,9 @@ type ProductService interface {
 	GetProductsByCategoryID(query *dto.SellerProductSearchQuery, categoryID uint) ([]*dto.ProductRes, int64, int64, error)
 	GetProducts(q *repository.SearchQuery) ([]*dto.ProductRes, int64, int64, error)
 	CreateSellerProduct(userID uint, req *dto.PostCreateProductReq) (*dto.PostCreateProductRes, error)
+	UpdateProductAndDetails(userID uint, productID uint, req *dto.PatchProductAndDetailsReq) (*dto.PatchProductAndDetailsRes, error)
+	UpdateVariantAndDetails(userID uint, variantDetailsID uint, req *dto.PatchVariantAndDetails) (*dto.VariantAndDetails, error)
+	DeleteProductVariantDetails(userID uint, variantDetailsID uint, defaultPrice *float64) error
 }
 
 type productService struct {
@@ -274,6 +278,10 @@ func (p *productService) CreateSellerProduct(userID uint, req *dto.PostCreatePro
 
 	defer helper.CommitOrRollback(tx, &err)
 
+	if req.DefaultPrice == nil && len(req.VariantArray) == 0 && req.DefaultPrice == nil {
+		err = apperror.BadRequestError("default price is required if there is no variant")
+	}
+
 	//get seller id
 	seller, _ := p.sellerRepo.FindSellerByUserID(tx, userID)
 	//create product
@@ -298,37 +306,281 @@ func (p *productService) CreateSellerProduct(userID uint, req *dto.PostCreatePro
 		}
 		productPhotos = append(productPhotos, productPhoto)
 	}
-	var productVariant1 *model.ProductVariant
-	var productVariant2 *model.ProductVariant
-	if req.HasVariant {
-		//create product variants
-		productVariant1, err = p.productRepo.CreateProductVariant(tx, req.Variant1Name)
+	var productVariantDetail *model.ProductVariantDetail
+	var productVariantDetails []*model.ProductVariantDetail
+	if len(req.VariantArray) == 0 {
+		defaultProductVariantDetail := dto.ProductVariantDetail{
+			Price:         *req.DefaultPrice,
+			Variant1Value: nil,
+			Variant2Value: nil,
+			VariantCode:   nil,
+			PictureURL:    nil,
+			Stock:         *req.DefaultStock,
+		}
+		productVariantDetail, err = p.productRepo.CreateProductVariantDetail(tx, product.ID, nil, nil, &defaultProductVariantDetail)
+		productVariantDetails = append(productVariantDetails, productVariantDetail)
 		if err != nil {
 			return nil, err
 		}
-
-		if req.Variant2Name != nil {
-			productVariant2, err = p.productRepo.CreateProductVariant(tx, *req.Variant2Name)
+	}
+	//create product variant details
+	if len(req.VariantArray) > 0 {
+		for _, v := range req.VariantArray {
+			var productVariant1 *model.ProductVariant
+			var productVariant2 *model.ProductVariant
+			productVariant1, err = p.productRepo.CreateProductVariant(tx, *v.Variant1Name)
 			if err != nil {
 				return nil, err
 			}
-		} else {
-			productVariant2 = nil
+			if v.Variant2Name != nil {
+				productVariant2, err = p.productRepo.CreateProductVariant(tx, *v.Variant1Name)
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				productVariant2 = nil
+			}
+			productVariantDetail, err = p.productRepo.CreateProductVariantDetail(tx, product.ID, productVariant1.ID, productVariant2, v.ProductVariantDetails)
+			if err != nil {
+				return nil, err
+			}
+			productVariantDetails = append(productVariantDetails, productVariantDetail)
 		}
 	}
-	//create product variant details
-	var productVariantDetail *model.ProductVariantDetail
-	productVariantDetail, err = p.productRepo.CreateProductVariantDetail(tx, product.ID, productVariant1.ID, productVariant2, req.ProductVariantDetails)
-	if err != nil {
-		return nil, err
-	}
+
 	ret := dto.PostCreateProductRes{
 		Product:              product,
 		ProductDetail:        productDetail,
 		ProductPhoto:         productPhotos,
-		ProductVariant1:      productVariant1,
-		ProductVariant2:      productVariant2,
-		ProductVariantDetail: productVariantDetail,
+		ProductVariantDetail: productVariantDetails,
 	}
 	return &ret, nil
 }
+func (p *productService) UpdateProductAndDetails(userID uint, productID uint, req *dto.PatchProductAndDetailsReq) (*dto.PatchProductAndDetailsRes, error) {
+	tx := p.db.Begin()
+	var err error
+
+	defer helper.CommitOrRollback(tx, &err)
+
+	var seller *model.Seller
+	seller, err = p.sellerRepo.FindSellerByUserID(tx, userID)
+	if err != nil {
+		return nil, err
+	}
+	var checkPID *model.Product
+	checkPID, err = p.productRepo.FindProductByID(tx, productID)
+
+	if seller.ID != checkPID.SellerID {
+		err = apperror.BadRequestError("Product does not belong to seller ")
+		return nil, err
+	}
+	product := model.Product{
+		Name:          req.Product.Name,
+		IsBulkEnabled: req.Product.IsBulkEnabled,
+		MinQuantity:   req.Product.MinQuantity,
+		MaxQuantity:   req.Product.MaxQuantity,
+	}
+
+	var updatedProduct *model.Product
+	updatedProduct, err = p.productRepo.UpdateProduct(tx, productID, &product)
+
+	productDetail := model.ProductDetail{
+		Description:     req.ProductDetail.Description,
+		VideoURL:        req.ProductDetail.VideoURL,
+		IsHazardous:     req.ProductDetail.IsHazardous,
+		ConditionStatus: req.ProductDetail.ConditionStatus,
+		Length:          req.ProductDetail.Length,
+		Width:           req.ProductDetail.Width,
+		Height:          req.ProductDetail.Height,
+		Weight:          req.ProductDetail.Weight,
+	}
+	var updatedProductDetail *model.ProductDetail
+	updatedProductDetail, err = p.productRepo.UpdateProductDetail(tx, productID, &productDetail)
+
+	res := dto.PatchProductAndDetailsRes{
+		Product:       updatedProduct,
+		ProductDetail: updatedProductDetail,
+	}
+
+	return &res, nil
+}
+
+//when update, check kalo ada variant yang nil, kalau ada, delete variant null
+func (p *productService) UpdateVariantAndDetails(userID uint, variantDetailsID uint, req *dto.PatchVariantAndDetails) (*dto.VariantAndDetails, error) {
+	tx := p.db.Begin()
+	var err error
+
+	defer helper.CommitOrRollback(tx, &err)
+
+	var seller *model.Seller
+	seller, err = p.sellerRepo.FindSellerByUserID(tx, userID)
+	if err != nil {
+		return nil, err
+	}
+	var productVariantDetails *model.ProductVariantDetail
+	productVariantDetails, err = p.productRepo.FindProductVariantDetailsByID(tx, variantDetailsID)
+	var checkPID *model.Product
+	checkPID, err = p.productRepo.FindProductByID(tx, productVariantDetails.ProductID)
+	if seller.ID != checkPID.SellerID {
+		err = apperror.BadRequestError("Product does not belong to seller ")
+		return nil, err
+	}
+	var updatedProductVariant1 *model.ProductVariant
+	var updatedProductVariant2 *model.ProductVariant
+
+	if req.Variant1Name != nil {
+		updateProductVariant := &model.ProductVariant{
+			Name: *req.Variant1Name,
+		}
+		updatedProductVariant1, err = p.productRepo.UpdateProductVariantByID(tx, *productVariantDetails.Variant1ID, updateProductVariant)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if req.Variant2Name != nil {
+		updateProductVariant := &model.ProductVariant{
+			Name: *req.Variant2Name,
+		}
+		updatedProductVariant2, err = p.productRepo.UpdateProductVariantByID(tx, *productVariantDetails.Variant1ID, updateProductVariant)
+		if err != nil {
+			return nil, err
+		}
+	}
+	updateProductVariantDetail := &model.ProductVariantDetail{
+		Price:         req.ProductVariantDetails.Price,
+		Variant1Value: req.ProductVariantDetails.Variant1Value,
+		Variant2Value: req.ProductVariantDetails.Variant2Value,
+		VariantCode:   req.ProductVariantDetails.VariantCode,
+		PictureURL:    req.ProductVariantDetails.PictureURL,
+		Stock:         req.ProductVariantDetails.Stock,
+	}
+	var updatedProductVariantDetails *model.ProductVariantDetail
+
+	updatedProductVariantDetails, err = p.productRepo.UpdateProductVariantDetailByID(tx, variantDetailsID, updateProductVariantDetail)
+	if err != nil {
+		return nil, err
+	}
+	pvdRet := &dto.ProductVariantDetail{
+		Price:         updatedProductVariantDetails.Price,
+		Variant1Value: updatedProductVariantDetails.Variant1Value,
+		Variant2Value: updatedProductVariantDetails.Variant2Value,
+		VariantCode:   updatedProductVariantDetails.VariantCode,
+		PictureURL:    updatedProductVariantDetails.PictureURL,
+		Stock:         updatedProductVariantDetails.Stock,
+	}
+	ret := &dto.VariantAndDetails{
+		Variant1Name:          &updatedProductVariant1.Name,
+		Variant2Name:          &updatedProductVariant2.Name,
+		ProductVariantDetails: pvdRet,
+	}
+	return ret, nil
+}
+
+//when delete, check kalo product variant = 1, kalo 1 then add default price variant
+
+func (p *productService) DeleteProductVariantDetails(userID uint, variantDetailsID uint, defaultPrice *float64) error {
+	tx := p.db.Begin()
+	var err error
+
+	defer helper.CommitOrRollback(tx, &err)
+
+	var seller *model.Seller
+	seller, err = p.sellerRepo.FindSellerByUserID(tx, userID)
+	if err != nil {
+		return err
+	}
+	var productVariantDetails *model.ProductVariantDetail
+	productVariantDetails, err = p.productRepo.FindProductVariantDetailsByID(tx, variantDetailsID)
+	var checkPID *model.Product
+	checkPID, err = p.productRepo.FindProductByID(tx, productVariantDetails.ProductID)
+	if seller.ID != checkPID.SellerID {
+		err = apperror.BadRequestError("Product does not belong to seller ")
+		return err
+	}
+	var pvds []*model.ProductVariantDetail
+
+	pvds, err = p.productRepo.FindProductVariantDetailsByProductID(tx, productVariantDetails.ProductID)
+	if len(pvds) == 1 && defaultPrice == nil {
+		err = apperror.BadRequestError("default price is required")
+		return err
+	}
+	err = p.productRepo.DeleteProductVariantDetailsByID(tx, variantDetailsID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+//add product variant detail
+//func (p *productService) CreateVariantAndDetails(userID uint, variantDetailsID, req *dto.VariantAndDetails) (*dto.VariantAndDetails, error) {
+//	tx := p.db.Begin()
+//	var err error
+//
+//	defer helper.CommitOrRollback(tx, &err)
+//
+//	var seller *model.Seller
+//	seller, err = p.sellerRepo.FindSellerByUserID(tx, userID)
+//	if err != nil {
+//		return nil, err
+//	}
+//	var productVariantDetails *model.ProductVariantDetail
+//	productVariantDetails, err = p.productRepo.FindProductVariantDetailsByID(tx, variantDetailsID)
+//	var checkPID *model.Product
+//	checkPID, err = p.productRepo.FindProductByID(tx, productVariantDetails.ProductID)
+//	if seller.ID != checkPID.SellerID {
+//		err = apperror.BadRequestError("Product does not belong to seller ")
+//		return nil, err
+//	}
+//	var updatedProductVariant1 *model.ProductVariant
+//	var updatedProductVariant2 *model.ProductVariant
+//
+//	if req.Variant1Name != nil {
+//		updateProductVariant := &model.ProductVariant{
+//			Name: *req.Variant1Name,
+//		}
+//		updatedProductVariant1, err = p.productRepo.UpdateProductVariantByID(tx, *productVariantDetails.Variant1ID, updateProductVariant)
+//		if err != nil {
+//			return nil, err
+//		}
+//	}
+//	if req.Variant2Name != nil {
+//		updateProductVariant := &model.ProductVariant{
+//			Name: *req.Variant2Name,
+//		}
+//		updatedProductVariant2, err = p.productRepo.UpdateProductVariantByID(tx, *productVariantDetails.Variant1ID, updateProductVariant)
+//		if err != nil {
+//			return nil, err
+//		}
+//	}
+//	updateProductVariantDetail := &model.ProductVariantDetail{
+//		Price:         req.ProductVariantDetails.Price,
+//		Variant1Value: req.ProductVariantDetails.Variant1Value,
+//		Variant2Value: req.ProductVariantDetails.Variant2Value,
+//		VariantCode:   req.ProductVariantDetails.VariantCode,
+//		PictureURL:    req.ProductVariantDetails.PictureURL,
+//		Stock:         req.ProductVariantDetails.Stock,
+//	}
+//	var updatedProductVariantDetails *model.ProductVariantDetail
+//
+//	updatedProductVariantDetails, err = p.productRepo.UpdateProductVariantDetailByID(tx, variantDetailsID, updateProductVariantDetail)
+//	if err != nil {
+//		return nil, err
+//	}
+//	pvdRet := &dto.ProductVariantDetail{
+//		Price:         updatedProductVariantDetails.Price,
+//		Variant1Value: updatedProductVariantDetails.Variant1Value,
+//		Variant2Value: updatedProductVariantDetails.Variant2Value,
+//		VariantCode:   updatedProductVariantDetails.VariantCode,
+//		PictureURL:    updatedProductVariantDetails.PictureURL,
+//		Stock:         updatedProductVariantDetails.Stock,
+//	}
+//	ret := &dto.VariantAndDetails{
+//		Variant1Name:          &updatedProductVariant1.Name,
+//		Variant2Name:          &updatedProductVariant2.Name,
+//		ProductVariantDetails: pvdRet,
+//	}
+//	return ret, nil
+//}
+//update product photo
+
+//delete product

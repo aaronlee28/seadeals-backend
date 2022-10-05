@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"math"
 	"net/http"
@@ -199,4 +200,72 @@ func (h *Handler) CreateSellerProduct(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, dto.StatusOKResponse(res))
+}
+
+func (h *Handler) UpdateProductAndDetails(ctx *gin.Context) {
+
+	userPayload, _ := ctx.Get("user")
+	user, isValid := userPayload.(dto.UserJWT)
+	userID := uint(0)
+	if isValid {
+		userID = user.UserID
+	}
+	value, _ := ctx.Get("payload")
+	json, _ := value.(*dto.PatchProductAndDetailsReq)
+	fmt.Println("reqqqqq", json)
+	idString := ctx.Param("id")
+	productIDInt, _ := strconv.Atoi(idString)
+	productID := uint(productIDInt)
+	res, err := h.productService.UpdateProductAndDetails(userID, productID, json)
+
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(res))
+}
+func (h *Handler) UpdateVariantAndDetails(ctx *gin.Context) {
+
+	userPayload, _ := ctx.Get("user")
+	user, isValid := userPayload.(dto.UserJWT)
+	userID := uint(0)
+	if isValid {
+		userID = user.UserID
+	}
+	value, _ := ctx.Get("payload")
+	json, _ := value.(*dto.PatchVariantAndDetails)
+	idString := ctx.Param("id")
+	productIDInt, _ := strconv.Atoi(idString)
+	productID := uint(productIDInt)
+	res, err := h.productService.UpdateVariantAndDetails(userID, productID, json)
+
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(res))
+}
+func (h *Handler) DeleteVariantAndDetails(ctx *gin.Context) {
+
+	userPayload, _ := ctx.Get("user")
+	user, isValid := userPayload.(dto.UserJWT)
+	userID := uint(0)
+	if isValid {
+		userID = user.UserID
+	}
+	value, _ := ctx.Get("payload")
+	json, _ := value.(*dto.DefaultPrice)
+	idString := ctx.Param("id")
+	variantdIDInt, _ := strconv.Atoi(idString)
+	variantdID := uint(variantdIDInt)
+	err := h.productService.DeleteProductVariantDetails(userID, variantdID, json.DefaultPrice)
+
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse("Ok"))
 }

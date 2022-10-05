@@ -25,10 +25,17 @@ type ProductRepository interface {
 	GetProductDetail(tx *gorm.DB, id uint) (*model.Product, error)
 	GetProductPhotoURL(tx *gorm.DB, productID uint) (string, error)
 	CreateProduct(tx *gorm.DB, name string, categoryID uint, sellerID uint, bulk bool, minQuantity uint, maxQuantity uint) (*model.Product, error)
-	CreateProductDetail(tx *gorm.DB, productID uint, req *dto.ProductDetailReq) (*model.ProductDetail, error)
+	CreateProductDetail(tx *gorm.DB, productID uint, req *dto.ProductDetailsReq) (*model.ProductDetail, error)
 	CreateProductPhoto(tx *gorm.DB, productID uint, req *dto.ProductPhoto) (*model.ProductPhoto, error)
 	CreateProductVariant(tx *gorm.DB, name string) (*model.ProductVariant, error)
 	CreateProductVariantDetail(tx *gorm.DB, productID uint, variant1ID *uint, variant2 *model.ProductVariant, req *dto.ProductVariantDetail) (*model.ProductVariantDetail, error)
+	UpdateProduct(tx *gorm.DB, productID uint, p *model.Product) (*model.Product, error)
+	UpdateProductDetail(tx *gorm.DB, productID uint, pd *model.ProductDetail) (*model.ProductDetail, error)
+	FindProductVariantDetailsByID(tx *gorm.DB, id uint) (*model.ProductVariantDetail, error)
+	DeleteProductVariantDetailsByID(tx *gorm.DB, id uint) error
+	UpdateProductVariantDetailByID(tx *gorm.DB, id uint, pvd *model.ProductVariantDetail) (*model.ProductVariantDetail, error)
+	UpdateProductVariantByID(tx *gorm.DB, id uint, pvd *model.ProductVariant) (*model.ProductVariant, error)
+	FindProductVariantDetailsByProductID(tx *gorm.DB, ProductID uint) ([]*model.ProductVariantDetail, error)
 }
 
 type productRepository struct{}
@@ -268,7 +275,7 @@ func (r *productRepository) CreateProduct(tx *gorm.DB, name string, categoryID u
 	}
 	return product, nil
 }
-func (r *productRepository) CreateProductDetail(tx *gorm.DB, productID uint, req *dto.ProductDetailReq) (*model.ProductDetail, error) {
+func (r *productRepository) CreateProductDetail(tx *gorm.DB, productID uint, req *dto.ProductDetailsReq) (*model.ProductDetail, error) {
 
 	productDetail := &model.ProductDetail{
 		ProductID:       productID,
@@ -336,4 +343,51 @@ func (r *productRepository) CreateProductVariantDetail(tx *gorm.DB, productID ui
 		return nil, apperror.InternalServerError("Cannot create product variant detail")
 	}
 	return productVariantDetail, nil
+}
+func (r *productRepository) UpdateProduct(tx *gorm.DB, productID uint, p *model.Product) (*model.Product, error) {
+	var updatedProduct *model.Product
+	result := tx.First(&updatedProduct, productID).Updates(&p)
+	return updatedProduct, result.Error
+}
+
+func (r *productRepository) UpdateProductDetail(tx *gorm.DB, productID uint, pd *model.ProductDetail) (*model.ProductDetail, error) {
+
+	var updatedProductDetail *model.ProductDetail
+	result := tx.First(&updatedProductDetail, "product_id = ?", productID).Updates(&pd)
+	return updatedProductDetail, result.Error
+}
+
+func (r *productRepository) FindProductVariantDetailsByID(tx *gorm.DB, id uint) (*model.ProductVariantDetail, error) {
+	var productVariantDetails *model.ProductVariantDetail
+	result := tx.First(&productVariantDetails, id)
+	if result.Error == gorm.ErrRecordNotFound {
+		return nil, apperror.NotFoundError(new(apperror.ProductNotFoundError).Error())
+	}
+	return productVariantDetails, result.Error
+}
+func (r *productRepository) FindProductVariantDetailsByProductID(tx *gorm.DB, ProductID uint) ([]*model.ProductVariantDetail, error) {
+	var productVariantDetails []*model.ProductVariantDetail
+	result := tx.Find(&productVariantDetails, "product_id = ?", ProductID)
+	if result.Error == gorm.ErrRecordNotFound {
+		return nil, apperror.NotFoundError(new(apperror.ProductNotFoundError).Error())
+	}
+	return productVariantDetails, result.Error
+}
+func (r *productRepository) DeleteProductVariantDetailsByID(tx *gorm.DB, id uint) error {
+	var deletedVariantDetail *model.ProductVariantDetail
+	result := tx.Delete(&deletedVariantDetail, id)
+	return result.Error
+}
+
+func (r *productRepository) UpdateProductVariantDetailByID(tx *gorm.DB, id uint, pvd *model.ProductVariantDetail) (*model.ProductVariantDetail, error) {
+
+	var updatedProductVariantDetail *model.ProductVariantDetail
+	result := tx.First(&updatedProductVariantDetail, id).Updates(&pvd)
+	return updatedProductVariantDetail, result.Error
+}
+
+func (r *productRepository) UpdateProductVariantByID(tx *gorm.DB, id uint, pvd *model.ProductVariant) (*model.ProductVariant, error) {
+	var updatedProductVariant *model.ProductVariant
+	result := tx.First(&updatedProductVariant, id).Updates(&pvd)
+	return updatedProductVariant, result.Error
 }
