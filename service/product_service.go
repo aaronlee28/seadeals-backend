@@ -271,35 +271,30 @@ func (p *productService) SearchRecommendProduct(q *repository.SearchQuery) ([]*d
 func (p *productService) CreateSellerProduct(userID uint, req *dto.PostCreateProductReq) (*dto.PostCreateProductRes, error) {
 	tx := p.db.Begin()
 	var err error
-	var err2 error
-	var err3 error
-	var err4 error
-	var err5 error
-	var err6 error
+
 	defer helper.CommitOrRollback(tx, &err)
-	defer helper.CommitOrRollback(tx, &err2)
-	defer helper.CommitOrRollback(tx, &err3)
-	defer helper.CommitOrRollback(tx, &err4)
-	defer helper.CommitOrRollback(tx, &err5)
-	defer helper.CommitOrRollback(tx, &err6)
+
 	//get seller id
 	seller, _ := p.sellerRepo.FindSellerByUserID(tx, userID)
 	//create product
-	product, err := p.productRepo.CreateProduct(tx, req.Name, req.CategoryID, seller.ID, req.IsBulkEnabled, req.MinQuantity, req.MaxQuantity)
+	var product *model.Product
+	product, err = p.productRepo.CreateProduct(tx, req.Name, req.CategoryID, seller.ID, req.IsBulkEnabled, req.MinQuantity, req.MaxQuantity)
 	if err != nil {
 		return nil, err
 	}
 	//create product details
-	productDetail, err2 := p.productRepo.CreateProductDetail(tx, product.ID, req.ProductDetail)
-	if err2 != nil {
-		return nil, err2
+	var productDetail *model.ProductDetail
+	productDetail, err = p.productRepo.CreateProductDetail(tx, product.ID, req.ProductDetail)
+	if err != nil {
+		return nil, err
 	}
 	//create product photos table
 	var productPhotos []*model.ProductPhoto
 	for _, ph := range req.ProductPhotos {
-		productPhoto, err3 := p.productRepo.CreateProductPhoto(tx, product.ID, ph)
-		if err3 != nil {
-			return nil, err3
+		var productPhoto *model.ProductPhoto
+		productPhoto, err = p.productRepo.CreateProductPhoto(tx, product.ID, ph)
+		if err != nil {
+			return nil, err
 		}
 		productPhotos = append(productPhotos, productPhoto)
 	}
@@ -307,24 +302,25 @@ func (p *productService) CreateSellerProduct(userID uint, req *dto.PostCreatePro
 	var productVariant2 *model.ProductVariant
 	if req.HasVariant {
 		//create product variants
-		productVariant1, err4 = p.productRepo.CreateProductVariant(tx, req.Variant1Name)
-		if err4 != nil {
-			return nil, err4
+		productVariant1, err = p.productRepo.CreateProductVariant(tx, req.Variant1Name)
+		if err != nil {
+			return nil, err
 		}
 
 		if req.Variant2Name != nil {
-			productVariant2, err5 = p.productRepo.CreateProductVariant(tx, *req.Variant2Name)
-			if err5 != nil {
-				return nil, err5
+			productVariant2, err = p.productRepo.CreateProductVariant(tx, *req.Variant2Name)
+			if err != nil {
+				return nil, err
 			}
 		} else {
 			productVariant2 = nil
 		}
 	}
 	//create product variant details
-	productVariantDetail, err6 := p.productRepo.CreateProductVariantDetail(tx, product.ID, productVariant1.ID, productVariant2, req.ProductVariantDetails)
-	if err6 != nil {
-		return nil, err6
+	var productVariantDetail *model.ProductVariantDetail
+	productVariantDetail, err = p.productRepo.CreateProductVariantDetail(tx, product.ID, productVariant1.ID, productVariant2, req.ProductVariantDetails)
+	if err != nil {
+		return nil, err
 	}
 	ret := dto.PostCreateProductRes{
 		Product:              product,
