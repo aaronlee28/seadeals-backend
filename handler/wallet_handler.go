@@ -115,12 +115,12 @@ func (h *Handler) RequestWalletChangeByEmail(ctx *gin.Context) {
 	user, _ := payload.(dto.UserJWT)
 	userID := user.UserID
 
-	res, key, err := h.walletService.RequestPinChangeWithEmail(userID)
+	recipientEmail, key, err := h.walletService.RequestPinChangeWithEmail(userID)
 	if err != nil {
 		_ = ctx.Error(err)
 		return
 	}
-	successResponse := dto.StatusOKResponse(gin.H{"mailjet_response": res, "key": key})
+	successResponse := dto.StatusOKResponse(gin.H{"message": "Verification code is send to " + recipientEmail + ", please check your email", "key": key})
 	ctx.JSON(http.StatusOK, successResponse)
 }
 

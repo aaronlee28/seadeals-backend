@@ -30,6 +30,7 @@ type AppConfig struct {
 	SeaLabsPayAPIKey         string
 	SeaLabsPayTransactionURL string
 	NgrokURL                 string
+	AWSMail                  string
 }
 
 var Config = AppConfig{}
@@ -56,6 +57,7 @@ func Reset() {
 		SeaLabsPayAPIKey:         getEnv("SEA_LABS_PAY_API_KEY", ""),
 		SeaLabsPayTransactionURL: getEnv("SEA_LABS_PAY_TRANSACTION_URL", ""),
 		NgrokURL:                 getEnv("NGROK_URL", ""),
+		AWSMail:                  getEnv("AWS_MAIL", ""),
 	}
 }
 
