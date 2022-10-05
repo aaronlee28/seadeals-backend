@@ -14,6 +14,8 @@ type ProductRepository interface {
 	FindProductBySlug(tx *gorm.DB, slug string) (*model.Product, error)
 	FindSimilarProduct(tx *gorm.DB, categoryID uint) ([]*model.Product, error)
 
+	GetProductCountBySellerID(tx *gorm.DB, sellerID uint) (int64, error)
+
 	SearchProduct(tx *gorm.DB, q *SearchQuery) (*[]model.Product, error)
 	SearchRecommendProduct(tx *gorm.DB, q *SearchQuery) ([]*dto.SellerProductsCustomTable, int64, int64, error)
 	SearchImageURL(tx *gorm.DB, productID uint) (string, error)
@@ -93,6 +95,15 @@ func (r *productRepository) FindSimilarProduct(tx *gorm.DB, categoryID uint) ([]
 	var products []*model.Product
 	result := tx.Limit(24).Where("category_id = ?", categoryID).Preload("ProductVariantDetail").Preload("ProductPhotos").Find(&products)
 	return products, result.Error
+}
+
+func (r *productRepository) GetProductCountBySellerID(tx *gorm.DB, sellerID uint) (int64, error) {
+	var totalProduct int64
+	result := tx.Model(&model.Product{}).Where("seller_id = ?", sellerID).Where("is_archived IS FALSE").Count(&totalProduct)
+	if result.Error != nil {
+		return 0, apperror.InternalServerError("Cannot count total product")
+	}
+	return totalProduct, nil
 }
 
 func (r *productRepository) GetProductDetail(tx *gorm.DB, id uint) (*model.Product, error) {
