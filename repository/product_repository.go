@@ -39,6 +39,7 @@ type ProductRepository interface {
 	GetVariantByName(tx *gorm.DB, name string) (*model.ProductVariant, error)
 	CreateVariantWithName(tx *gorm.DB, name string) (*model.ProductVariant, error)
 	CreateProductVariantDetailWithModel(tx *gorm.DB, pvd *model.ProductVariantDetail) (*model.ProductVariantDetail, error)
+	DeleteNullProductVariantDetailsByID(tx *gorm.DB, ProductID uint) error
 }
 
 type productRepository struct{}
@@ -381,7 +382,16 @@ func (r *productRepository) DeleteProductVariantDetailsByID(tx *gorm.DB, id uint
 	result := tx.Delete(&deletedVariantDetail, id)
 	return result.Error
 }
+func (r *productRepository) DeleteNullProductVariantDetailsByID(tx *gorm.DB, ProductID uint) error {
+	var productVariantDetails *model.ProductVariantDetail
+	result := tx.First(&productVariantDetails, "product_id = ?", ProductID).Where("variant1_id = null")
+	if result.Error == gorm.ErrRecordNotFound {
+		return apperror.NotFoundError(new(apperror.ProductNotFoundError).Error())
+	}
+	result2 := tx.Delete(&productVariantDetails)
 
+	return result2.Error
+}
 func (r *productRepository) UpdateProductVariantDetailByID(tx *gorm.DB, id uint, pvd *model.ProductVariantDetail) (*model.ProductVariantDetail, error) {
 
 	var updatedProductVariantDetail *model.ProductVariantDetail

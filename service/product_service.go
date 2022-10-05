@@ -535,6 +535,9 @@ func (p *productService) AddVariantDetails(userID uint, productID uint, req *dto
 		err = apperror.BadRequestError("Product does not belong to seller ")
 		return nil, err
 	}
+
+	err = p.productRepo.DeleteNullProductVariantDetailsByID(tx, productID)
+
 	var productVariant1 *model.ProductVariant
 	var productVariant2 *model.ProductVariant
 	productVariant1, err = p.productRepo.GetVariantByName(tx, *req.Variant1Name)
@@ -582,5 +585,4 @@ func (p *productService) AddVariantDetails(userID uint, productID uint, req *dto
 //update product photo
 //add product photo
 //delete product photo
-
 //delete product
