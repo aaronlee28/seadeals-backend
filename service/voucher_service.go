@@ -16,7 +16,7 @@ type VoucherService interface {
 	CreateVoucher(req *dto.PostVoucherReq, userID uint) (*dto.GetVoucherRes, error)
 	FindVoucherDetailByID(id, userID uint) (*dto.GetVoucherRes, error)
 	FindVoucherByID(id uint) (*dto.GetVoucherRes, error)
-	FindVoucherBySellerID(sellerID, userID uint, qp *model.VoucherQueryParam) (*dto.GetVouchersRes, error)
+	FindVoucherByUserID(userID uint, qp *model.VoucherQueryParam) (*dto.GetVouchersRes, error)
 	ValidateVoucher(req *dto.PostValidateVoucherReq) (*dto.GetVoucherRes, error)
 	UpdateVoucher(req *dto.PatchVoucherReq, id, userID uint) (*dto.GetVoucherRes, error)
 	DeleteVoucherByID(id, userID uint) (bool, error)
@@ -108,6 +108,7 @@ func (s *voucherService) CreateVoucher(req *dto.PostVoucherReq, userID uint) (*d
 	}
 
 	voucher := &model.Voucher{
+		SellerID:    seller.ID,
 		Name:        req.Name,
 		Code:        req.Code,
 		StartDate:   req.StartDate,
@@ -165,23 +166,18 @@ func (s *voucherService) FindVoucherByID(id uint) (*dto.GetVoucherRes, error) {
 	return res, nil
 }
 
-func (s *voucherService) FindVoucherBySellerID(sellerID, userID uint, qp *model.VoucherQueryParam) (*dto.GetVouchersRes, error) {
+func (s *voucherService) FindVoucherByUserID(userID uint, qp *model.VoucherQueryParam) (*dto.GetVouchersRes, error) {
 	tx := s.db.Begin()
 	var err error
 	defer helper.CommitOrRollback(tx, &err)
 
-	seller, err := s.sellerRepo.FindSellerByID(tx, sellerID)
+	seller, err := s.sellerRepo.FindSellerByUserID(tx, userID)
 	if err != nil {
 		return nil, err
 	}
 
-	if seller.UserID != userID {
-		err = apperror.UnauthorizedError("cannot fetch other shop voucher")
-		return nil, err
-	}
-
 	validateVoucherQueryParam(qp)
-	vouchers, err := s.voucherRepo.FindVoucherBySellerID(tx, sellerID, qp)
+	vouchers, err := s.voucherRepo.FindVoucherBySellerID(tx, seller.ID, qp)
 	if err != nil {
 		return nil, err
 	}
