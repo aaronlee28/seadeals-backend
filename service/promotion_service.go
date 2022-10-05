@@ -103,15 +103,13 @@ func (p *promotionService) CreatePromotion(id uint, req *dto.CreatePromotionReq)
 func (p *promotionService) ViewDetailPromotionByID(id uint) (*dto.GetPromotionRes, error) {
 	tx := p.db.Begin()
 	var err error
-	var err2 error
 	defer helper.CommitOrRollback(tx, &err)
-	defer helper.CommitOrRollback(tx, &err2)
 
 	promo, err := p.promotionRepository.ViewDetailPromotionByID(tx, id)
-
-	photo, err2 := p.productRepo.GetProductPhotoURL(tx, promo.ProductID)
-	if err2 != nil {
-		return nil, err2
+	var photo string
+	photo, err = p.productRepo.GetProductPhotoURL(tx, promo.ProductID)
+	if err != nil {
+		return nil, err
 	}
 	promoRes := new(dto.GetPromotionRes).FromPromotion(promo)
 	promoRes.ProductPhotoURL = photo
@@ -122,9 +120,7 @@ func (p *promotionService) ViewDetailPromotionByID(id uint) (*dto.GetPromotionRe
 func (p *promotionService) UpdatePromotion(req *dto.PatchPromotionReq, promoID uint, userID uint) (*dto.PatchPromotionRes, error) {
 	tx := p.db.Begin()
 	var err error
-	var err2 error
 	defer helper.CommitOrRollback(tx, &err)
-	defer helper.CommitOrRollback(tx, &err2)
 
 	promo, err := p.promotionRepository.ViewDetailPromotionByID(tx, promoID)
 	if promo.Product.Seller.UserID != userID {
@@ -142,9 +138,10 @@ func (p *promotionService) UpdatePromotion(req *dto.PatchPromotionReq, promoID u
 		AmountType:  req.AmountType,
 		Amount:      req.Amount,
 	}
-	updatedPromotion, err2 := p.promotionRepository.UpdatePromotion(tx, promoID, updatePromotion)
-	if err2 != nil {
-		return nil, err2
+	var updatedPromotion *model.Promotion
+	updatedPromotion, err = p.promotionRepository.UpdatePromotion(tx, promoID, updatePromotion)
+	if err != nil {
+		return nil, err
 	}
 	updatePromoRes := new(dto.PatchPromotionRes).PatchFromPromotion(updatedPromotion)
 	return updatePromoRes, nil
