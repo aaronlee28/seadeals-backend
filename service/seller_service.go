@@ -13,6 +13,7 @@ type SellerService interface {
 
 type sellerService struct {
 	db              *gorm.DB
+	productRepo     repository.ProductRepository
 	sellerRepo      repository.SellerRepository
 	reviewRepo      repository.ReviewRepository
 	socialGraphRepo repository.SocialGraphRepository
@@ -20,6 +21,7 @@ type sellerService struct {
 
 type SellerServiceConfig struct {
 	DB              *gorm.DB
+	ProductRepo     repository.ProductRepository
 	SellerRepo      repository.SellerRepository
 	ReviewRepo      repository.ReviewRepository
 	SocialGraphRepo repository.SocialGraphRepository
@@ -31,6 +33,7 @@ func NewSellerService(c *SellerServiceConfig) SellerService {
 		sellerRepo:      c.SellerRepo,
 		reviewRepo:      c.ReviewRepo,
 		socialGraphRepo: c.SocialGraphRepo,
+		productRepo:     c.ProductRepo,
 	}
 }
 
@@ -64,6 +67,12 @@ func (s *sellerService) FindSellerByID(sellerID uint, userID uint) (*dto.GetSell
 		return nil, err
 	}
 	res.Following = uint(following)
-	
+
+	totalProduct, err := s.productRepo.GetProductCountBySellerID(tx, seller.ID)
+	if err != nil {
+		return nil, err
+	}
+	res.TotalProduct = totalProduct
+
 	return res, nil
 }

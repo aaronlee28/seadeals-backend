@@ -86,6 +86,7 @@ func Init() {
 		SellerRepo:      sellerRepository,
 		ReviewRepo:      reviewRepository,
 		SocialGraphRepo: socialGraphRepo,
+		ProductRepo:     productRepository,
 	})
 
 	walletService := service.NewWalletService(&service.WalletServiceConfig{
@@ -160,25 +161,25 @@ func Init() {
 	})
 
 	router := NewRouter(&RouterConfig{
-		UserService:            userService,
-		AuthService:            authService,
-		AddressService:         addressService,
-		WalletService:          walletService,
-		ProductCategoryService: productCategoryService,
-		ProductService:         productService,
-		ProductVariantService:  productVariantService,
-		ReviewService:          reviewService,
-		SellerService:          sellerService,
-		UserSeaLabsPayAccServ:  userSeaLabsPayAccountServ,
-		OrderItemService:       orderItemService,
-		RefreshTokenService:    refreshTokenService,
-		SealabsPayService:      sealabsPayService,
-		FavoriteService:        favoriteService,
-		SocialGraphService:     socialGraphService,
-		VoucherService:         voucherService,
-		PromotionService:       promotionService,
-		CourierService:         courierService,
-		OrderService:           orderService,
+		UserService:             userService,
+		AuthService:             authService,
+		AddressService:          addressService,
+		WalletService:           walletService,
+		ProductCategoryService:  productCategoryService,
+		ProductService:          productService,
+		ProductVariantService:   productVariantService,
+		ReviewService:           reviewService,
+		SellerService:           sellerService,
+		UserSeaLabsPayAccServ:   userSeaLabsPayAccountServ,
+		OrderItemService:        orderItemService,
+		RefreshTokenService:     refreshTokenService,
+		SealabsPayService:       sealabsPayService,
+		FavoriteService:         favoriteService,
+		SocialGraphService:      socialGraphService,
+		VoucherService:          voucherService,
+		PromotionService:        promotionService,
+		CourierService:          courierService,
+		OrderService:            orderService,
 		SellerAvailableCourServ: sellerAvailableCourServ,
 	})
 	log.Fatalln(router.Run(":" + config.Config.Port))
