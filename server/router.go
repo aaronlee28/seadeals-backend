@@ -119,6 +119,9 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.DELETE("/sellers/:id/delete-variant-and-details", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.DefaultPrice{}
 	}), h.DeleteVariantAndDetails)
+	r.POST("/sellers/:id/add-variant-and-details", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
+		return &dto.AddVariantAndDetails{}
+	}), h.AddVariantDetails)
 
 	// NOTIFICATION
 	r.POST("/products/favorites", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {

@@ -36,6 +36,9 @@ type ProductRepository interface {
 	UpdateProductVariantDetailByID(tx *gorm.DB, id uint, pvd *model.ProductVariantDetail) (*model.ProductVariantDetail, error)
 	UpdateProductVariantByID(tx *gorm.DB, id uint, pvd *model.ProductVariant) (*model.ProductVariant, error)
 	FindProductVariantDetailsByProductID(tx *gorm.DB, ProductID uint) ([]*model.ProductVariantDetail, error)
+	GetVariantByName(tx *gorm.DB, name string) (*model.ProductVariant, error)
+	CreateVariantWithName(tx *gorm.DB, name string) (*model.ProductVariant, error)
+	CreateProductVariantDetailWithModel(tx *gorm.DB, pvd *model.ProductVariantDetail) (*model.ProductVariantDetail, error)
 }
 
 type productRepository struct{}
@@ -390,4 +393,29 @@ func (r *productRepository) UpdateProductVariantByID(tx *gorm.DB, id uint, pvd *
 	var updatedProductVariant *model.ProductVariant
 	result := tx.First(&updatedProductVariant, id).Updates(&pvd)
 	return updatedProductVariant, result.Error
+}
+func (r *productRepository) GetVariantByName(tx *gorm.DB, name string) (*model.ProductVariant, error) {
+	var updatedProductVariant *model.ProductVariant
+	result := tx.First(&updatedProductVariant, "name = ?", name)
+	return updatedProductVariant, result.Error
+}
+
+func (r *productRepository) CreateVariantWithName(tx *gorm.DB, name string) (*model.ProductVariant, error) {
+	createPV := model.ProductVariant{
+		Name: name,
+	}
+	result := tx.Create(&createPV)
+
+	if result.Error != nil {
+		return nil, apperror.InternalServerError("Cannot create variant")
+	}
+	return &createPV, result.Error
+}
+
+func (r *productRepository) CreateProductVariantDetailWithModel(tx *gorm.DB, pvd *model.ProductVariantDetail) (*model.ProductVariantDetail, error) {
+	result := tx.Create(&pvd)
+	if result.Error != nil {
+		return nil, apperror.InternalServerError("Cannot create variant detail")
+	}
+	return pvd, result.Error
 }

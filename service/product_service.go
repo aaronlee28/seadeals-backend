@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"gorm.io/gorm"
 	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
@@ -20,6 +21,7 @@ type ProductService interface {
 	UpdateProductAndDetails(userID uint, productID uint, req *dto.PatchProductAndDetailsReq) (*dto.PatchProductAndDetailsRes, error)
 	UpdateVariantAndDetails(userID uint, variantDetailsID uint, req *dto.PatchVariantAndDetails) (*dto.VariantAndDetails, error)
 	DeleteProductVariantDetails(userID uint, variantDetailsID uint, defaultPrice *float64) error
+	AddVariantDetails(userID uint, productID uint, req *dto.AddVariantAndDetails) ([]*model.ProductVariantDetail, error)
 }
 
 type productService struct {
@@ -512,75 +514,73 @@ func (p *productService) DeleteProductVariantDetails(userID uint, variantDetails
 }
 
 //add product variant detail
-//func (p *productService) CreateVariantAndDetails(userID uint, variantDetailsID, req *dto.VariantAndDetails) (*dto.VariantAndDetails, error) {
-//	tx := p.db.Begin()
-//	var err error
-//
-//	defer helper.CommitOrRollback(tx, &err)
-//
-//	var seller *model.Seller
-//	seller, err = p.sellerRepo.FindSellerByUserID(tx, userID)
-//	if err != nil {
-//		return nil, err
-//	}
-//	var productVariantDetails *model.ProductVariantDetail
-//	productVariantDetails, err = p.productRepo.FindProductVariantDetailsByID(tx, variantDetailsID)
-//	var checkPID *model.Product
-//	checkPID, err = p.productRepo.FindProductByID(tx, productVariantDetails.ProductID)
-//	if seller.ID != checkPID.SellerID {
-//		err = apperror.BadRequestError("Product does not belong to seller ")
-//		return nil, err
-//	}
-//	var updatedProductVariant1 *model.ProductVariant
-//	var updatedProductVariant2 *model.ProductVariant
-//
-//	if req.Variant1Name != nil {
-//		updateProductVariant := &model.ProductVariant{
-//			Name: *req.Variant1Name,
-//		}
-//		updatedProductVariant1, err = p.productRepo.UpdateProductVariantByID(tx, *productVariantDetails.Variant1ID, updateProductVariant)
-//		if err != nil {
-//			return nil, err
-//		}
-//	}
-//	if req.Variant2Name != nil {
-//		updateProductVariant := &model.ProductVariant{
-//			Name: *req.Variant2Name,
-//		}
-//		updatedProductVariant2, err = p.productRepo.UpdateProductVariantByID(tx, *productVariantDetails.Variant1ID, updateProductVariant)
-//		if err != nil {
-//			return nil, err
-//		}
-//	}
-//	updateProductVariantDetail := &model.ProductVariantDetail{
-//		Price:         req.ProductVariantDetails.Price,
-//		Variant1Value: req.ProductVariantDetails.Variant1Value,
-//		Variant2Value: req.ProductVariantDetails.Variant2Value,
-//		VariantCode:   req.ProductVariantDetails.VariantCode,
-//		PictureURL:    req.ProductVariantDetails.PictureURL,
-//		Stock:         req.ProductVariantDetails.Stock,
-//	}
-//	var updatedProductVariantDetails *model.ProductVariantDetail
-//
-//	updatedProductVariantDetails, err = p.productRepo.UpdateProductVariantDetailByID(tx, variantDetailsID, updateProductVariantDetail)
-//	if err != nil {
-//		return nil, err
-//	}
-//	pvdRet := &dto.ProductVariantDetail{
-//		Price:         updatedProductVariantDetails.Price,
-//		Variant1Value: updatedProductVariantDetails.Variant1Value,
-//		Variant2Value: updatedProductVariantDetails.Variant2Value,
-//		VariantCode:   updatedProductVariantDetails.VariantCode,
-//		PictureURL:    updatedProductVariantDetails.PictureURL,
-//		Stock:         updatedProductVariantDetails.Stock,
-//	}
-//	ret := &dto.VariantAndDetails{
-//		Variant1Name:          &updatedProductVariant1.Name,
-//		Variant2Name:          &updatedProductVariant2.Name,
-//		ProductVariantDetails: pvdRet,
-//	}
-//	return ret, nil
-//}
+
+func (p *productService) AddVariantDetails(userID uint, productID uint, req *dto.AddVariantAndDetails) ([]*model.ProductVariantDetail, error) {
+	tx := p.db.Begin()
+	var err error
+	var err2 error
+
+	defer helper.CommitOrRollback(tx, &err)
+	defer helper.CommitOrRollback(tx, &err2)
+
+	var seller *model.Seller
+	seller, err = p.sellerRepo.FindSellerByUserID(tx, userID)
+	if err != nil {
+		return nil, err
+	}
+	var checkPID *model.Product
+	checkPID, err = p.productRepo.FindProductByID(tx, productID)
+
+	if seller.ID != checkPID.SellerID {
+		err = apperror.BadRequestError("Product does not belong to seller ")
+		return nil, err
+	}
+	var productVariant1 *model.ProductVariant
+	var productVariant2 *model.ProductVariant
+	productVariant1, err = p.productRepo.GetVariantByName(tx, *req.Variant1Name)
+	if err != nil {
+
+		productVariant1, err2 = p.productRepo.CreateVariantWithName(tx, *req.Variant1Name)
+		if err2 != nil {
+			return nil, err
+		}
+	}
+	if req.Variant2Name != nil {
+		productVariant2, err = p.productRepo.GetVariantByName(tx, *req.Variant2Name)
+		fmt.Println("????", productVariant2)
+		fmt.Println("err", err)
+
+		if err != nil {
+			productVariant2, err2 = p.productRepo.CreateVariantWithName(tx, *req.Variant2Name)
+			if err2 != nil {
+				return nil, err
+			}
+		}
+	}
+	var createdVariantDetail []*model.ProductVariantDetail
+	for _, pvd := range req.ProductVariantDetails {
+
+		addPVD := model.ProductVariantDetail{
+			ProductID:     productID,
+			Price:         pvd.Price,
+			Variant1Value: &productVariant1.Name,
+			Variant2Value: &productVariant2.Name,
+			Variant1ID:    productVariant1.ID,
+			Variant2ID:    productVariant2.ID,
+			VariantCode:   pvd.VariantCode,
+			PictureURL:    pvd.PictureURL,
+			Stock:         pvd.Stock,
+		}
+		var newPVD *model.ProductVariantDetail
+		newPVD, err = p.productRepo.CreateProductVariantDetailWithModel(tx, &addPVD)
+		createdVariantDetail = append(createdVariantDetail, newPVD)
+	}
+
+	return createdVariantDetail, nil
+}
+
 //update product photo
+//add product photo
+//delete product photo
 
 //delete product

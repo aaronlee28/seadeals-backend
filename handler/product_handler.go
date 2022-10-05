@@ -269,3 +269,28 @@ func (h *Handler) DeleteVariantAndDetails(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, dto.StatusOKResponse("Ok"))
 }
+
+func (h *Handler) AddVariantDetails(ctx *gin.Context) {
+
+	userPayload, _ := ctx.Get("user")
+	user, isValid := userPayload.(dto.UserJWT)
+	userID := uint(0)
+	if isValid {
+		userID = user.UserID
+	}
+	value, _ := ctx.Get("payload")
+	json, _ := value.(*dto.AddVariantAndDetails)
+	idString := ctx.Param("id")
+	productIDInt, _ := strconv.Atoi(idString)
+	productID := uint(productIDInt)
+	fmt.Println("hahahahahaha", json)
+
+	res, err := h.productService.AddVariantDetails(userID, productID, json)
+
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(res))
+}
