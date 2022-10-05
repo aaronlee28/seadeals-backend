@@ -1,7 +1,6 @@
 package service
 
 import (
-	"fmt"
 	"gorm.io/gorm"
 	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
@@ -550,8 +549,6 @@ func (p *productService) AddVariantDetails(userID uint, productID uint, req *dto
 	}
 	if req.Variant2Name != nil {
 		productVariant2, err = p.productRepo.GetVariantByName(tx, *req.Variant2Name)
-		fmt.Println("????", productVariant2)
-		fmt.Println("err", err)
 
 		if err != nil {
 			productVariant2, err2 = p.productRepo.CreateVariantWithName(tx, *req.Variant2Name)
