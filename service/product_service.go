@@ -11,7 +11,7 @@ import (
 type ProductService interface {
 	FindProductDetailByID(productID uint, userID uint) (*model.Product, error)
 	FindSimilarProducts(productID uint) ([]*dto.ProductRes, error)
-	SearchRecommendProduct(q *repository.SearchQuery) (*dto.SearchedSortFilterProduct, error)
+	SearchRecommendProduct(q *repository.SearchQuery) ([]*dto.ProductRes, int64, int64, error)
 	GetProductsBySellerID(query *dto.SellerProductSearchQuery, sellerID uint) ([]*dto.ProductRes, int64, int64, error)
 	GetProductsByCategoryID(query *dto.SellerProductSearchQuery, categoryID uint) ([]*dto.ProductRes, int64, int64, error)
 	GetProducts(q *repository.SearchQuery) ([]*dto.ProductRes, int64, int64, error)
@@ -231,21 +231,41 @@ func (p *productService) GetProducts(query *repository.SearchQuery) ([]*dto.Prod
 	return productsRes, totalPage, totalData, nil
 }
 
-func (p *productService) SearchRecommendProduct(q *repository.SearchQuery) (*dto.SearchedSortFilterProduct, error) {
+func (p *productService) SearchRecommendProduct(q *repository.SearchQuery) ([]*dto.ProductRes, int64, int64, error) {
 	tx := p.db.Begin()
 	var err error
 	defer helper.CommitOrRollback(tx, &err)
 
-	products, err := p.productRepo.SearchRecommendProduct(tx, q)
+	products, totalPage, totalData, err := p.productRepo.SearchRecommendProduct(tx, q)
 	if err != nil {
-		return nil, err
+		return nil, 0, 0, err
 	}
 
-	searchedSortFilterProducts := dto.SearchedSortFilterProduct{
-		TotalLength:     len(products),
-		SearchedProduct: products,
+	var productsRes = make([]*dto.ProductRes, 0)
+	for _, product := range products {
+		var photoURL string
+		if len(product.ProductPhotos) > 0 {
+			photoURL = product.ProductPhotos[0].PhotoURL
+		}
+
+		dtoProduct := &dto.ProductRes{
+			MinPrice: product.Min,
+			MaxPrice: product.Max,
+			Product: &dto.GetProductRes{
+				ID:            product.ID,
+				Price:         product.Min,
+				Name:          product.Name,
+				Slug:          product.Slug,
+				MediaURL:      photoURL,
+				City:          product.Seller.Address.City,
+				Rating:        product.Avg,
+				TotalReviewer: product.Count,
+				TotalSold:     uint(product.Product.SoldCount),
+			},
+		}
+		productsRes = append(productsRes, dtoProduct)
 	}
-	return &searchedSortFilterProducts, nil
+	return productsRes, totalPage, totalData, nil
 }
 
 func (p *productService) CreateSellerProduct(userID uint, req *dto.PostCreateProductReq) (*dto.PostCreateProductRes, error) {

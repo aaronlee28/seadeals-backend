@@ -10,25 +10,25 @@ import (
 )
 
 type RouterConfig struct {
-	UserService            service.UserService
-	AuthService            service.AuthService
-	AddressService         service.AddressService
-	WalletService          service.WalletService
-	ProductCategoryService service.ProductCategoryService
-	ProductService         service.ProductService
-	ProductVariantService  service.ProductVariantService
-	ReviewService          service.ReviewService
-	SellerService          service.SellerService
-	UserSeaLabsPayAccServ  service.UserSeaPayAccountServ
-	OrderItemService       service.CartItemService
-	RefreshTokenService    service.RefreshTokenService
-	SealabsPayService      service.SealabsPayService
-	FavoriteService        service.FavoriteService
-	SocialGraphService     service.SocialGraphService
-	VoucherService         service.VoucherService
-	PromotionService       service.PromotionService
-	CourierService         service.CourierService
-	OrderService           service.OrderService
+	UserService             service.UserService
+	AuthService             service.AuthService
+	AddressService          service.AddressService
+	WalletService           service.WalletService
+	ProductCategoryService  service.ProductCategoryService
+	ProductService          service.ProductService
+	ProductVariantService   service.ProductVariantService
+	ReviewService           service.ReviewService
+	SellerService           service.SellerService
+	UserSeaLabsPayAccServ   service.UserSeaPayAccountServ
+	OrderItemService        service.CartItemService
+	RefreshTokenService     service.RefreshTokenService
+	SealabsPayService       service.SealabsPayService
+	FavoriteService         service.FavoriteService
+	SocialGraphService      service.SocialGraphService
+	VoucherService          service.VoucherService
+	PromotionService        service.PromotionService
+	CourierService          service.CourierService
+	OrderService            service.OrderService
 	SellerAvailableCourServ service.SellerAvailableCourService
 }
 
@@ -36,25 +36,25 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r := gin.Default()
 
 	h := handler.New(&handler.Config{
-		UserService:            c.UserService,
-		AuthService:            c.AuthService,
-		AddressService:         c.AddressService,
-		ProductCategoryService: c.ProductCategoryService,
-		ProductService:         c.ProductService,
-		ProductVariantService:  c.ProductVariantService,
-		ReviewService:          c.ReviewService,
-		SellerService:          c.SellerService,
-		WalletService:          c.WalletService,
-		SeaLabsPayAccServ:      c.UserSeaLabsPayAccServ,
-		OrderItemService:       c.OrderItemService,
-		RefreshTokenService:    c.RefreshTokenService,
-		SealabsPayService:      c.SealabsPayService,
-		FavoriteService:        c.FavoriteService,
-		SocialGraphService:     c.SocialGraphService,
-		VoucherService:         c.VoucherService,
-		PromotionService:       c.PromotionService,
-		CourierService:         c.CourierService,
-		OrderService:           c.OrderService,
+		UserService:             c.UserService,
+		AuthService:             c.AuthService,
+		AddressService:          c.AddressService,
+		ProductCategoryService:  c.ProductCategoryService,
+		ProductService:          c.ProductService,
+		ProductVariantService:   c.ProductVariantService,
+		ReviewService:           c.ReviewService,
+		SellerService:           c.SellerService,
+		WalletService:           c.WalletService,
+		SeaLabsPayAccServ:       c.UserSeaLabsPayAccServ,
+		OrderItemService:        c.OrderItemService,
+		RefreshTokenService:     c.RefreshTokenService,
+		SealabsPayService:       c.SealabsPayService,
+		FavoriteService:         c.FavoriteService,
+		SocialGraphService:      c.SocialGraphService,
+		VoucherService:          c.VoucherService,
+		PromotionService:        c.PromotionService,
+		CourierService:          c.CourierService,
+		OrderService:            c.OrderService,
 		SellerAvailableCourServ: c.SellerAvailableCourServ,
 	})
 
@@ -142,7 +142,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.POST("/validate-voucher", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.PostValidateVoucherReq{}
 	}), h.ValidateVoucher)
-	r.GET("/sellers/:id/vouchers", middleware.AuthorizeJWTFor(model.SellerRoleName), h.FindVoucherBySellerID)
+	r.GET("/vouchers", middleware.AuthorizeJWTFor(model.SellerRoleName), h.FindVoucherByUserID)
 	r.GET("/vouchers/:id/detail", middleware.AuthorizeJWTFor(model.SellerRoleName), h.FindVoucherDetailByID)
 	r.GET("/vouchers/:id", h.FindVoucherByID)
 	r.PATCH("/vouchers/:id", middleware.AuthorizeJWTFor(model.SellerRoleName), middleware.RequestValidator(func() any {
