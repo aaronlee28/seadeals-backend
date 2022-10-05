@@ -14,11 +14,11 @@ func (h *Handler) FavoriteToProduct(ctx *gin.Context) {
 	value, _ := ctx.Get("payload")
 	json, _ := value.(*dto.FavoriteProductReq)
 
-	favorite, err := h.favoriteService.FavoriteToProduct(userID, json.ProductID)
+	favorite, favoriteCount, err := h.favoriteService.FavoriteToProduct(userID, json.ProductID)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, err)
 		return
 	}
-	successResponse := dto.StatusOKResponse(favorite)
+	successResponse := dto.StatusOKResponse(gin.H{"favorites": favorite, "new_favorite_count": favoriteCount})
 	ctx.JSON(http.StatusOK, successResponse)
 }

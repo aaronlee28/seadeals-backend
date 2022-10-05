@@ -8,35 +8,43 @@ import (
 )
 
 type FavoriteService interface {
-	FavoriteToProduct(userID uint, productID uint) (*model.Favorite, error)
+	FavoriteToProduct(userID uint, productID uint) (*model.Favorite, uint, error)
 }
 
 type favoriteService struct {
 	db                 *gorm.DB
 	favoriteRepository repository.FavoriteRepository
+	productRepository  repository.ProductRepository
 }
 
 type FavoriteServiceConfig struct {
 	DB                 *gorm.DB
 	FavoriteRepository repository.FavoriteRepository
+	ProductRepository  repository.ProductRepository
 }
 
 func NewFavoriteService(c *FavoriteServiceConfig) FavoriteService {
 	return &favoriteService{
 		db:                 c.DB,
 		favoriteRepository: c.FavoriteRepository,
+		productRepository:  c.ProductRepository,
 	}
 }
 
-func (f *favoriteService) FavoriteToProduct(userID uint, productID uint) (*model.Favorite, error) {
+func (f *favoriteService) FavoriteToProduct(userID uint, productID uint) (*model.Favorite, uint, error) {
 	tx := f.db.Begin()
 	var err error
 	defer helper.CommitOrRollback(tx, &err)
 
 	favorite, err := f.favoriteRepository.FavoriteToProduct(tx, userID, productID)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
-	
-	return favorite, nil
+
+	product, err := f.productRepository.UpdateProductFavoriteCount(tx, productID, favorite.IsFavorite)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return favorite, product.FavoriteCount, nil
 }

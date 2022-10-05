@@ -2,6 +2,7 @@ package repository
 
 import (
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
 	"seadeals-backend/model"
@@ -16,6 +17,8 @@ type ProductRepository interface {
 
 	GetProductCountBySellerID(tx *gorm.DB, sellerID uint) (int64, error)
 
+	UpdateProductFavoriteCount(tx *gorm.DB, productID uint, isFavorite bool) (*model.Product, error)
+
 	SearchProduct(tx *gorm.DB, q *SearchQuery) (*[]model.Product, error)
 	SearchRecommendProduct(tx *gorm.DB, q *SearchQuery) ([]*dto.SellerProductsCustomTable, int64, int64, error)
 	SearchImageURL(tx *gorm.DB, productID uint) (string, error)
@@ -26,6 +29,7 @@ type ProductRepository interface {
 	SearchCategory(tx *gorm.DB, productID uint) (string, error)
 	GetProductDetail(tx *gorm.DB, id uint) (*model.Product, error)
 	GetProductPhotoURL(tx *gorm.DB, productID uint) (string, error)
+
 	CreateProduct(tx *gorm.DB, name string, categoryID uint, sellerID uint, bulk bool, minQuantity uint, maxQuantity uint) (*model.Product, error)
 	CreateProductDetail(tx *gorm.DB, productID uint, req *dto.ProductDetailReq) (*model.ProductDetail, error)
 	CreateProductPhoto(tx *gorm.DB, productID uint, req *dto.ProductPhoto) (*model.ProductPhoto, error)
@@ -104,6 +108,21 @@ func (r *productRepository) GetProductCountBySellerID(tx *gorm.DB, sellerID uint
 		return 0, apperror.InternalServerError("Cannot count total product")
 	}
 	return totalProduct, nil
+}
+
+func (r *productRepository) UpdateProductFavoriteCount(tx *gorm.DB, productID uint, isFavorite bool) (*model.Product, error) {
+	var product = &model.Product{}
+	product.ID = productID
+	var result *gorm.DB
+	if isFavorite {
+		result = tx.Model(&product).Clauses(clause.Returning{}).Update("favorite_count", gorm.Expr("favorite_count + 1"))
+	} else {
+		result = tx.Model(&product).Clauses(clause.Returning{}).Update("favorite_count", gorm.Expr("favorite_count - 1"))
+	}
+	if result.Error != nil {
+		return nil, apperror.InternalServerError("Cannot update product")
+	}
+	return product, nil
 }
 
 func (r *productRepository) GetProductDetail(tx *gorm.DB, id uint) (*model.Product, error) {
