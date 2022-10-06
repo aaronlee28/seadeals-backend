@@ -19,6 +19,7 @@ type GetSellerRes struct {
 	TotalReviewer uint           `json:"total_reviewer"`
 	JoinDate      string         `json:"join_date"`
 	IsFollow      bool           `json:"is_follow"`
+	TotalProduct  int64          `json:"total_product"`
 }
 
 func (_ *GetSellerRes) From(s *model.Seller) *GetSellerRes {
@@ -26,31 +27,36 @@ func (_ *GetSellerRes) From(s *model.Seller) *GetSellerRes {
 
 	joinStatus := "just now"
 	now := time.Now()
-	deltaYear := now.Year() - s.CreatedAt.Year()
-	if deltaYear > 0 {
-		plural := " years"
-		if deltaYear == 1 {
-			plural = " year"
+	deltaTime := now.Sub(s.CreatedAt).Hours()
+
+	day := deltaTime / 24
+	if int(day) > 0 {
+		joinStatus = "joined " + strconv.Itoa(int(day))
+		if day == 1 {
+			joinStatus += " day ago"
+		} else {
+			joinStatus += " days ago"
 		}
-		joinStatus = strconv.Itoa(deltaYear) + plural + " ago"
 	}
 
-	deltaMonth := now.Month() - s.CreatedAt.Month()
-	if deltaYear == 0 && deltaMonth > 0 {
-		plural := " months"
-		if deltaMonth == 1 {
-			plural = " month"
+	month := day / 30
+	if int(month) > 0 {
+		joinStatus = "joined " + strconv.Itoa(int(month))
+		if month == 1 {
+			joinStatus += " month ago"
+		} else {
+			joinStatus += " months ago"
 		}
-		joinStatus = strconv.Itoa(int(deltaMonth)) + plural + " ago"
 	}
 
-	deltaDay := now.Day() - s.CreatedAt.Day()
-	if deltaYear == 0 && deltaMonth == 0 && deltaDay > 0 {
-		plural := " days"
-		if deltaDay == 1 {
-			plural = " day"
+	year := month / 12
+	if int(year) > 0 {
+		joinStatus = "joined " + strconv.Itoa(int(year))
+		if year == 1 {
+			joinStatus += " year ago"
+		} else {
+			joinStatus += " years ago"
 		}
-		joinStatus = strconv.Itoa(deltaDay) + plural + " ago"
 	}
 
 	isFollow := false

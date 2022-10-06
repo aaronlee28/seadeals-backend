@@ -1,6 +1,10 @@
 package service
 
 import (
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ses"
 	"math"
 	"seadeals-backend/apperror"
 	"seadeals-backend/config"
@@ -12,7 +16,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mailjet/mailjet-apiv3-go"
 	"gorm.io/gorm"
 )
 
@@ -23,7 +26,7 @@ type WalletService interface {
 	GetWalletTransactionsByUserID(q *dto.WalletTransactionsQuery, userID uint) ([]*model.WalletTransaction, int64, int64, error)
 
 	WalletPin(userID uint, pin string) error
-	RequestPinChangeWithEmail(userID uint) (*mailjet.ResultsV31, string, error)
+	RequestPinChangeWithEmail(userID uint) (string, string, error)
 	ValidateRequestIsValid(userID uint, key string) (string, error)
 	ValidateCodeToRequestByEmail(userID uint, req *dto.CodeKeyRequestByEmailReq) (string, error)
 	ChangeWalletPinByEmail(userID uint, req *dto.ChangePinByEmailReq) (*model.Wallet, error)
@@ -183,63 +186,91 @@ func (w *walletService) WalletPin(userID uint, pin string) error {
 	return nil
 }
 
-func (w *walletService) RequestPinChangeWithEmail(userID uint) (*mailjet.ResultsV31, string, error) {
+func (w *walletService) RequestPinChangeWithEmail(userID uint) (string, string, error) {
 	tx := w.db.Begin()
 	var err error
 	defer helper.CommitOrRollback(tx, &err)
 
 	user, err := w.userRepository.GetUserByID(tx, userID)
 	if err != nil {
-		return nil, "", err
+		return "", "", err
 	}
 
 	wallet, err := w.walletRepository.GetWalletByUserID(tx, userID)
 	if err != nil {
-		return nil, "", err
+		return "", "", err
 	}
 
 	if wallet.Pin == nil {
 		err = apperror.NotFoundError("Pin is not setup yet")
-		return nil, "", err
+		return "", "", err
 	}
 
 	randomString := helper.RandomString(12)
 	code := helper.RandomString(6)
 	err = w.walletRepository.RequestChangePinByEmail(user.ID, randomString, code)
 	if err != nil {
-		return nil, "", err
+		return "", "", err
 	}
 
-	mailjetClient := mailjet.NewMailjetClient(config.Config.MailJetPublicKey, config.Config.MailJetSecretKey)
 	html := "<p>Berikut adalah kode untuk reset pin kamu:</p><h3>" + code + "</h3>"
-	messagesInfo := []mailjet.InfoMessagesV31{
-		{
-			From: &mailjet.RecipientV31{
-				Email: "seadeals04@gmail.com",
-				Name:  "SeaDeals No Reply",
+
+	sess, err := session.NewSession(&aws.Config{
+		Region: aws.String("ap-southeast-1")},
+	)
+
+	sender := config.Config.AWSMail
+	textBody := "This email is for SeaDeals wallet pin email verification"
+	subject := "SeaDeals Wallet PIN Verification"
+	charSet := "UTF-8"
+
+	svc := ses.New(sess)
+
+	input := &ses.SendEmailInput{
+		Destination: &ses.Destination{
+			CcAddresses: []*string{},
+			ToAddresses: []*string{
+				aws.String(user.Email),
 			},
-			To: &mailjet.RecipientsV31{
-				mailjet.RecipientV31{
-					Email: user.Email,
-					Name:  user.FullName,
+		},
+		Message: &ses.Message{
+			Body: &ses.Body{
+				Html: &ses.Content{
+					Charset: aws.String(charSet),
+					Data:    aws.String(html),
+				},
+				Text: &ses.Content{
+					Charset: aws.String(charSet),
+					Data:    aws.String(textBody),
 				},
 			},
-			Subject:  "Wallet Pin Reset Request",
-			TextPart: "request password for user" + user.FullName,
-			HTMLPart: html,
-			Priority: 0,
-			CustomID: config.Config.AppName,
+			Subject: &ses.Content{
+				Charset: aws.String(charSet),
+				Data:    aws.String(subject),
+			},
 		},
-	}
-	messages := mailjet.MessagesV31{
-		Info: messagesInfo,
+		Source: aws.String(sender),
 	}
 
-	res, err := mailjetClient.SendMailV31(&messages)
+	_, err = svc.SendEmail(input)
 	if err != nil {
-		return nil, "", err
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case ses.ErrCodeMessageRejected:
+				return "", "", apperror.InternalServerError("Email is rejected")
+			case ses.ErrCodeMailFromDomainNotVerifiedException:
+				return "", "", apperror.InternalServerError("Email is not verified")
+			case ses.ErrCodeConfigurationSetDoesNotExistException:
+				return "", "", apperror.InternalServerError("Configuration is not yet set")
+			default:
+				return "", "", aerr
+			}
+		} else {
+			return "", "", err
+		}
 	}
-	return res, randomString, nil
+
+	return user.Email, randomString, nil
 }
 
 func (w *walletService) ValidateRequestIsValid(userID uint, key string) (string, error) {
@@ -361,7 +392,7 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 		UserID:        userID,
 		VoucherID:     voucherID,
 		Total:         0,
-		PaymentMethod: "wallet",
+		PaymentMethod: dto.WALLET,
 		Status:        "Waiting for Seller",
 	}
 
@@ -473,7 +504,7 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 		return nil, err
 	}
 
-	if req.PaymentMethod == "wallet" {
+	if req.PaymentMethod == dto.WALLET {
 		err = w.walletRepository.CreateWalletTransaction(tx, wallet.ID, transaction)
 		if err != nil {
 			return nil, err

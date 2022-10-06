@@ -16,4 +16,5 @@ type Order struct {
 	Total         float64      `json:"total"`
 	Status        string       `json:"status"`
 	OrderItems    []*OrderItem `json:"order_items"`
+	Delivery      *Delivery    `json:"delivery"`
 }

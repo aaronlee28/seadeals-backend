@@ -31,6 +31,7 @@ func (f *favoriteRepository) FavoriteToProduct(tx *gorm.DB, userID uint, product
 		if result.Error != nil {
 			return nil, apperror.InternalServerError("Cannot favorite a product")
 		}
+		return favorite, nil
 	}
 
 	currentFavorite := !favorite.IsFavorite

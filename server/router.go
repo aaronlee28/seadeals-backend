@@ -168,6 +168,11 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	}), h.UpdateVoucher)
 	r.DELETE("/vouchers/:id", middleware.AuthorizeJWTFor(model.SellerRoleName), h.DeleteVoucherByID)
 
+	// REFUND
+	r.POST("/cancel/orders", middleware.AuthorizeJWTFor(model.SellerRoleName), middleware.RequestValidator(func() any {
+		return &dto.SellerCancelOrderReq{}
+	}), h.CancelOrderBySeller)
+
 	// PROMOTION
 	r.GET("/promotions", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetPromotion)
 	r.POST("/promotions", middleware.RequestValidator(func() any { return &dto.CreatePromotionReq{} }), middleware.AuthorizeJWTFor(model.UserRoleName), h.CreatePromotion)

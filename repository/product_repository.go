@@ -11,9 +11,13 @@ import (
 
 type ProductRepository interface {
 	FindProductByID(tx *gorm.DB, productID uint) (*model.Product, error)
-	FindProductDetailByID(tx *gorm.DB, productID uint, userID uint) (*model.Product, error)
+	FindProductDetailByID(tx *gorm.DB, productID uint, userID uint) (*dto.ProductDetailRes, error)
 	FindProductBySlug(tx *gorm.DB, slug string) (*model.Product, error)
 	FindSimilarProduct(tx *gorm.DB, categoryID uint) ([]*model.Product, error)
+
+	GetProductCountBySellerID(tx *gorm.DB, sellerID uint) (int64, error)
+
+	UpdateProductFavoriteCount(tx *gorm.DB, productID uint, isFavorite bool) (*model.Product, error)
 
 	SearchProduct(tx *gorm.DB, q *SearchQuery) (*[]model.Product, error)
 	SearchRecommendProduct(tx *gorm.DB, q *SearchQuery) ([]*dto.SellerProductsCustomTable, int64, int64, error)
@@ -25,6 +29,7 @@ type ProductRepository interface {
 	SearchCategory(tx *gorm.DB, productID uint) (string, error)
 	GetProductDetail(tx *gorm.DB, id uint) (*model.Product, error)
 	GetProductPhotoURL(tx *gorm.DB, productID uint) (string, error)
+
 	CreateProduct(tx *gorm.DB, name string, categoryID uint, sellerID uint, bulk bool, minQuantity uint, maxQuantity uint) (*model.Product, error)
 	CreateProductDetail(tx *gorm.DB, productID uint, req *dto.ProductDetailsReq) (*model.ProductDetail, error)
 	CreateProductPhoto(tx *gorm.DB, productID uint, req *dto.ProductPhoto) (*model.ProductPhoto, error)
@@ -76,16 +81,33 @@ func (r *productRepository) FindProductByID(tx *gorm.DB, productID uint) (*model
 	return product, result.Error
 }
 
-func (r *productRepository) FindProductDetailByID(tx *gorm.DB, productID uint, userID uint) (*model.Product, error) {
-	var product *model.Product
-	result := tx.Preload("ProductPhotos", "product_id = ?", productID)
+func (r *productRepository) FindProductDetailByID(tx *gorm.DB, productID uint, userID uint) (*dto.ProductDetailRes, error) {
+	var productVariantDetail *model.ProductVariantDetail
+	variant := tx.Model(&productVariantDetail)
+	variant = variant.Select("SUM(product_variant_details.stock) as total_stock, product_variant_details.product_id")
+	variant = variant.Group("product_variant_details.product_id")
+
+	var productReview *model.Review
+	review := tx.Model(&productReview)
+	review = review.Select("AVG(rating) as average_rating, COUNT(*) as total_review, reviews.product_id")
+	review = review.Group("reviews.product_id")
+
+	var product *dto.ProductDetailRes
+	result := tx.Model(&product)
+	result = result.Select("*")
+	result = result.Preload("ProductPhotos", "product_id = ?", productID)
 	result = result.Preload("ProductDetail", "product_id = ?", productID)
 	result = result.Preload("ProductVariantDetail", "product_id = ?", productID, func(db *gorm.DB) *gorm.DB {
 		return db.Order("product_variant_details.price")
 	})
+	result = result.Preload("Category")
+	result = result.Preload("Seller")
+	result = result.Preload("Promotion")
 	result = result.Preload("ProductVariantDetail.ProductVariant1")
 	result = result.Preload("ProductVariantDetail.ProductVariant2")
 	result = result.Preload("Favorite", "product_id = ? AND user_id = ? AND is_favorite IS TRUE", productID, userID)
+	result = result.Joins("JOIN (?) AS s1 ON s1.product_id = products.id", variant)
+	result = result.Joins("LEFT JOIN (?) AS s2 ON s2.product_id = products.id", review)
 	result = result.First(&product, productID)
 	if result.Error != nil {
 		return nil, result.Error
@@ -97,6 +119,30 @@ func (r *productRepository) FindSimilarProduct(tx *gorm.DB, categoryID uint) ([]
 	var products []*model.Product
 	result := tx.Limit(24).Where("category_id = ?", categoryID).Preload("ProductVariantDetail").Preload("ProductPhotos").Find(&products)
 	return products, result.Error
+}
+
+func (r *productRepository) GetProductCountBySellerID(tx *gorm.DB, sellerID uint) (int64, error) {
+	var totalProduct int64
+	result := tx.Model(&model.Product{}).Where("seller_id = ?", sellerID).Where("is_archived IS FALSE").Count(&totalProduct)
+	if result.Error != nil {
+		return 0, apperror.InternalServerError("Cannot count total product")
+	}
+	return totalProduct, nil
+}
+
+func (r *productRepository) UpdateProductFavoriteCount(tx *gorm.DB, productID uint, isFavorite bool) (*model.Product, error) {
+	var product = &model.Product{}
+	product.ID = productID
+	var result *gorm.DB
+	if isFavorite {
+		result = tx.Model(&product).Clauses(clause.Returning{}).Update("favorite_count", gorm.Expr("favorite_count + 1"))
+	} else {
+		result = tx.Model(&product).Clauses(clause.Returning{}).Update("favorite_count", gorm.Expr("favorite_count - 1"))
+	}
+	if result.Error != nil {
+		return nil, apperror.InternalServerError("Cannot update product")
+	}
+	return product, nil
 }
 
 func (r *productRepository) GetProductDetail(tx *gorm.DB, id uint) (*model.Product, error) {
