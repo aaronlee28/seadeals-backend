@@ -21,6 +21,9 @@ type ProductService interface {
 	UpdateVariantAndDetails(userID uint, variantDetailsID uint, req *dto.PatchVariantAndDetails) (*dto.VariantAndDetails, error)
 	DeleteProductVariantDetails(userID uint, variantDetailsID uint, defaultPrice *float64) error
 	AddVariantDetails(userID uint, productID uint, req *dto.AddVariantAndDetails) ([]*model.ProductVariantDetail, error)
+	AddProductPhoto(userID uint, productID uint, req *dto.ProductPhotoReq) ([]*model.ProductPhoto, error)
+	DeleteProductPhoto(userID uint, productID uint, req *dto.DeleteProductPhoto) ([]*model.ProductPhoto, error)
+	DeleteProduct(userID uint, productID uint) (*model.Product, error)
 }
 
 type productService struct {
@@ -579,7 +582,83 @@ func (p *productService) AddVariantDetails(userID uint, productID uint, req *dto
 	return createdVariantDetail, nil
 }
 
-//update product photo
 //add product photo
+func (p *productService) AddProductPhoto(userID uint, productID uint, req *dto.ProductPhotoReq) ([]*model.ProductPhoto, error) {
+	tx := p.db.Begin()
+	var err error
+
+	defer helper.CommitOrRollback(tx, &err)
+
+	var seller *model.Seller
+	seller, err = p.sellerRepo.FindSellerByUserID(tx, userID)
+	if err != nil {
+		return nil, err
+	}
+	var checkPID *model.Product
+	checkPID, err = p.productRepo.FindProductByID(tx, productID)
+
+	if seller.ID != checkPID.SellerID {
+		err = apperror.BadRequestError("Product does not belong to seller")
+		return nil, err
+	}
+
+	productPhotos, err := p.productRepo.CreateProductPhotos(tx, productID, req)
+	if err != nil {
+		return nil, err
+	}
+	return productPhotos, nil
+}
+
 //delete product photo
+func (p *productService) DeleteProductPhoto(userID uint, productID uint, req *dto.DeleteProductPhoto) ([]*model.ProductPhoto, error) {
+	tx := p.db.Begin()
+	var err error
+
+	defer helper.CommitOrRollback(tx, &err)
+
+	var seller *model.Seller
+	seller, err = p.sellerRepo.FindSellerByUserID(tx, userID)
+	if err != nil {
+		return nil, err
+	}
+	var checkPID *model.Product
+	checkPID, err = p.productRepo.FindProductByID(tx, productID)
+
+	if seller.ID != checkPID.SellerID {
+		err = apperror.BadRequestError("Product does not belong to seller")
+		return nil, err
+	}
+
+	productPhotos, err := p.productRepo.DeleteProductPhotos(tx, req)
+	if err != nil {
+		return nil, err
+	}
+	return productPhotos, nil
+}
+
 //delete product
+func (p *productService) DeleteProduct(userID uint, productID uint) (*model.Product, error) {
+	tx := p.db.Begin()
+	var err error
+
+	defer helper.CommitOrRollback(tx, &err)
+
+	var seller *model.Seller
+	seller, err = p.sellerRepo.FindSellerByUserID(tx, userID)
+	if err != nil {
+		return nil, err
+	}
+	var checkPID *model.Product
+	checkPID, err = p.productRepo.FindProductByID(tx, productID)
+
+	if seller.ID != checkPID.SellerID {
+		err = apperror.BadRequestError("Product does not belong to seller")
+		return nil, err
+	}
+
+	product, err := p.productRepo.DeleteProduct(tx, productID)
+	if err != nil {
+		return nil, err
+	}
+	return product, nil
+}

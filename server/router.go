@@ -122,7 +122,13 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.POST("/sellers/:id/add-variant-and-details", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.AddVariantAndDetails{}
 	}), h.AddVariantDetails)
-
+	r.POST("/sellers/:id/add-product-photo", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
+		return &dto.ProductPhotoReq{}
+	}), h.AddProductPhoto)
+	r.DELETE("/sellers/:id/delete-product-photo", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
+		return &dto.DeleteProductPhoto{}
+	}), h.DeleteProductPhoto)
+	r.DELETE("/sellers/:id/delete-product", middleware.AuthorizeJWTFor(model.UserRoleName), h.DeleteProduct)
 	// NOTIFICATION
 	r.POST("/products/favorites", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.FavoriteProductReq{}

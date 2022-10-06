@@ -2,6 +2,7 @@ package repository
 
 import (
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
 	"seadeals-backend/model"
@@ -40,6 +41,9 @@ type ProductRepository interface {
 	CreateVariantWithName(tx *gorm.DB, name string) (*model.ProductVariant, error)
 	CreateProductVariantDetailWithModel(tx *gorm.DB, pvd *model.ProductVariantDetail) (*model.ProductVariantDetail, error)
 	DeleteNullProductVariantDetailsByID(tx *gorm.DB, ProductID uint) error
+	CreateProductPhotos(tx *gorm.DB, productID uint, req *dto.ProductPhotoReq) ([]*model.ProductPhoto, error)
+	DeleteProductPhotos(tx *gorm.DB, req *dto.DeleteProductPhoto) ([]*model.ProductPhoto, error)
+	DeleteProduct(tx *gorm.DB, productID uint) (*model.Product, error)
 }
 
 type productRepository struct{}
@@ -428,4 +432,49 @@ func (r *productRepository) CreateProductVariantDetailWithModel(tx *gorm.DB, pvd
 		return nil, apperror.InternalServerError("Cannot create variant detail")
 	}
 	return pvd, result.Error
+}
+func (r *productRepository) CreateProductPhotos(tx *gorm.DB, productID uint, req *dto.ProductPhotoReq) ([]*model.ProductPhoto, error) {
+	var ret []*model.ProductPhoto
+	for _, ph := range req.ProductPhoto {
+
+		productPhoto := model.ProductPhoto{
+			ProductID: productID,
+			PhotoURL:  ph.PhotoURL,
+			Name:      ph.Name,
+		}
+		result := tx.Clauses(clause.Returning{}).Create(&productPhoto)
+		if result.Error != nil {
+			return nil, apperror.InternalServerError("Cannot create product photo")
+		}
+
+		ret = append(ret, &productPhoto)
+	}
+
+	return ret, nil
+}
+func (r *productRepository) DeleteProductPhotos(tx *gorm.DB, req *dto.DeleteProductPhoto) ([]*model.ProductPhoto, error) {
+	var ret []*model.ProductPhoto
+	for _, ph := range req.PhotoId {
+		var p *model.ProductPhoto
+		find := tx.Where("id = ?", ph).First(&p)
+		if find.Error != nil {
+			return nil, apperror.InternalServerError("Cannot find id")
+		}
+		ret = append(ret, p)
+	}
+	result := tx.Clauses(clause.Returning{}).Delete(&ret)
+	if result.Error != nil {
+		return nil, apperror.InternalServerError("Cannot delete product photo")
+	}
+	return ret, nil
+}
+
+func (r *productRepository) DeleteProduct(tx *gorm.DB, productID uint) (*model.Product, error) {
+	var ret *model.Product
+
+	result := tx.Clauses(clause.Returning{}).Where("id = ?", productID).First(&ret).Delete(&ret)
+	if result.Error != nil {
+		return nil, apperror.InternalServerError("Cannot delete product")
+	}
+	return ret, nil
 }
