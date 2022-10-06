@@ -107,10 +107,28 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.GET("/sellers/:id/products", h.GetProductsBySellerID)
 	r.GET("/categories/:id/products", h.GetProductsByCategoryID)
 	r.GET("/products", h.SearchProducts)
-	r.POST("/sellers/create-product", middleware.OptionalAuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
+	r.POST("/sellers/create-product", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.PostCreateProductReq{}
 	}), h.CreateSellerProduct)
-
+	r.PATCH("/sellers/:id/update-product-and-details", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
+		return &dto.PatchProductAndDetailsReq{}
+	}), h.UpdateProductAndDetails)
+	r.PATCH("/sellers/:id/update-variant-and-details", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
+		return &dto.PatchVariantAndDetails{}
+	}), h.UpdateVariantAndDetails)
+	r.DELETE("/sellers/:id/delete-variant-and-details", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
+		return &dto.DefaultPrice{}
+	}), h.DeleteVariantAndDetails)
+	r.POST("/sellers/:id/add-variant-and-details", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
+		return &dto.AddVariantAndDetails{}
+	}), h.AddVariantDetails)
+	r.POST("/sellers/:id/add-product-photo", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
+		return &dto.ProductPhotoReq{}
+	}), h.AddProductPhoto)
+	r.DELETE("/sellers/:id/delete-product-photo", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
+		return &dto.DeleteProductPhoto{}
+	}), h.DeleteProductPhoto)
+	r.DELETE("/sellers/:id/delete-product", middleware.AuthorizeJWTFor(model.UserRoleName), h.DeleteProduct)
 	// NOTIFICATION
 	r.POST("/products/favorites", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.FavoriteProductReq{}

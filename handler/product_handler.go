@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"math"
 	"net/http"
@@ -190,8 +191,181 @@ func (h *Handler) CreateSellerProduct(ctx *gin.Context) {
 		userID = user.UserID
 	}
 	value, _ := ctx.Get("payload")
+	fmt.Println("value", value)
 	json, _ := value.(*dto.PostCreateProductReq)
 	res, err := h.productService.CreateSellerProduct(userID, json)
+
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(res))
+}
+
+func (h *Handler) UpdateProductAndDetails(ctx *gin.Context) {
+
+	userPayload, _ := ctx.Get("user")
+	user, isValid := userPayload.(dto.UserJWT)
+	userID := uint(0)
+	if isValid {
+		userID = user.UserID
+	}
+	value, _ := ctx.Get("payload")
+	json, _ := value.(*dto.PatchProductAndDetailsReq)
+	idString := ctx.Param("id")
+	productIDInt, _ := strconv.Atoi(idString)
+	productID := uint(productIDInt)
+	res, err := h.productService.UpdateProductAndDetails(userID, productID, json)
+
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(res))
+}
+func (h *Handler) UpdateVariantAndDetails(ctx *gin.Context) {
+
+	userPayload, _ := ctx.Get("user")
+	user, isValid := userPayload.(dto.UserJWT)
+	userID := uint(0)
+	if isValid {
+		userID = user.UserID
+	}
+	value, _ := ctx.Get("payload")
+	json, _ := value.(*dto.PatchVariantAndDetails)
+	idString := ctx.Param("id")
+	productIDInt, _ := strconv.Atoi(idString)
+	productID := uint(productIDInt)
+	res, err := h.productService.UpdateVariantAndDetails(userID, productID, json)
+
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(res))
+}
+func (h *Handler) DeleteVariantAndDetails(ctx *gin.Context) {
+
+	userPayload, _ := ctx.Get("user")
+	user, isValid := userPayload.(dto.UserJWT)
+	userID := uint(0)
+	if isValid {
+		userID = user.UserID
+	}
+	value, _ := ctx.Get("payload")
+	json, _ := value.(*dto.DefaultPrice)
+	idString := ctx.Param("id")
+	variantdIDInt, _ := strconv.Atoi(idString)
+	variantdID := uint(variantdIDInt)
+	err := h.productService.DeleteProductVariantDetails(userID, variantdID, json.DefaultPrice)
+
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse("Ok"))
+}
+
+func (h *Handler) AddVariantDetails(ctx *gin.Context) {
+
+	userPayload, _ := ctx.Get("user")
+	user, isValid := userPayload.(dto.UserJWT)
+	userID := uint(0)
+	if isValid {
+		userID = user.UserID
+	}
+	value, _ := ctx.Get("payload")
+	json, _ := value.(*dto.AddVariantAndDetails)
+	idString := ctx.Param("id")
+	productIDInt, _ := strconv.Atoi(idString)
+	productID := uint(productIDInt)
+
+	res, err := h.productService.AddVariantDetails(userID, productID, json)
+
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(res))
+}
+
+func (h *Handler) AddProductPhoto(ctx *gin.Context) {
+
+	userPayload, _ := ctx.Get("user")
+	user, isValid := userPayload.(dto.UserJWT)
+	userID := uint(0)
+	if isValid {
+		userID = user.UserID
+	} else {
+		fmt.Println("non valid")
+	}
+	value, _ := ctx.Get("payload")
+	json, ok := value.(*dto.ProductPhotoReq)
+	if ok != true {
+		ctx.JSON(http.StatusBadRequest, "salah")
+		return
+	}
+	idString := ctx.Param("id")
+	productIDInt, _ := strconv.Atoi(idString)
+	productID := uint(productIDInt)
+	res, err := h.productService.AddProductPhoto(userID, productID, json)
+
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(res))
+}
+
+func (h *Handler) DeleteProductPhoto(ctx *gin.Context) {
+
+	userPayload, _ := ctx.Get("user")
+	user, isValid := userPayload.(dto.UserJWT)
+	userID := uint(0)
+	if isValid {
+		userID = user.UserID
+	} else {
+		fmt.Println("non valid")
+	}
+	value, _ := ctx.Get("payload")
+	json, ok := value.(*dto.DeleteProductPhoto)
+	if ok != true {
+		ctx.JSON(http.StatusBadRequest, "salah")
+		return
+	}
+	idString := ctx.Param("id")
+	productIDInt, _ := strconv.Atoi(idString)
+	productID := uint(productIDInt)
+	res, err := h.productService.DeleteProductPhoto(userID, productID, json)
+
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(res))
+}
+func (h *Handler) DeleteProduct(ctx *gin.Context) {
+
+	userPayload, _ := ctx.Get("user")
+	user, isValid := userPayload.(dto.UserJWT)
+	userID := uint(0)
+	if isValid {
+		userID = user.UserID
+	} else {
+		fmt.Println("non valid")
+	}
+
+	idString := ctx.Param("id")
+	productIDInt, _ := strconv.Atoi(idString)
+	productID := uint(productIDInt)
+	res, err := h.productService.DeleteProduct(userID, productID)
 
 	if err != nil {
 		_ = ctx.Error(err)
