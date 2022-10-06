@@ -2,6 +2,7 @@ package repository
 
 import (
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
 	"seadeals-backend/model"
@@ -13,6 +14,8 @@ type ProductVariantDetailRepository interface {
 	GetProductsBySellerID(tx *gorm.DB, query *dto.SellerProductSearchQuery, sellerID uint) ([]*dto.SellerProductsCustomTable, int64, int64, error)
 	GetProductsByCategoryID(tx *gorm.DB, query *dto.SellerProductSearchQuery, sellerID uint) ([]*dto.SellerProductsCustomTable, int64, int64, error)
 	SearchProducts(tx *gorm.DB, query *SearchQuery) ([]*dto.SellerProductsCustomTable, int64, int64, error)
+
+	AddProductVariantStock(tx *gorm.DB, productVarDetID uint, amount uint) (*model.ProductVariantDetail, error)
 }
 
 type productVariantDetailRepository struct{}
@@ -269,4 +272,14 @@ func (p *productVariantDetailRepository) SearchProducts(tx *gorm.DB, query *Sear
 		totalPage += 1
 	}
 	return products, totalPage, totalData, nil
+}
+
+func (p *productVariantDetailRepository) AddProductVariantStock(tx *gorm.DB, productVarDetID uint, amount uint) (*model.ProductVariantDetail, error) {
+	var productVarDet = &model.ProductVariantDetail{}
+	productVarDet.ID = productVarDetID
+	result := tx.Model(&productVarDet).Clauses(clause.Returning{}).Update("stock", gorm.Expr("stock + ?", amount))
+	if result.Error != nil {
+		return nil, apperror.InternalServerError("Cannot update product variant stock")
+	}
+	return productVarDet, nil
 }

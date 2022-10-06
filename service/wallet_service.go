@@ -392,7 +392,7 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 		UserID:        userID,
 		VoucherID:     voucherID,
 		Total:         0,
-		PaymentMethod: "wallet",
+		PaymentMethod: dto.WALLET,
 		Status:        "Waiting for Seller",
 	}
 
@@ -504,7 +504,7 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 		return nil, err
 	}
 
-	if req.PaymentMethod == "wallet" {
+	if req.PaymentMethod == dto.WALLET {
 		err = w.walletRepository.CreateWalletTransaction(tx, wallet.ID, transaction)
 		if err != nil {
 			return nil, err
