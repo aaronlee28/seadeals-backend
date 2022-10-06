@@ -3,11 +3,12 @@ package repository
 import (
 	"errors"
 	"fmt"
-	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 	"seadeals-backend/apperror"
 	"seadeals-backend/model"
 	"time"
+
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type VoucherRepository interface {
@@ -15,7 +16,7 @@ type VoucherRepository interface {
 	UpdateVoucher(tx *gorm.DB, v *model.Voucher, id uint) (*model.Voucher, error)
 	FindVoucherByID(tx *gorm.DB, id uint) (*model.Voucher, error)
 	FindVoucherDetailByID(tx *gorm.DB, id uint) (*model.Voucher, error)
-	FindVoucherBySellerID(tx *gorm.DB, sellerID uint, qp *model.VoucherQueryParam) ([]*model.Voucher, error)
+	FindVoucherBySellerID(tx *gorm.DB, sellerID uint, qp *model.VoucherQueryParam) ([]*model.Voucher, int64, error)
 	FindVoucherByCode(tx *gorm.DB, code string) (*model.Voucher, error)
 	DeleteVoucherByID(tx *gorm.DB, id uint) (bool, error)
 }
@@ -61,7 +62,7 @@ func (r *voucherRepository) FindVoucherDetailByID(tx *gorm.DB, id uint) (*model.
 	return v, result.Error
 }
 
-func (r *voucherRepository) FindVoucherBySellerID(tx *gorm.DB, sellerID uint, qp *model.VoucherQueryParam) ([]*model.Voucher, error) {
+func (r *voucherRepository) FindVoucherBySellerID(tx *gorm.DB, sellerID uint, qp *model.VoucherQueryParam) ([]*model.Voucher, int64, error) {
 	offset := (qp.Page - 1) * qp.Limit
 	orderStmt := fmt.Sprintf("%s %s", qp.SortBy, qp.Sort)
 
@@ -79,12 +80,19 @@ func (r *voucherRepository) FindVoucherBySellerID(tx *gorm.DB, sellerID uint, qp
 		queryDB = queryDB.Where("extract (month from start_date) = ? OR extract (month from end_date) = ?", qp.Month, qp.Month)
 	}
 
+	var totalVouchers int64
 	var vouchers []*model.Voucher
-	result := queryDB.Limit(int(qp.Limit)).Offset(int(offset)).Where("seller_id = ?", sellerID).Preload("Seller.User").Order(orderStmt).Find(&vouchers)
-	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		return nil, apperror.NotFoundError(new(apperror.VoucherNotFoundError).Error())
+	fmt.Println("Here")
+	result := queryDB.Model(&model.Voucher{}).Count(&totalVouchers).Where("seller_id = ?", sellerID)
+	if result.Error != nil {
+		return nil, totalVouchers, result.Error
 	}
-	return vouchers, result.Error
+
+	result = queryDB.Limit(int(qp.Limit)).Offset(int(offset)).Where("seller_id = ?", sellerID).Preload("Seller.User").Order(orderStmt).Find(&vouchers)
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return nil, totalVouchers, apperror.NotFoundError(new(apperror.VoucherNotFoundError).Error())
+	}
+	return vouchers, totalVouchers, result.Error
 }
 
 func (r *voucherRepository) FindVoucherByCode(tx *gorm.DB, code string) (*model.Voucher, error) {
