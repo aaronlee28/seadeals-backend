@@ -2,7 +2,6 @@ package service
 
 import (
 	"fmt"
-	"gorm.io/gorm"
 	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
 	"seadeals-backend/helper"
@@ -10,6 +9,8 @@ import (
 	"seadeals-backend/repository"
 	"strings"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 type VoucherService interface {
@@ -177,13 +178,12 @@ func (s *voucherService) FindVoucherByUserID(userID uint, qp *model.VoucherQuery
 	}
 
 	validateVoucherQueryParam(qp)
-	vouchers, err := s.voucherRepo.FindVoucherBySellerID(tx, seller.ID, qp)
+	vouchers, totalVouchers, err := s.voucherRepo.FindVoucherBySellerID(tx, seller.ID, qp)
 	if err != nil {
 		return nil, err
 	}
 
-	totalVouchers := uint(len(vouchers))
-	totalPages := (totalVouchers + qp.Limit - 1) / qp.Limit
+	totalPages := (uint(totalVouchers) + qp.Limit - 1) / qp.Limit
 
 	var voucherRes = make([]*dto.GetVoucherRes, 0)
 	for _, voucher := range vouchers {
@@ -194,7 +194,7 @@ func (s *voucherService) FindVoucherByUserID(userID uint, qp *model.VoucherQuery
 		Limit:         qp.Limit,
 		Page:          qp.Page,
 		TotalPages:    totalPages,
-		TotalVouchers: totalVouchers,
+		TotalVouchers: uint(totalVouchers),
 		Vouchers:      voucherRes,
 	}
 
