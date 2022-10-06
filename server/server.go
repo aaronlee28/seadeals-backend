@@ -150,9 +150,13 @@ func Init() {
 	})
 
 	orderService := service.NewOrderService(&service.OrderServiceConfig{
-		DB:               db.Get(),
-		OrderRepository:  orderRepository,
-		SellerRepository: sellerRepository,
+		DB:                        db.Get(),
+		OrderRepository:           orderRepository,
+		SellerRepository:          sellerRepository,
+		WalletRepository:          walletRepository,
+		WalletTransRepo:           walletTransactionRepo,
+		ProductVarDetRepo:         productVarDetRepo,
+		SeaLabsPayTransHolderRepo: seaLabsPayTransactionHolderRepo,
 	})
 
 	sellerAvailableCourServ := service.NewSellerAvailableCourService(&service.SellerAvailableCourServiceConfig{
