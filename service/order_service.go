@@ -1,10 +1,11 @@
 package service
 
 import (
+	"bytes"
 	"fmt"
 	"gorm.io/gorm"
+	"io/ioutil"
 	"net/http"
-	"net/url"
 	"seadeals-backend/apperror"
 	"seadeals-backend/config"
 	"seadeals-backend/dto"
@@ -12,7 +13,6 @@ import (
 	"seadeals-backend/model"
 	"seadeals-backend/repository"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -127,23 +127,31 @@ func (o *orderService) CancelOrderBySeller(orderID uint, userID uint) (*model.Or
 		}
 
 		client := &http.Client{}
-		URL := config.Config.SeaLabsPayTransactionURL
-		v := url.Values{}
-		v.Set("txn_id", strconv.Itoa(int(transHolder.TxnID)))
-		v.Set("amount", strconv.Itoa(int(order.Total)))
-		v.Set("reason", "Seller cancel the order")
+		URL := config.Config.SeaLabsPayRefundURL
+		var jsonStr = []byte(`{"reason":"Seller cancel the order", "amount":` + strconv.Itoa(int(order.Total)) + `, "txn_id":` + strconv.Itoa(int(transHolder.TxnID)) + `}`)
+		//v := url.Values{}
+		//v.Set("txn_id", strconv.Itoa(int(transHolder.TxnID)))
+		//v.Set("amount", strconv.Itoa(int(order.Total)))
+		//v.Set("reason", "Seller cancel the order")
 
 		bearer := "Bearer " + config.Config.SeaLabsPayAPIKey
-		req, err = http.NewRequest("POST", URL, strings.NewReader(v.Encode()))
+		req, err = http.NewRequest("POST", URL, bytes.NewBuffer(jsonStr))
 		if err != nil {
 			return nil, err
 		}
 		req.Header.Add("Authorization", bearer)
+		req.Header.Set("Content-Type", "application/json")
 		resp, err = client.Do(req)
 		if err != nil {
 			return nil, err
 		}
-		fmt.Println(resp.StatusCode)
+		if resp.StatusCode != 200 {
+			fmt.Println(resp.StatusCode)
+			bodyText, _ := ioutil.ReadAll(resp.Body)
+			s := string(bodyText)
+			fmt.Println(s)
+			return nil, apperror.BadRequestError("Cannot work with sea labs pay")
+		}
 	}
 
 	for _, item := range order.OrderItems {
