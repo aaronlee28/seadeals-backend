@@ -54,6 +54,11 @@ func (p *productService) FindProductDetailByID(productID uint, userID uint) (*dt
 		return nil, err
 	}
 
+	if len(product.ProductVariantDetail) > 0 {
+		product.MinPrice = product.ProductVariantDetail[0].Price
+		product.MaxPrice = product.ProductVariantDetail[len(product.ProductVariantDetail)-1].Price
+	}
+
 	return product, nil
 }
 

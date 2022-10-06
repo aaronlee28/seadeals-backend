@@ -73,6 +73,11 @@ func (r *productRepository) FindProductDetailByID(tx *gorm.DB, productID uint, u
 	variant = variant.Select("SUM(product_variant_details.stock) as total_stock, product_variant_details.product_id")
 	variant = variant.Group("product_variant_details.product_id")
 
+	var productReview *model.Review
+	review := tx.Model(&productReview)
+	review = review.Select("AVG(rating) as average_rating, COUNT(*) as total_review, reviews.product_id")
+	review = review.Group("reviews.product_id")
+
 	var product *dto.ProductDetailRes
 	result := tx.Model(&product)
 	result = result.Select("*")
@@ -88,6 +93,7 @@ func (r *productRepository) FindProductDetailByID(tx *gorm.DB, productID uint, u
 	result = result.Preload("ProductVariantDetail.ProductVariant2")
 	result = result.Preload("Favorite", "product_id = ? AND user_id = ? AND is_favorite IS TRUE", productID, userID)
 	result = result.Joins("JOIN (?) AS s1 ON s1.product_id = products.id", variant)
+	result = result.Joins("LEFT JOIN (?) AS s2 ON s2.product_id = products.id", review)
 	result = result.First(&product, productID)
 	if result.Error != nil {
 		return nil, result.Error
