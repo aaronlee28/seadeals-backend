@@ -21,12 +21,13 @@ type ReviewQueryParam struct {
 
 type Review struct {
 	gorm.Model  `json:"-"`
-	ID          uint           `json:"id" gorm:"primaryKey"`
-	UserID      uint           `json:"user_id"`
-	User        *User          `json:"user"`
-	ProductID   uint           `json:"product_id"`
-	Product     *Product       `json:"product"`
-	Rating      int            `json:"rating"`
-	Images      []*ReviewPhoto `json:"images"`
-	Description *string        `json:"description"`
+	ID          uint     `json:"id" gorm:"primaryKey"`
+	UserID      uint     `json:"user_id"`
+	User        *User    `json:"user"`
+	ProductID   uint     `json:"product_id"`
+	Product     *Product `json:"product"`
+	Rating      int      `json:"rating"`
+	ImageURL    *string  `json:"image_url"`
+	ImageName   *string  `json:"image_name"`
+	Description *string  `json:"description"`
 }

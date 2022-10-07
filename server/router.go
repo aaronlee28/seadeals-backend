@@ -139,9 +139,6 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		return &dto.FollowSellerReq{}
 	}), h.FollowToSeller)
 
-	// REVIEWS
-	r.GET("/products/:id/reviews", h.FindReviewByProductID)
-
 	// SELLER
 	r.GET("/sellers/:id", middleware.OptionalAuthorizeJWTFor(model.UserRoleName), h.FindSellerByID)
 	r.POST("/sellers", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
@@ -260,7 +257,12 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.POST("/create-global-voucher", middleware.RequestValidator(func() any { return &dto.CreateGlobalVoucher{} }), middleware.AuthorizeJWTFor(model.AdminRoleName), h.CreateGlobalVoucher)
 
 	r.POST("/create-category", middleware.RequestValidator(func() any { return &dto.CreateCategory{} }), middleware.AuthorizeJWTFor(model.AdminRoleName), h.CreateCategory)
+
+	// REVIEWS
+	r.GET("/products/:id/reviews", h.FindReviewByProductID)
+	r.POST("/product/review", middleware.RequestValidator(func() any { return &dto.CreateUpdateReview{} }), middleware.AuthorizeJWTFor(model.UserRoleName), h.CreateUpdateReview)
+	r.GET("/user/review-history", middleware.AuthorizeJWTFor(model.UserRoleName), h.UserReviewHistory)
+
 	return r
 
-	//set role = admin nya dimana?
 }

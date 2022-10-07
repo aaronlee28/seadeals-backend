@@ -10,22 +10,30 @@ import (
 
 type ReviewService interface {
 	FindReviewByProductID(productID uint, qp *model.ReviewQueryParam) (*dto.GetReviewsRes, error)
+	CreateUpdateReview(userID uint, req *dto.CreateUpdateReview) (*model.Review, error)
+	UserReviewHistory(userID uint) ([]*model.Review, error)
 }
 
 type reviewService struct {
-	db         *gorm.DB
-	reviewRepo repository.ReviewRepository
+	db          *gorm.DB
+	reviewRepo  repository.ReviewRepository
+	sellerRepo  repository.SellerRepository
+	productRepo repository.ProductRepository
 }
 
 type ReviewServiceConfig struct {
-	DB         *gorm.DB
-	ReviewRepo repository.ReviewRepository
+	DB          *gorm.DB
+	ReviewRepo  repository.ReviewRepository
+	SellerRepo  repository.SellerRepository
+	ProductRepo repository.ProductRepository
 }
 
 func NewReviewService(config *ReviewServiceConfig) ReviewService {
 	return &reviewService{
-		db:         config.DB,
-		reviewRepo: config.ReviewRepo,
+		db:          config.DB,
+		reviewRepo:  config.ReviewRepo,
+		sellerRepo:  config.SellerRepo,
+		productRepo: config.ProductRepo,
 	}
 }
 
@@ -81,4 +89,58 @@ func (s *reviewService) FindReviewByProductID(productID uint, qp *model.ReviewQu
 	}
 
 	return res, nil
+}
+
+func (s *reviewService) CreateUpdateReview(userID uint, req *dto.CreateUpdateReview) (*model.Review, error) {
+
+	tx := s.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
+
+	_, err = s.reviewRepo.ValidateUserOrderItem(tx, userID, req.ProductID)
+	if err != nil {
+		return nil, err
+	}
+
+	var existingReview *model.Review
+
+	existingReview, err = s.reviewRepo.FindReviewByProductIDAndSellerID(tx, userID, req.ProductID)
+
+	newReview := model.Review{
+		UserID:      userID,
+		ProductID:   req.ProductID,
+		Rating:      int(req.Rating),
+		ImageURL:    req.ImageURL,
+		ImageName:   req.ImageName,
+		Description: req.Description,
+	}
+	var createdReview *model.Review
+
+	if existingReview.ID == 0 {
+		createdReview, err = s.reviewRepo.CreateReview(tx, &newReview)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		createdReview, err = s.reviewRepo.UpdateReview(tx, existingReview.ID, &newReview)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return createdReview, nil
+}
+
+func (s *reviewService) UserReviewHistory(userID uint) ([]*model.Review, error) {
+
+	tx := s.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
+
+	var reviewHistory []*model.Review
+
+	reviewHistory, err = s.reviewRepo.UserReviewHistory(tx, userID)
+	if err != nil {
+		return nil, err
+	}
+	return reviewHistory, nil
 }
