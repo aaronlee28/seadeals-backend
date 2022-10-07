@@ -88,7 +88,7 @@ func (o *orderService) CancelOrderBySeller(orderID uint, userID uint) (*model.Or
 	}
 	if order.Status != dto.OrderWaitingSeller {
 		err = apperror.BadRequestError("Cannot cancel order that is currently " + order.Status)
-		return nil, apperror.BadRequestError("Cannot cancel order that is currently " + order.Status)
+		return nil, err
 	}
 
 	seller, err := o.sellerRepository.FindSellerByUserID(tx, userID)
@@ -96,7 +96,8 @@ func (o *orderService) CancelOrderBySeller(orderID uint, userID uint) (*model.Or
 		return nil, err
 	}
 	if order.SellerID != seller.ID {
-		return nil, apperror.BadRequestError("Cannot cancel another seller order")
+		err = apperror.BadRequestError("Cannot cancel another seller order")
+		return nil, err
 	}
 
 	var priceBeforeGlobalDisc float64
