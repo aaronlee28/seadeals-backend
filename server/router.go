@@ -249,6 +249,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	// ADMIN
 	r.POST("/create-global-voucher", middleware.RequestValidator(func() any { return &dto.CreateGlobalVoucher{} }), middleware.AuthorizeJWTFor(model.AdminRoleName), h.CreateGlobalVoucher)
 
+	r.POST("/create-category", middleware.RequestValidator(func() any { return &dto.CreateCategory{} }), middleware.AuthorizeJWTFor(model.AdminRoleName), h.CreateCategory)
 	return r
 
 	//set role = admin nya dimana?

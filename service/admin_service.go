@@ -11,6 +11,7 @@ import (
 
 type AdminService interface {
 	CreateGlobalVoucher(req *dto.CreateGlobalVoucher) (*model.Voucher, error)
+	CreateCategory(req *dto.CreateCategory) (*model.ProductCategory, error)
 }
 
 type adminService struct {
@@ -35,7 +36,7 @@ func (a *adminService) CreateGlobalVoucher(req *dto.CreateGlobalVoucher) (*model
 	var err error
 	defer helper.CommitOrRollback(tx, &err)
 
-	if req.AmountType == "percentage" || req.AmountType == "nominal" {
+	if req.AmountType != "percentage" && req.AmountType != "nominal" {
 		err = apperror.BadRequestError("invalid amount type")
 		return nil, err
 	}
@@ -64,3 +65,34 @@ func (a *adminService) CreateGlobalVoucher(req *dto.CreateGlobalVoucher) (*model
 
 	return createdGlobalVoucher, nil
 }
+func (a *adminService) CreateCategory(req *dto.CreateCategory) (*model.ProductCategory, error) {
+	tx := a.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
+
+	createCategory := model.ProductCategory{
+		Name:    req.Name,
+		Slug:    req.Slug,
+		IconURL: req.IconURL,
+	}
+
+	if req.ParentID != nil {
+		_, err = a.adminRepo.GetCategoryByID(tx, *req.ParentID)
+		if err != nil {
+			return nil, err
+		}
+
+		createCategory.ParentID = req.ParentID
+	}
+
+	var createdCategory *model.ProductCategory
+	createdCategory, err = a.adminRepo.CreateCategory(tx, &createCategory)
+	if err != nil {
+		return nil, err
+	}
+
+	return createdCategory, nil
+}
+
+//parent id cuman bisa pilih id yang udah ada di table (V)
+// parent id gak bisa link ke diri sendiri (V)
