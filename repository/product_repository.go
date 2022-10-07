@@ -101,7 +101,6 @@ func (r *productRepository) FindProductDetailByID(tx *gorm.DB, productID uint, u
 		return db.Order("product_variant_details.price")
 	})
 	result = result.Preload("Category")
-	result = result.Preload("Seller")
 	result = result.Preload("Promotion")
 	result = result.Preload("ProductVariantDetail.ProductVariant1")
 	result = result.Preload("ProductVariantDetail.ProductVariant2")

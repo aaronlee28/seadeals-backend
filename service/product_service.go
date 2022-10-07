@@ -10,7 +10,7 @@ import (
 )
 
 type ProductService interface {
-	FindProductDetailByID(productID uint, userID uint) (*dto.ProductDetailRes, error)
+	FindProductDetailByID(productID uint, userID uint) (*dto.ProductDetailRes, *dto.GetSellerRes, error)
 	FindSimilarProducts(productID uint) ([]*dto.ProductRes, error)
 	SearchRecommendProduct(q *repository.SearchQuery) ([]*dto.ProductRes, int64, int64, error)
 	GetProductsBySellerID(query *dto.SellerProductSearchQuery, sellerID uint) ([]*dto.ProductRes, int64, int64, error)
@@ -32,6 +32,7 @@ type productService struct {
 	reviewRepo        repository.ReviewRepository
 	productVarDetRepo repository.ProductVariantDetailRepository
 	sellerRepo        repository.SellerRepository
+	socialGraphRepo   repository.SocialGraphRepository
 }
 
 type ProductConfig struct {
@@ -40,6 +41,7 @@ type ProductConfig struct {
 	ReviewRepo        repository.ReviewRepository
 	ProductVarDetRepo repository.ProductVariantDetailRepository
 	SellerRepo        repository.SellerRepository
+	SocialGraphRepo   repository.SocialGraphRepository
 }
 
 func NewProductService(config *ProductConfig) ProductService {
@@ -49,17 +51,18 @@ func NewProductService(config *ProductConfig) ProductService {
 		reviewRepo:        config.ReviewRepo,
 		productVarDetRepo: config.ProductVarDetRepo,
 		sellerRepo:        config.SellerRepo,
+		socialGraphRepo:   config.SocialGraphRepo,
 	}
 }
 
-func (p *productService) FindProductDetailByID(productID uint, userID uint) (*dto.ProductDetailRes, error) {
+func (p *productService) FindProductDetailByID(productID uint, userID uint) (*dto.ProductDetailRes, *dto.GetSellerRes, error) {
 	tx := p.db.Begin()
 	var err error
 	defer helper.CommitOrRollback(tx, &err)
 
 	product, err := p.productRepo.FindProductDetailByID(tx, productID, userID)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if len(product.ProductVariantDetail) > 0 {
@@ -67,7 +70,38 @@ func (p *productService) FindProductDetailByID(productID uint, userID uint) (*dt
 		product.MaxPrice = product.ProductVariantDetail[len(product.ProductVariantDetail)-1].Price
 	}
 
-	return product, nil
+	seller, err := p.sellerRepo.FindSellerDetailByID(tx, product.SellerID, userID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	sellerRes := new(dto.GetSellerRes).From(seller)
+	averageReview, totalReview, err := p.reviewRepo.GetReviewsAvgAndCountBySellerID(tx, seller.ID)
+	if err != nil {
+		return nil, nil, err
+	}
+	sellerRes.TotalReviewer = uint(totalReview)
+	sellerRes.Rating = averageReview
+
+	followers, err := p.socialGraphRepo.GetFollowerCountBySellerID(tx, seller.ID)
+	if err != nil {
+		return nil, nil, err
+	}
+	sellerRes.Followers = uint(followers)
+
+	following, err := p.socialGraphRepo.GetFollowingCountByUserID(tx, seller.UserID)
+	if err != nil {
+		return nil, nil, err
+	}
+	sellerRes.Following = uint(following)
+
+	totalProduct, err := p.productRepo.GetProductCountBySellerID(tx, seller.ID)
+	if err != nil {
+		return nil, nil, err
+	}
+	sellerRes.TotalProduct = totalProduct
+
+	return product, sellerRes, nil
 }
 
 func (p *productService) GetProductsBySellerID(query *dto.SellerProductSearchQuery, sellerID uint) ([]*dto.ProductRes, int64, int64, error) {
