@@ -30,6 +30,7 @@ type RouterConfig struct {
 	CourierService          service.CourierService
 	OrderService            service.OrderService
 	SellerAvailableCourServ service.SellerAvailableCourService
+	AdminService            service.AdminService
 }
 
 func NewRouter(c *RouterConfig) *gin.Engine {
@@ -56,6 +57,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		CourierService:          c.CourierService,
 		OrderService:            c.OrderService,
 		SellerAvailableCourServ: c.SellerAvailableCourServ,
+		AdminService:            c.AdminService,
 	})
 
 	r.Use(middleware.ErrorHandler)
@@ -243,5 +245,11 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 
 	// PAYMENT
 	r.POST("/checkout-cart", middleware.RequestValidator(func() any { return &dto.CheckoutCartReq{} }), middleware.AuthorizeJWTFor(model.Level1RoleName), h.CheckoutCart)
+
+	// ADMIN
+	r.POST("/create-global-voucher", middleware.RequestValidator(func() any { return &dto.CreateGlobalVoucher{} }), middleware.AuthorizeJWTFor(model.AdminRoleName), h.CreateGlobalVoucher)
+
 	return r
+
+	//set role = admin nya dimana?
 }

@@ -35,7 +35,7 @@ type VoucherQueryParam struct {
 type Voucher struct {
 	gorm.Model  `json:"-"`
 	ID          uint      `json:"id" gorm:"primaryKey"`
-	SellerID    uint      `json:"seller_id"`
+	SellerID    *uint     `json:"seller_id"`
 	Seller      *Seller   `json:"seller"`
 	Name        string    `json:"name"`
 	Code        string    `json:"code"`

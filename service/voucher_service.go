@@ -86,7 +86,7 @@ func validateVoucher(voucher *model.Voucher, req *dto.PostValidateVoucherReq) er
 	if !(voucher.StartDate.Before(time.Now()) && voucher.EndDate.After(time.Now())) {
 		return apperror.BadRequestError(new(apperror.VoucherNotFoundError).Error())
 	}
-	if voucher.SellerID != req.SellerID {
+	if voucher.SellerID != &req.SellerID {
 		return apperror.BadRequestError("voucher cannot be used in this shop")
 	}
 	if (voucher.Quota - int(req.Quantity)) <= 0 {
@@ -109,7 +109,7 @@ func (s *voucherService) CreateVoucher(req *dto.PostVoucherReq, userID uint) (*d
 	}
 
 	voucher := &model.Voucher{
-		SellerID:    seller.ID,
+		SellerID:    &seller.ID,
 		Name:        req.Name,
 		Code:        req.Code,
 		StartDate:   req.StartDate,

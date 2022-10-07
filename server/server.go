@@ -33,6 +33,7 @@ func Init() {
 	orderRepository := repository.NewOrderRepo()
 	sellerAvailableCourRepo := repository.NewSellerAvailableCourierRepository()
 	transactionRepo := repository.NewTransactionRepository()
+	adminRepository := repository.NewAdminRepository()
 
 	userService := service.NewUserService(&service.UserServiceConfig{
 		DB:               db.Get(),
@@ -110,7 +111,6 @@ func Init() {
 	orderItemService := service.NewCartItemService(&service.CartItemServiceConfig{
 		DB:                 db.Get(),
 		CartItemRepository: orderItemRepository,
-		ProductVarDetRepo:  productVarDetRepo,
 	})
 
 	refreshTokenService := service.NewRefreshTokenService(&service.RefreshTokenServiceConfig{
@@ -125,7 +125,6 @@ func Init() {
 	favoriteService := service.NewFavoriteService(&service.FavoriteServiceConfig{
 		DB:                 db.Get(),
 		FavoriteRepository: favoriteRepository,
-		ProductRepository:  productRepository,
 	})
 
 	socialGraphService := service.NewSocialGraphService(&service.SocialGraphServiceConfig{
@@ -169,6 +168,10 @@ func Init() {
 		SellerRepository:    sellerRepository,
 	})
 
+	adminService := service.NewAdminRService(&service.AdminConfig{
+		DB:        db.Get(),
+		AdminRepo: adminRepository,
+	})
 	router := NewRouter(&RouterConfig{
 		UserService:             userService,
 		AuthService:             authService,
@@ -190,6 +193,8 @@ func Init() {
 		CourierService:          courierService,
 		OrderService:            orderService,
 		SellerAvailableCourServ: sellerAvailableCourServ,
+		AdminService:            adminService,
 	})
+
 	log.Fatalln(router.Run(":" + config.Config.Port))
 }

@@ -37,7 +37,7 @@ func (_ *GetVoucherRes) From(v *model.Voucher) *GetVoucherRes {
 
 	return &GetVoucherRes{
 		ID:          v.ID,
-		SellerID:    v.SellerID,
+		SellerID:    *v.SellerID,
 		Name:        v.Name,
 		Code:        v.Code,
 		StartDate:   v.StartDate,
