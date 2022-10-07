@@ -154,6 +154,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 
 	// ORDER
 	r.GET("/sellers/orders", middleware.AuthorizeJWTFor(model.SellerRoleName), h.GetSellerOrders)
+	r.GET("/user/orders", middleware.AuthorizeJWTFor(model.SellerRoleName), h.GetBuyerOrders)
 
 	// VOUCHER
 	r.POST("/vouchers", middleware.AuthorizeJWTFor(model.SellerRoleName), middleware.RequestValidator(func() any {
@@ -174,6 +175,15 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.POST("/cancel/orders", middleware.AuthorizeJWTFor(model.SellerRoleName), middleware.RequestValidator(func() any {
 		return &dto.SellerCancelOrderReq{}
 	}), h.CancelOrderBySeller)
+	r.POST("/request-refund/orders", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
+		return &dto.CreateComplaintReq{}
+	}), h.RequestRefundByBuyer)
+	r.POST("/reject-refund/orders", middleware.AuthorizeJWTFor(model.SellerRoleName), middleware.RequestValidator(func() any {
+		return &dto.RejectAcceptRefundReq{}
+	}), h.RejectRefundRequest)
+	r.POST("/accept-refund/orders", middleware.AuthorizeJWTFor(model.SellerRoleName), middleware.RequestValidator(func() any {
+		return &dto.RejectAcceptRefundReq{}
+	}), h.AcceptRefundRequest)
 
 	// PROMOTION
 	r.GET("/promotions", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetPromotion)
