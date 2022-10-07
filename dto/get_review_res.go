@@ -34,7 +34,6 @@ func (_ *GetReviewRes) From(r *model.Review) *GetReviewRes {
 		UserUsername:  r.User.Username,
 		UserAvatarURL: r.User.AvatarURL,
 		Rating:        r.Rating,
-		Images:        r.Images,
 		Description:   r.Description,
 		CreatedAt:     r.CreatedAt,
 	}

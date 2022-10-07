@@ -79,8 +79,10 @@ func Init() {
 	})
 
 	reviewService := service.NewReviewService(&service.ReviewServiceConfig{
-		DB:         db.Get(),
-		ReviewRepo: reviewRepository,
+		DB:          db.Get(),
+		ReviewRepo:  reviewRepository,
+		SellerRepo:  sellerRepository,
+		ProductRepo: productRepository,
 	})
 
 	sellerService := service.NewSellerService(&service.SellerServiceConfig{

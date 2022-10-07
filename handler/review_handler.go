@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"seadeals-backend/apperror"
@@ -35,5 +36,30 @@ func (h *Handler) FindReviewByProductID(ctx *gin.Context) {
 		return
 	}
 
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(res))
+}
+
+func (h *Handler) CreateUpdateReview(ctx *gin.Context) {
+	userPayload, _ := ctx.Get("user")
+	user, isValid := userPayload.(dto.UserJWT)
+	userID := uint(0)
+	if isValid {
+		userID = user.UserID
+	} else {
+		fmt.Println("user is not valid")
+	}
+
+	value, _ := ctx.Get("payload")
+	json, _ := value.(*dto.CreateUpdateReview)
+
+	res, err := h.reviewService.CreateUpdateReview(userID, json)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
 	ctx.JSON(http.StatusOK, dto.StatusOKResponse(res))
 }
