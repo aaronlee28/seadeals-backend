@@ -38,19 +38,7 @@ func (a *addressService) CreateAddress(req *dto.CreateAddressReq, userID uint) (
 	var err error
 	defer helper.CommitOrRollback(tx, &err)
 
-	newAddress := &model.Address{
-		UserID:      userID,
-		CityID:      req.CityID,
-		ProvinceID:  req.ProvinceID,
-		Province:    req.Province,
-		City:        req.City,
-		Type:        req.Type,
-		PostalCode:  req.PostalCode,
-		SubDistrict: req.SubDistrict,
-		Address:     req.Address,
-		IsMain:      false,
-	}
-	address, err := a.addressRepository.CreateAddress(tx, newAddress)
+	address, err := a.addressRepository.CreateAddress(tx, req, userID)
 	if err != nil {
 		return nil, err
 	}
