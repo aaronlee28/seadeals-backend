@@ -16,6 +16,7 @@ type ReviewRepository interface {
 	ValidateUserOrderItem(tx *gorm.DB, userID uint, productID uint) (*model.OrderItem, error)
 	CreateReview(tx *gorm.DB, req *model.Review) (*model.Review, error)
 	UpdateReview(tx *gorm.DB, reviewID uint, req *model.Review) (*model.Review, error)
+	UserReviewHistory(tx *gorm.DB, userID uint) ([]*model.Review, error)
 }
 
 type reviewRepository struct{}
@@ -110,4 +111,13 @@ func (r *reviewRepository) UpdateReview(tx *gorm.DB, reviewID uint, req *model.R
 		return nil, apperror.InternalServerError("Cannot update review")
 	}
 	return req, result.Error
+}
+
+func (r *reviewRepository) UserReviewHistory(tx *gorm.DB, userID uint) ([]*model.Review, error) {
+	var reviewHistory []*model.Review
+	result := tx.Clauses(clause.Returning{}).Where("user_id = ?", userID).Find(&reviewHistory)
+	if result.Error != nil {
+		return nil, apperror.InternalServerError("Cannot find transaction")
+	}
+	return reviewHistory, result.Error
 }
