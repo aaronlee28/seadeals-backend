@@ -1,7 +1,6 @@
 package service
 
 import (
-	"fmt"
 	"gorm.io/gorm"
 	"seadeals-backend/dto"
 	"seadeals-backend/helper"
@@ -12,6 +11,7 @@ import (
 type ReviewService interface {
 	FindReviewByProductID(productID uint, qp *model.ReviewQueryParam) (*dto.GetReviewsRes, error)
 	CreateUpdateReview(userID uint, req *dto.CreateUpdateReview) (*model.Review, error)
+	UserReviewHistory(userID uint) ([]*model.Review, error)
 }
 
 type reviewService struct {
@@ -116,7 +116,6 @@ func (s *reviewService) CreateUpdateReview(userID uint, req *dto.CreateUpdateRev
 	}
 	var createdReview *model.Review
 
-	fmt.Println("asflashlfkjhasdk", existingReview.ID)
 	if existingReview.ID == 0 {
 		createdReview, err = s.reviewRepo.CreateReview(tx, &newReview)
 		if err != nil {
@@ -129,4 +128,19 @@ func (s *reviewService) CreateUpdateReview(userID uint, req *dto.CreateUpdateRev
 		}
 	}
 	return createdReview, nil
+}
+
+func (s *reviewService) UserReviewHistory(userID uint) ([]*model.Review, error) {
+
+	tx := s.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
+
+	var reviewHistory []*model.Review
+
+	reviewHistory, err = s.reviewRepo.UserReviewHistory(tx, userID)
+	if err != nil {
+		return nil, err
+	}
+	return reviewHistory, nil
 }

@@ -57,9 +57,25 @@ func (h *Handler) CreateUpdateReview(ctx *gin.Context) {
 		_ = ctx.Error(err)
 		return
 	}
+
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(res))
+}
+
+func (h *Handler) UserReviewHistory(ctx *gin.Context) {
+	userPayload, _ := ctx.Get("user")
+	user, isValid := userPayload.(dto.UserJWT)
+	userID := uint(0)
+	if isValid {
+		userID = user.UserID
+	} else {
+		fmt.Println("user is not valid")
+	}
+
+	res, err := h.reviewService.UserReviewHistory(userID)
 	if err != nil {
 		_ = ctx.Error(err)
 		return
 	}
+
 	ctx.JSON(http.StatusOK, dto.StatusOKResponse(res))
 }

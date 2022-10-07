@@ -261,7 +261,8 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	// REVIEWS
 	r.GET("/products/:id/reviews", h.FindReviewByProductID)
 	r.POST("/product/review", middleware.RequestValidator(func() any { return &dto.CreateUpdateReview{} }), middleware.AuthorizeJWTFor(model.UserRoleName), h.CreateUpdateReview)
+	r.GET("/user/review-history", middleware.AuthorizeJWTFor(model.UserRoleName), h.UserReviewHistory)
+
 	return r
 
-	//set role = admin nya dimana?
 }
