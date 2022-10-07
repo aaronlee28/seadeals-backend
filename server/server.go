@@ -32,6 +32,7 @@ func Init() {
 	courierRepository := repository.NewCourierRepository()
 	orderRepository := repository.NewOrderRepo()
 	sellerAvailableCourRepo := repository.NewSellerAvailableCourierRepository()
+	adminRepository := repository.NewAdminRepository()
 
 	userService := service.NewUserService(&service.UserServiceConfig{
 		DB:               db.Get(),
@@ -159,27 +160,33 @@ func Init() {
 		SellerRepository:    sellerRepository,
 	})
 
-	router := NewRouter(&RouterConfig{
-		UserService:            userService,
-		AuthService:            authService,
-		AddressService:         addressService,
-		WalletService:          walletService,
-		ProductCategoryService: productCategoryService,
-		ProductService:         productService,
-		ProductVariantService:  productVariantService,
-		ReviewService:          reviewService,
-		SellerService:          sellerService,
-		UserSeaLabsPayAccServ:  userSeaLabsPayAccountServ,
-		OrderItemService:       orderItemService,
-		RefreshTokenService:    refreshTokenService,
-		SealabsPayService:      sealabsPayService,
-		FavoriteService:        favoriteService,
-		SocialGraphService:     socialGraphService,
-		VoucherService:         voucherService,
-		PromotionService:       promotionService,
-		CourierService:         courierService,
-		OrderService:           orderService,
-		SellerAvailableCourServ: sellerAvailableCourServ,
+	adminService := service.NewAdminRService(&service.AdminConfig{
+		DB:        db.Get(),
+		AdminRepo: adminRepository,
 	})
+	router := NewRouter(&RouterConfig{
+		UserService:             userService,
+		AuthService:             authService,
+		AddressService:          addressService,
+		WalletService:           walletService,
+		ProductCategoryService:  productCategoryService,
+		ProductService:          productService,
+		ProductVariantService:   productVariantService,
+		ReviewService:           reviewService,
+		SellerService:           sellerService,
+		UserSeaLabsPayAccServ:   userSeaLabsPayAccountServ,
+		OrderItemService:        orderItemService,
+		RefreshTokenService:     refreshTokenService,
+		SealabsPayService:       sealabsPayService,
+		FavoriteService:         favoriteService,
+		SocialGraphService:      socialGraphService,
+		VoucherService:          voucherService,
+		PromotionService:        promotionService,
+		CourierService:          courierService,
+		OrderService:            orderService,
+		SellerAvailableCourServ: sellerAvailableCourServ,
+		AdminService:            adminService,
+	})
+
 	log.Fatalln(router.Run(":" + config.Config.Port))
 }
