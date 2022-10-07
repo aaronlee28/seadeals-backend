@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"seadeals-backend/dto"
@@ -22,7 +21,6 @@ func (h *Handler) CreateGlobalVoucher(ctx *gin.Context) {
 }
 
 func (h *Handler) CreateCategory(ctx *gin.Context) {
-	fmt.Println("masuuuuukkkk")
 	value, _ := ctx.Get("payload")
 	json, _ := value.(*dto.CreateCategory)
 	res, err := h.adminService.CreateCategory(json)
