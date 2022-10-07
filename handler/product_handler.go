@@ -44,13 +44,27 @@ func (h *Handler) FindSimilarProduct(ctx *gin.Context) {
 		return
 	}
 
-	products, err := h.productService.FindSimilarProducts(uint(id))
+	query := &repository.SearchQuery{
+		Limit: helper.GetQuery(ctx, "limit", "24"),
+		Page:  helper.GetQuery(ctx, "page", "1"),
+	}
+	limit, _ := strconv.ParseUint(query.Limit, 10, 64)
+	if limit == 0 {
+		limit = 20
+	}
+	page, _ := strconv.ParseUint(query.Page, 10, 64)
+	if page == 0 {
+		page = 1
+	}
+
+	products, totalPage, totalData, err := h.productService.FindSimilarProducts(uint(id), query)
 	if err != nil {
 		_ = ctx.Error(err)
 		return
 	}
 
-	ctx.JSON(http.StatusOK, dto.StatusOKResponse(products))
+	fmt.Println(products[0].MaxPrice)
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(gin.H{"products": products, "total_page": totalPage, "total_data": totalData, "limit": limit, "current_page": page}))
 }
 
 func (h *Handler) GetProductsBySellerID(ctx *gin.Context) {
