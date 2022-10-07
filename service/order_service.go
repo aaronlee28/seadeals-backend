@@ -2,9 +2,9 @@ package service
 
 import (
 	"bytes"
-	"fmt"
+	"encoding/json"
 	"gorm.io/gorm"
-	"io/ioutil"
+	"math"
 	"net/http"
 	"seadeals-backend/apperror"
 	"seadeals-backend/config"
@@ -24,6 +24,8 @@ type OrderService interface {
 type orderService struct {
 	db                        *gorm.DB
 	orderRepository           repository.OrderRepository
+	transactionRepo           repository.TransactionRepository
+	voucherRepo               repository.VoucherRepository
 	sellerRepository          repository.SellerRepository
 	walletRepository          repository.WalletRepository
 	walletTransRepo           repository.WalletTransactionRepository
@@ -35,6 +37,8 @@ type OrderServiceConfig struct {
 	DB                        *gorm.DB
 	OrderRepository           repository.OrderRepository
 	SellerRepository          repository.SellerRepository
+	VoucherRepo               repository.VoucherRepository
+	TransactionRepo           repository.TransactionRepository
 	WalletRepository          repository.WalletRepository
 	WalletTransRepo           repository.WalletTransactionRepository
 	ProductVarDetRepo         repository.ProductVariantDetailRepository
@@ -46,6 +50,8 @@ func NewOrderService(c *OrderServiceConfig) OrderService {
 		db:                        c.DB,
 		orderRepository:           c.OrderRepository,
 		sellerRepository:          c.SellerRepository,
+		voucherRepo:               c.VoucherRepo,
+		transactionRepo:           c.TransactionRepo,
 		walletRepository:          c.WalletRepository,
 		walletTransRepo:           c.WalletTransRepo,
 		productVarDetRepo:         c.ProductVarDetRepo,
@@ -81,7 +87,8 @@ func (o *orderService) CancelOrderBySeller(orderID uint, userID uint) (*model.Or
 		return nil, err
 	}
 	if order.Status != dto.OrderWaitingSeller {
-		return nil, apperror.BadRequestError("Cannot cancel order that is currently " + order.Status)
+		err = apperror.BadRequestError("Cannot cancel order that is currently " + order.Status)
+		return nil, err
 	}
 
 	seller, err := o.sellerRepository.FindSellerByUserID(tx, userID)
@@ -89,7 +96,28 @@ func (o *orderService) CancelOrderBySeller(orderID uint, userID uint) (*model.Or
 		return nil, err
 	}
 	if order.SellerID != seller.ID {
-		return nil, apperror.BadRequestError("Cannot cancel another seller order")
+		err = apperror.BadRequestError("Cannot cancel another seller order")
+		return nil, err
+	}
+
+	var priceBeforeGlobalDisc float64
+	var voucher *model.Voucher
+	var amountRefunded float64
+	if order.Transaction.VoucherID != nil {
+		priceBeforeGlobalDisc, err = o.transactionRepo.GetPriceBeforeGlobalDisc(tx, order.TransactionID)
+		if err != nil {
+			return nil, err
+		}
+		voucher, err = o.voucherRepo.FindVoucherDetailByID(tx, *order.Transaction.VoucherID)
+		if err != nil {
+			return nil, err
+		}
+		if voucher.AmountType == "percentage" {
+			amountRefunded = order.Total - ((voucher.Amount / 100) * order.Total)
+		} else {
+			amountReduced := (order.Total / priceBeforeGlobalDisc) * order.Total
+			amountRefunded = order.Total - amountReduced
+		}
 	}
 
 	var buyerWallet *model.Wallet
@@ -110,7 +138,7 @@ func (o *orderService) CancelOrderBySeller(orderID uint, userID uint) (*model.Or
 		walletTrans := &model.WalletTransaction{
 			WalletID:      buyerWallet.ID,
 			TransactionID: &order.TransactionID,
-			Total:         order.Total,
+			Total:         math.Floor(amountRefunded),
 			PaymentMethod: dto.WALLET,
 			PaymentType:   "CREDIT",
 			Description:   "Refund from transaction ID " + strconv.FormatUint(uint64(order.TransactionID), 10),
@@ -128,11 +156,7 @@ func (o *orderService) CancelOrderBySeller(orderID uint, userID uint) (*model.Or
 
 		client := &http.Client{}
 		URL := config.Config.SeaLabsPayRefundURL
-		var jsonStr = []byte(`{"reason":"Seller cancel the order", "amount":` + strconv.Itoa(int(order.Total)) + `, "txn_id":` + strconv.Itoa(int(transHolder.TxnID)) + `}`)
-		//v := url.Values{}
-		//v.Set("txn_id", strconv.Itoa(int(transHolder.TxnID)))
-		//v.Set("amount", strconv.Itoa(int(order.Total)))
-		//v.Set("reason", "Seller cancel the order")
+		var jsonStr = []byte(`{"reason":"Seller cancel the order", "amount":` + strconv.Itoa(int(amountRefunded)) + `, "txn_id":` + strconv.Itoa(int(transHolder.TxnID)) + `}`)
 
 		bearer := "Bearer " + config.Config.SeaLabsPayAPIKey
 		req, err = http.NewRequest("POST", URL, bytes.NewBuffer(jsonStr))
@@ -146,11 +170,18 @@ func (o *orderService) CancelOrderBySeller(orderID uint, userID uint) (*model.Or
 			return nil, err
 		}
 		if resp.StatusCode != 200 {
-			fmt.Println(resp.StatusCode)
-			bodyText, _ := ioutil.ReadAll(resp.Body)
-			s := string(bodyText)
-			fmt.Println(s)
-			return nil, apperror.BadRequestError("Cannot work with sea labs pay")
+			type seaLabsPayError struct {
+				Code    string `json:"code"`
+				Message string `json:"message"`
+				Data    struct {
+				} `json:"data"`
+			}
+			var j seaLabsPayError
+			err = json.NewDecoder(resp.Body).Decode(&j)
+			if err != nil {
+				panic(err)
+			}
+			return nil, apperror.BadRequestError(j.Message)
 		}
 	}
 

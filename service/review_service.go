@@ -1,7 +1,6 @@
 package service
 
 import (
-	"fmt"
 	"gorm.io/gorm"
 	"seadeals-backend/dto"
 	"seadeals-backend/helper"
@@ -80,7 +79,6 @@ func (s *reviewService) FindReviewByProductID(productID uint, qp *model.ReviewQu
 		AverageRating: avgRating,
 		Reviews:       reviewsRes,
 	}
-	fmt.Println(res)
 
 	return res, nil
 }

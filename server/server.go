@@ -32,6 +32,7 @@ func Init() {
 	courierRepository := repository.NewCourierRepository()
 	orderRepository := repository.NewOrderRepo()
 	sellerAvailableCourRepo := repository.NewSellerAvailableCourierRepository()
+	transactionRepo := repository.NewTransactionRepository()
 
 	userService := service.NewUserService(&service.UserServiceConfig{
 		DB:               db.Get(),
@@ -109,6 +110,7 @@ func Init() {
 	orderItemService := service.NewCartItemService(&service.CartItemServiceConfig{
 		DB:                 db.Get(),
 		CartItemRepository: orderItemRepository,
+		ProductVarDetRepo:  productVarDetRepo,
 	})
 
 	refreshTokenService := service.NewRefreshTokenService(&service.RefreshTokenServiceConfig{
@@ -153,6 +155,8 @@ func Init() {
 		DB:                        db.Get(),
 		OrderRepository:           orderRepository,
 		SellerRepository:          sellerRepository,
+		VoucherRepo:               voucherRepo,
+		TransactionRepo:           transactionRepo,
 		WalletRepository:          walletRepository,
 		WalletTransRepo:           walletTransactionRepo,
 		ProductVarDetRepo:         productVarDetRepo,
