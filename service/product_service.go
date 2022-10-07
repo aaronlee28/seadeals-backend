@@ -11,7 +11,7 @@ import (
 
 type ProductService interface {
 	FindProductDetailByID(productID uint, userID uint) (*dto.ProductDetailRes, *dto.GetSellerRes, error)
-	FindSimilarProducts(productID uint) ([]*dto.ProductRes, error)
+	FindSimilarProducts(productID uint, query *repository.SearchQuery) ([]*dto.ProductRes, int64, int64, error)
 	SearchRecommendProduct(q *repository.SearchQuery) ([]*dto.ProductRes, int64, int64, error)
 	GetProductsBySellerID(query *dto.SellerProductSearchQuery, sellerID uint) ([]*dto.ProductRes, int64, int64, error)
 	GetProductsByCategoryID(query *dto.SellerProductSearchQuery, categoryID uint) ([]*dto.ProductRes, int64, int64, error)
@@ -180,19 +180,19 @@ func (p *productService) GetProductsByCategoryID(query *dto.SellerProductSearchQ
 	return productsRes, totalPage, totalData, nil
 }
 
-func (p *productService) FindSimilarProducts(productID uint) ([]*dto.ProductRes, error) {
+func (p *productService) FindSimilarProducts(productID uint, query *repository.SearchQuery) ([]*dto.ProductRes, int64, int64, error) {
 	tx := p.db.Begin()
 	var err error
 	defer helper.CommitOrRollback(tx, &err)
 
 	product, err := p.productRepo.FindProductByID(tx, productID)
 	if err != nil {
-		return nil, err
+		return nil, 0, 0, err
 	}
 
-	products, err := p.productRepo.FindSimilarProduct(tx, product.CategoryID)
+	products, totalPage, totalData, err := p.productRepo.FindSimilarProduct(tx, product.CategoryID, query)
 	if err != nil {
-		return nil, err
+		return nil, 0, 0, err
 	}
 
 	var productsRes = make([]*dto.ProductRes, 0)
@@ -201,43 +201,29 @@ func (p *productService) FindSimilarProducts(productID uint) ([]*dto.ProductRes,
 			continue
 		}
 
-		var photoURL string
+		imageURL := ""
 		if len(pdt.ProductPhotos) > 0 {
-			photoURL = pdt.ProductPhotos[0].PhotoURL
+			imageURL = pdt.ProductPhotos[0].PhotoURL
 		}
-
-		var minPrice, maxPrice uint
-		minPrice, maxPrice, err = p.productRepo.SearchMinMaxPrice(tx, pdt.ID)
-		if err != nil {
-			return nil, err
-		}
-
-		var ratings []int
-		ratings, err = p.productRepo.SearchRating(tx, pdt.ID)
-		if err != nil {
-			return nil, err
-		}
-		reviewCount := len(ratings)
-		avgRating := float64(helper.SumInt(ratings)) / float64(reviewCount)
-
 		dtoProduct := &dto.ProductRes{
-			MinPrice: float64(minPrice),
-			MaxPrice: float64(maxPrice),
+			MinPrice: pdt.Min,
+			MaxPrice: pdt.Max,
 			Product: &dto.GetProductRes{
 				ID:            pdt.ID,
-				Price:         float64(minPrice),
+				Price:         pdt.Min,
 				Name:          pdt.Name,
 				Slug:          pdt.Slug,
-				MediaURL:      photoURL,
-				Rating:        avgRating,
-				TotalReviewer: int64(reviewCount),
-				TotalSold:     uint(pdt.SoldCount),
+				MediaURL:      imageURL,
+				Rating:        pdt.Avg,
+				TotalReviewer: pdt.Count,
+				TotalSold:     uint(pdt.Product.SoldCount),
+				City:          pdt.Seller.Address.City,
 			},
 		}
 		productsRes = append(productsRes, dtoProduct)
 	}
 
-	return productsRes, nil
+	return productsRes, totalPage, totalData, nil
 }
 
 func (p *productService) GetProducts(query *repository.SearchQuery) ([]*dto.ProductRes, int64, int64, error) {
