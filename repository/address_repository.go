@@ -3,11 +3,12 @@ package repository
 import (
 	"gorm.io/gorm"
 	"seadeals-backend/apperror"
+	"seadeals-backend/dto"
 	"seadeals-backend/model"
 )
 
 type AddressRepository interface {
-	CreateAddress(*gorm.DB, *model.Address) (*model.Address, error)
+	CreateAddress(tx *gorm.DB, req *dto.CreateAddressReq, userID uint) (*model.Address, error)
 	GetAddressesByUserID(*gorm.DB, uint) ([]*model.Address, error)
 	GetAddressesByID(tx *gorm.DB, id, userID uint) (*model.Address, error)
 	UpdateAddress(*gorm.DB, *model.Address) (*model.Address, error)
@@ -21,13 +22,34 @@ func NewAddressRepository() AddressRepository {
 	return &addressRepository{}
 }
 
-func (a *addressRepository) CreateAddress(tx *gorm.DB, newAddress *model.Address) (*model.Address, error) {
-	result := tx.Create(&newAddress)
+func (a *addressRepository) CreateAddress(tx *gorm.DB, req *dto.CreateAddressReq, userID uint) (*model.Address, error) {
+	var newAddress = &model.Address{}
+	var isMain = false
+	result := tx.Model(&newAddress).Where("user_id = ?", userID).Where("is_main IS TRUE").First(&newAddress)
 	if result.Error != nil {
-		return nil, apperror.InternalServerError("cannot create new Address")
+		if result.Error != gorm.ErrRecordNotFound {
+			return nil, apperror.InternalServerError("Cannot find main ")
+		}
+		isMain = true
 	}
 
-	return newAddress, result.Error
+	newAddress = &model.Address{
+		UserID:      userID,
+		CityID:      req.CityID,
+		ProvinceID:  req.ProvinceID,
+		Province:    req.Province,
+		City:        req.City,
+		Type:        req.Type,
+		PostalCode:  req.PostalCode,
+		SubDistrict: req.SubDistrict,
+		Address:     req.Address,
+		IsMain:      isMain,
+	}
+	result = tx.Create(&newAddress)
+	if result.Error != nil {
+		return nil, apperror.InternalServerError("Cannot register new Address")
+	}
+	return newAddress, nil
 }
 
 func (a *addressRepository) GetAddressesByUserID(tx *gorm.DB, userID uint) ([]*model.Address, error) {
