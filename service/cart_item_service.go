@@ -2,6 +2,7 @@ package service
 
 import (
 	"gorm.io/gorm"
+	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
 	"seadeals-backend/helper"
 	"seadeals-backend/model"
@@ -18,17 +19,20 @@ type CartItemService interface {
 type cartItemService struct {
 	db                 *gorm.DB
 	cartItemRepository repository.CartItemRepository
+	productVarDetRepo  repository.ProductVariantDetailRepository
 }
 
 type CartItemServiceConfig struct {
 	DB                 *gorm.DB
 	CartItemRepository repository.CartItemRepository
+	ProductVarDetRepo  repository.ProductVariantDetailRepository
 }
 
 func NewCartItemService(config *CartItemServiceConfig) CartItemService {
 	return &cartItemService{
 		db:                 config.DB,
 		cartItemRepository: config.CartItemRepository,
+		productVarDetRepo:  config.ProductVarDetRepo,
 	}
 }
 
@@ -48,6 +52,16 @@ func (o *cartItemService) AddToCart(userID uint, req *dto.AddToCartReq) (*model.
 	tx := o.db.Begin()
 	var err error
 	defer helper.CommitOrRollback(tx, &err)
+
+	productVarDet, err := o.productVarDetRepo.GetProductVariantDetailByID(tx, req.ProductVariantDetailID)
+	if err != nil {
+		return nil, err
+	}
+
+	if productVarDet.Product.Seller.UserID == userID {
+		err = apperror.BadRequestError("Cannot buy your own product")
+		return nil, err
+	}
 
 	cartItem := &model.CartItem{
 		ProductVariantDetailID: req.ProductVariantDetailID,
@@ -85,12 +99,19 @@ func (o *cartItemService) GetCartItems(query *repository.Query, userID uint) ([]
 				subtotal = float64(item.Quantity) * (pricePerItem)
 			}
 		}
+
+		var imageURL string
+		if len(item.ProductVariantDetail.Product.ProductPhotos) > 0 {
+			imageURL = item.ProductVariantDetail.Product.ProductPhotos[0].PhotoURL
+		}
 		cartItem := &dto.CartItemRes{
 			ID:           item.ID,
 			Quantity:     item.Quantity,
 			Subtotal:     subtotal,
 			PricePerItem: pricePerItem,
 			SellerID:     item.ProductVariantDetail.Product.SellerID,
+			ImageURL:     imageURL,
+			SellerName:   item.ProductVariantDetail.Product.Seller.Name,
 			ProductName:  item.ProductVariantDetail.Product.Name,
 		}
 		cartItems = append(cartItems, cartItem)

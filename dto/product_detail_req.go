@@ -1,6 +1,6 @@
 package dto
 
-type ProductDetailReq struct {
+type ProductDetailsReq struct {
 	Description     string  `json:"description" binding:"required"`
 	VideoURL        string  `json:"video_url"`
 	IsHazardous     *bool   `json:"is_hazardous" binding:"required"`

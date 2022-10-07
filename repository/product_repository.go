@@ -2,6 +2,7 @@ package repository
 
 import (
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
 	"seadeals-backend/model"
@@ -10,9 +11,13 @@ import (
 
 type ProductRepository interface {
 	FindProductByID(tx *gorm.DB, productID uint) (*model.Product, error)
-	FindProductDetailByID(tx *gorm.DB, productID uint, userID uint) (*model.Product, error)
+	FindProductDetailByID(tx *gorm.DB, productID uint, userID uint) (*dto.ProductDetailRes, error)
 	FindProductBySlug(tx *gorm.DB, slug string) (*model.Product, error)
 	FindSimilarProduct(tx *gorm.DB, categoryID uint) ([]*model.Product, error)
+
+	GetProductCountBySellerID(tx *gorm.DB, sellerID uint) (int64, error)
+
+	UpdateProductFavoriteCount(tx *gorm.DB, productID uint, isFavorite bool) (*model.Product, error)
 
 	SearchProduct(tx *gorm.DB, q *SearchQuery) (*[]model.Product, error)
 	SearchRecommendProduct(tx *gorm.DB, q *SearchQuery) ([]*dto.SellerProductsCustomTable, int64, int64, error)
@@ -24,11 +29,26 @@ type ProductRepository interface {
 	SearchCategory(tx *gorm.DB, productID uint) (string, error)
 	GetProductDetail(tx *gorm.DB, id uint) (*model.Product, error)
 	GetProductPhotoURL(tx *gorm.DB, productID uint) (string, error)
+
 	CreateProduct(tx *gorm.DB, name string, categoryID uint, sellerID uint, bulk bool, minQuantity uint, maxQuantity uint) (*model.Product, error)
-	CreateProductDetail(tx *gorm.DB, productID uint, req *dto.ProductDetailReq) (*model.ProductDetail, error)
+	CreateProductDetail(tx *gorm.DB, productID uint, req *dto.ProductDetailsReq) (*model.ProductDetail, error)
 	CreateProductPhoto(tx *gorm.DB, productID uint, req *dto.ProductPhoto) (*model.ProductPhoto, error)
 	CreateProductVariant(tx *gorm.DB, name string) (*model.ProductVariant, error)
 	CreateProductVariantDetail(tx *gorm.DB, productID uint, variant1ID *uint, variant2 *model.ProductVariant, req *dto.ProductVariantDetail) (*model.ProductVariantDetail, error)
+	UpdateProduct(tx *gorm.DB, productID uint, p *model.Product) (*model.Product, error)
+	UpdateProductDetail(tx *gorm.DB, productID uint, pd *model.ProductDetail) (*model.ProductDetail, error)
+	FindProductVariantDetailsByID(tx *gorm.DB, id uint) (*model.ProductVariantDetail, error)
+	DeleteProductVariantDetailsByID(tx *gorm.DB, id uint) error
+	UpdateProductVariantDetailByID(tx *gorm.DB, id uint, pvd *model.ProductVariantDetail) (*model.ProductVariantDetail, error)
+	UpdateProductVariantByID(tx *gorm.DB, id uint, pvd *model.ProductVariant) (*model.ProductVariant, error)
+	FindProductVariantDetailsByProductID(tx *gorm.DB, ProductID uint) ([]*model.ProductVariantDetail, error)
+	GetVariantByName(tx *gorm.DB, name string) (*model.ProductVariant, error)
+	CreateVariantWithName(tx *gorm.DB, name string) (*model.ProductVariant, error)
+	CreateProductVariantDetailWithModel(tx *gorm.DB, pvd *model.ProductVariantDetail) (*model.ProductVariantDetail, error)
+	DeleteNullProductVariantDetailsByID(tx *gorm.DB, ProductID uint) error
+	CreateProductPhotos(tx *gorm.DB, productID uint, req *dto.ProductPhotoReq) ([]*model.ProductPhoto, error)
+	DeleteProductPhotos(tx *gorm.DB, req *dto.DeleteProductPhoto) ([]*model.ProductPhoto, error)
+	DeleteProduct(tx *gorm.DB, productID uint) (*model.Product, error)
 }
 
 type productRepository struct{}
@@ -61,16 +81,33 @@ func (r *productRepository) FindProductByID(tx *gorm.DB, productID uint) (*model
 	return product, result.Error
 }
 
-func (r *productRepository) FindProductDetailByID(tx *gorm.DB, productID uint, userID uint) (*model.Product, error) {
-	var product *model.Product
-	result := tx.Preload("ProductPhotos", "product_id = ?", productID)
+func (r *productRepository) FindProductDetailByID(tx *gorm.DB, productID uint, userID uint) (*dto.ProductDetailRes, error) {
+	var productVariantDetail *model.ProductVariantDetail
+	variant := tx.Model(&productVariantDetail)
+	variant = variant.Select("SUM(product_variant_details.stock) as total_stock, product_variant_details.product_id")
+	variant = variant.Group("product_variant_details.product_id")
+
+	var productReview *model.Review
+	review := tx.Model(&productReview)
+	review = review.Select("AVG(rating) as average_rating, COUNT(*) as total_review, reviews.product_id")
+	review = review.Group("reviews.product_id")
+
+	var product *dto.ProductDetailRes
+	result := tx.Model(&product)
+	result = result.Select("*")
+	result = result.Preload("ProductPhotos", "product_id = ?", productID)
 	result = result.Preload("ProductDetail", "product_id = ?", productID)
 	result = result.Preload("ProductVariantDetail", "product_id = ?", productID, func(db *gorm.DB) *gorm.DB {
 		return db.Order("product_variant_details.price")
 	})
+	result = result.Preload("Category")
+	result = result.Preload("Seller")
+	result = result.Preload("Promotion")
 	result = result.Preload("ProductVariantDetail.ProductVariant1")
 	result = result.Preload("ProductVariantDetail.ProductVariant2")
 	result = result.Preload("Favorite", "product_id = ? AND user_id = ? AND is_favorite IS TRUE", productID, userID)
+	result = result.Joins("JOIN (?) AS s1 ON s1.product_id = products.id", variant)
+	result = result.Joins("LEFT JOIN (?) AS s2 ON s2.product_id = products.id", review)
 	result = result.First(&product, productID)
 	if result.Error != nil {
 		return nil, result.Error
@@ -82,6 +119,30 @@ func (r *productRepository) FindSimilarProduct(tx *gorm.DB, categoryID uint) ([]
 	var products []*model.Product
 	result := tx.Limit(24).Where("category_id = ?", categoryID).Preload("ProductVariantDetail").Preload("ProductPhotos").Find(&products)
 	return products, result.Error
+}
+
+func (r *productRepository) GetProductCountBySellerID(tx *gorm.DB, sellerID uint) (int64, error) {
+	var totalProduct int64
+	result := tx.Model(&model.Product{}).Where("seller_id = ?", sellerID).Where("is_archived IS FALSE").Count(&totalProduct)
+	if result.Error != nil {
+		return 0, apperror.InternalServerError("Cannot count total product")
+	}
+	return totalProduct, nil
+}
+
+func (r *productRepository) UpdateProductFavoriteCount(tx *gorm.DB, productID uint, isFavorite bool) (*model.Product, error) {
+	var product = &model.Product{}
+	product.ID = productID
+	var result *gorm.DB
+	if isFavorite {
+		result = tx.Model(&product).Clauses(clause.Returning{}).Update("favorite_count", gorm.Expr("favorite_count + 1"))
+	} else {
+		result = tx.Model(&product).Clauses(clause.Returning{}).Update("favorite_count", gorm.Expr("favorite_count - 1"))
+	}
+	if result.Error != nil {
+		return nil, apperror.InternalServerError("Cannot update product")
+	}
+	return product, nil
 }
 
 func (r *productRepository) GetProductDetail(tx *gorm.DB, id uint) (*model.Product, error) {
@@ -268,7 +329,7 @@ func (r *productRepository) CreateProduct(tx *gorm.DB, name string, categoryID u
 	}
 	return product, nil
 }
-func (r *productRepository) CreateProductDetail(tx *gorm.DB, productID uint, req *dto.ProductDetailReq) (*model.ProductDetail, error) {
+func (r *productRepository) CreateProductDetail(tx *gorm.DB, productID uint, req *dto.ProductDetailsReq) (*model.ProductDetail, error) {
 
 	productDetail := &model.ProductDetail{
 		ProductID:       productID,
@@ -336,4 +397,130 @@ func (r *productRepository) CreateProductVariantDetail(tx *gorm.DB, productID ui
 		return nil, apperror.InternalServerError("Cannot create product variant detail")
 	}
 	return productVariantDetail, nil
+}
+func (r *productRepository) UpdateProduct(tx *gorm.DB, productID uint, p *model.Product) (*model.Product, error) {
+	var updatedProduct *model.Product
+	result := tx.First(&updatedProduct, productID).Updates(&p)
+	return updatedProduct, result.Error
+}
+
+func (r *productRepository) UpdateProductDetail(tx *gorm.DB, productID uint, pd *model.ProductDetail) (*model.ProductDetail, error) {
+
+	var updatedProductDetail *model.ProductDetail
+	result := tx.First(&updatedProductDetail, "product_id = ?", productID).Updates(&pd)
+	return updatedProductDetail, result.Error
+}
+
+func (r *productRepository) FindProductVariantDetailsByID(tx *gorm.DB, id uint) (*model.ProductVariantDetail, error) {
+	var productVariantDetails *model.ProductVariantDetail
+	result := tx.First(&productVariantDetails, id)
+	if result.Error == gorm.ErrRecordNotFound {
+		return nil, apperror.NotFoundError(new(apperror.ProductNotFoundError).Error())
+	}
+	return productVariantDetails, result.Error
+}
+func (r *productRepository) FindProductVariantDetailsByProductID(tx *gorm.DB, ProductID uint) ([]*model.ProductVariantDetail, error) {
+	var productVariantDetails []*model.ProductVariantDetail
+	result := tx.Find(&productVariantDetails, "product_id = ?", ProductID)
+	if result.Error == gorm.ErrRecordNotFound {
+		return nil, apperror.NotFoundError(new(apperror.ProductNotFoundError).Error())
+	}
+	return productVariantDetails, result.Error
+}
+func (r *productRepository) DeleteProductVariantDetailsByID(tx *gorm.DB, id uint) error {
+	var deletedVariantDetail *model.ProductVariantDetail
+	result := tx.Delete(&deletedVariantDetail, id)
+	return result.Error
+}
+func (r *productRepository) DeleteNullProductVariantDetailsByID(tx *gorm.DB, ProductID uint) error {
+	var productVariantDetails *model.ProductVariantDetail
+	result := tx.First(&productVariantDetails, "product_id = ?", ProductID).Where("variant1_id = null")
+	if result.Error == gorm.ErrRecordNotFound {
+		return apperror.NotFoundError(new(apperror.ProductNotFoundError).Error())
+	}
+	result2 := tx.Delete(&productVariantDetails)
+
+	return result2.Error
+}
+func (r *productRepository) UpdateProductVariantDetailByID(tx *gorm.DB, id uint, pvd *model.ProductVariantDetail) (*model.ProductVariantDetail, error) {
+
+	var updatedProductVariantDetail *model.ProductVariantDetail
+	result := tx.First(&updatedProductVariantDetail, id).Updates(&pvd)
+	return updatedProductVariantDetail, result.Error
+}
+
+func (r *productRepository) UpdateProductVariantByID(tx *gorm.DB, id uint, pvd *model.ProductVariant) (*model.ProductVariant, error) {
+	var updatedProductVariant *model.ProductVariant
+	result := tx.First(&updatedProductVariant, id).Updates(&pvd)
+	return updatedProductVariant, result.Error
+}
+func (r *productRepository) GetVariantByName(tx *gorm.DB, name string) (*model.ProductVariant, error) {
+	var updatedProductVariant *model.ProductVariant
+	result := tx.First(&updatedProductVariant, "name = ?", name)
+	return updatedProductVariant, result.Error
+}
+
+func (r *productRepository) CreateVariantWithName(tx *gorm.DB, name string) (*model.ProductVariant, error) {
+	createPV := model.ProductVariant{
+		Name: name,
+	}
+	result := tx.Create(&createPV)
+
+	if result.Error != nil {
+		return nil, apperror.InternalServerError("Cannot create variant")
+	}
+	return &createPV, result.Error
+}
+
+func (r *productRepository) CreateProductVariantDetailWithModel(tx *gorm.DB, pvd *model.ProductVariantDetail) (*model.ProductVariantDetail, error) {
+	result := tx.Create(&pvd)
+	if result.Error != nil {
+		return nil, apperror.InternalServerError("Cannot create variant detail")
+	}
+	return pvd, result.Error
+}
+func (r *productRepository) CreateProductPhotos(tx *gorm.DB, productID uint, req *dto.ProductPhotoReq) ([]*model.ProductPhoto, error) {
+	var ret []*model.ProductPhoto
+	for _, ph := range req.ProductPhoto {
+
+		productPhoto := model.ProductPhoto{
+			ProductID: productID,
+			PhotoURL:  ph.PhotoURL,
+			Name:      ph.Name,
+		}
+		result := tx.Clauses(clause.Returning{}).Create(&productPhoto)
+		if result.Error != nil {
+			return nil, apperror.InternalServerError("Cannot create product photo")
+		}
+
+		ret = append(ret, &productPhoto)
+	}
+
+	return ret, nil
+}
+func (r *productRepository) DeleteProductPhotos(tx *gorm.DB, req *dto.DeleteProductPhoto) ([]*model.ProductPhoto, error) {
+	var ret []*model.ProductPhoto
+	for _, ph := range req.PhotoId {
+		var p *model.ProductPhoto
+		find := tx.Where("id = ?", ph).First(&p)
+		if find.Error != nil {
+			return nil, apperror.InternalServerError("Cannot find id")
+		}
+		ret = append(ret, p)
+	}
+	result := tx.Clauses(clause.Returning{}).Delete(&ret)
+	if result.Error != nil {
+		return nil, apperror.InternalServerError("Cannot delete product photo")
+	}
+	return ret, nil
+}
+
+func (r *productRepository) DeleteProduct(tx *gorm.DB, productID uint) (*model.Product, error) {
+	var ret *model.Product
+
+	result := tx.Clauses(clause.Returning{}).Where("id = ?", productID).First(&ret).Delete(&ret)
+	if result.Error != nil {
+		return nil, apperror.InternalServerError("Cannot delete product")
+	}
+	return ret, nil
 }

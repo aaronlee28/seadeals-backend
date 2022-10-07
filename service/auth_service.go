@@ -3,7 +3,6 @@ package service
 import (
 	"gorm.io/gorm"
 	"os"
-	"seadeals-backend/apperror"
 	"seadeals-backend/config"
 	"seadeals-backend/dto"
 	"seadeals-backend/helper"
@@ -65,8 +64,7 @@ func (a *authService) AuthAfterRegister(user *model.User, wallet *model.Wallet, 
 
 	err = a.refreshTokenRepo.CreateRefreshToken(tx, user.ID, refreshToken)
 	if err != nil {
-		tx.Rollback()
-		return "", "", apperror.InternalServerError("Cannot add refresh token")
+		return "", "", err
 	}
 
 	tx.Commit()
@@ -107,7 +105,6 @@ func (a *authService) SignInWithGoogle(user *model.User) (string, string, error)
 	}
 	err = a.refreshTokenRepo.CreateRefreshToken(tx, user.ID, refreshToken)
 	if err != nil {
-		err = apperror.InternalServerError("Cannot add refresh token")
 		return "", "", err
 	}
 

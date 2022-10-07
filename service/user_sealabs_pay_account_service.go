@@ -156,7 +156,7 @@ func (u *userSeaPayAccountServ) PayWithSeaLabsPay(userID uint, req *dto.Checkout
 		UserID:        userID,
 		VoucherID:     voucherID,
 		Total:         0,
-		PaymentMethod: "sealabs pay",
+		PaymentMethod: dto.SEA_LABS_PAY,
 		Status:        "Waiting for payment",
 	}
 

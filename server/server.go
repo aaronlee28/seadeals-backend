@@ -32,6 +32,7 @@ func Init() {
 	courierRepository := repository.NewCourierRepository()
 	orderRepository := repository.NewOrderRepo()
 	sellerAvailableCourRepo := repository.NewSellerAvailableCourierRepository()
+	transactionRepo := repository.NewTransactionRepository()
 	adminRepository := repository.NewAdminRepository()
 
 	userService := service.NewUserService(&service.UserServiceConfig{
@@ -87,6 +88,7 @@ func Init() {
 		SellerRepo:      sellerRepository,
 		ReviewRepo:      reviewRepository,
 		SocialGraphRepo: socialGraphRepo,
+		ProductRepo:     productRepository,
 	})
 
 	walletService := service.NewWalletService(&service.WalletServiceConfig{
@@ -149,9 +151,15 @@ func Init() {
 	})
 
 	orderService := service.NewOrderService(&service.OrderServiceConfig{
-		DB:               db.Get(),
-		OrderRepository:  orderRepository,
-		SellerRepository: sellerRepository,
+		DB:                        db.Get(),
+		OrderRepository:           orderRepository,
+		SellerRepository:          sellerRepository,
+		VoucherRepo:               voucherRepo,
+		TransactionRepo:           transactionRepo,
+		WalletRepository:          walletRepository,
+		WalletTransRepo:           walletTransactionRepo,
+		ProductVarDetRepo:         productVarDetRepo,
+		SeaLabsPayTransHolderRepo: seaLabsPayTransactionHolderRepo,
 	})
 
 	sellerAvailableCourServ := service.NewSellerAvailableCourService(&service.SellerAvailableCourServiceConfig{

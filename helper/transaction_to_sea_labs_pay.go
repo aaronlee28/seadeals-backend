@@ -71,7 +71,6 @@ func TransactionToSeaLabsPay(accountNumber string, amount string, sign string, c
 		if err != nil {
 			panic(err)
 		}
-		fmt.Println(j.Message)
 		return "", 0, apperror.BadRequestError(j.Message)
 	}
 }
