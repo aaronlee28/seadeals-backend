@@ -87,6 +87,7 @@ func (o *orderService) CancelOrderBySeller(orderID uint, userID uint) (*model.Or
 		return nil, err
 	}
 	if order.Status != dto.OrderWaitingSeller {
+		err = apperror.BadRequestError("Cannot cancel order that is currently " + order.Status)
 		return nil, apperror.BadRequestError("Cannot cancel order that is currently " + order.Status)
 	}
 

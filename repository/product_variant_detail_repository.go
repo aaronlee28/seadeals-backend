@@ -14,6 +14,7 @@ type ProductVariantDetailRepository interface {
 	GetProductsBySellerID(tx *gorm.DB, query *dto.SellerProductSearchQuery, sellerID uint) ([]*dto.SellerProductsCustomTable, int64, int64, error)
 	GetProductsByCategoryID(tx *gorm.DB, query *dto.SellerProductSearchQuery, sellerID uint) ([]*dto.SellerProductsCustomTable, int64, int64, error)
 	SearchProducts(tx *gorm.DB, query *SearchQuery) ([]*dto.SellerProductsCustomTable, int64, int64, error)
+	GetProductVariantDetailByID(tx *gorm.DB, productVarDetID uint) (*model.ProductVariantDetail, error)
 
 	AddProductVariantStock(tx *gorm.DB, productVarDetID uint, amount uint) (*model.ProductVariantDetail, error)
 }
@@ -272,6 +273,19 @@ func (p *productVariantDetailRepository) SearchProducts(tx *gorm.DB, query *Sear
 		totalPage += 1
 	}
 	return products, totalPage, totalData, nil
+}
+
+func (p *productVariantDetailRepository) GetProductVariantDetailByID(tx *gorm.DB, productVarDetID uint) (*model.ProductVariantDetail, error) {
+	var productVarDet = &model.ProductVariantDetail{}
+	productVarDet.ID = productVarDetID
+	result := tx.Model(&productVarDet).Preload("Product").First(&productVarDet)
+	if result.Error != nil {
+		if result.Error == gorm.ErrRecordNotFound {
+			return nil, apperror.BadRequestError("That product variant detail doesn't exists")
+		}
+		return nil, apperror.InternalServerError("Cannot find product variant detail")
+	}
+	return productVarDet, nil
 }
 
 func (p *productVariantDetailRepository) AddProductVariantStock(tx *gorm.DB, productVarDetID uint, amount uint) (*model.ProductVariantDetail, error) {
