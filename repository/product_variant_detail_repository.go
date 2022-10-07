@@ -278,7 +278,7 @@ func (p *productVariantDetailRepository) SearchProducts(tx *gorm.DB, query *Sear
 func (p *productVariantDetailRepository) GetProductVariantDetailByID(tx *gorm.DB, productVarDetID uint) (*model.ProductVariantDetail, error) {
 	var productVarDet = &model.ProductVariantDetail{}
 	productVarDet.ID = productVarDetID
-	result := tx.Model(&productVarDet).Preload("Product").First(&productVarDet)
+	result := tx.Model(&productVarDet).Preload("Product.Seller").First(&productVarDet)
 	if result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
 			return nil, apperror.BadRequestError("That product variant detail doesn't exists")

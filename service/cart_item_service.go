@@ -58,7 +58,7 @@ func (o *cartItemService) AddToCart(userID uint, req *dto.AddToCartReq) (*model.
 		return nil, err
 	}
 
-	if productVarDet.Product.SellerID == userID {
+	if productVarDet.Product.Seller.UserID == userID {
 		err = apperror.BadRequestError("Cannot buy your own product")
 		return nil, err
 	}

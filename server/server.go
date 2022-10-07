@@ -110,6 +110,7 @@ func Init() {
 	orderItemService := service.NewCartItemService(&service.CartItemServiceConfig{
 		DB:                 db.Get(),
 		CartItemRepository: orderItemRepository,
+		ProductVarDetRepo:  productVarDetRepo,
 	})
 
 	refreshTokenService := service.NewRefreshTokenService(&service.RefreshTokenServiceConfig{
