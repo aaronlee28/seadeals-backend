@@ -28,13 +28,13 @@ func (h *Handler) FindProductDetailByID(ctx *gin.Context) {
 		userID = user.UserID
 	}
 
-	res, err := h.productService.FindProductDetailByID(uint(productID), userID)
+	resProduct, resSeller, err := h.productService.FindProductDetailByID(uint(productID), userID)
 	if err != nil {
 		_ = ctx.Error(err)
 		return
 	}
 
-	ctx.JSON(http.StatusOK, dto.StatusOKResponse(res))
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(gin.H{"product_detail": resProduct, "seller": resSeller}))
 }
 
 func (h *Handler) FindSimilarProduct(ctx *gin.Context) {
