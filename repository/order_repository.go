@@ -223,11 +223,15 @@ func (o *orderRepository) UpdateStockByProductVariantDetailID(pvdID uint, quanti
 
 func (o *orderRepository) UpdateOrderStatusByTransID(tx *gorm.DB, transactionID uint, status string) ([]*model.Order, error) {
 	var orders []*model.Order
-	result := tx.Model(&orders).Clauses(clause.Returning{}).Preload("Delivery").Where("transaction_id = ?", transactionID).Update("status", status)
+	result := tx.Model(&orders).Clauses(clause.Returning{}).Where("transaction_id = ?", transactionID).Update("status", status)
 	if result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
 			return nil, apperror.BadRequestError("order doesn't exists")
 		}
+		return nil, apperror.InternalServerError("Cannot find order")
+	}
+	result = result.Model(&orders).Where("transaction_id = ?", transactionID).Preload("Delivery").Find(&orders)
+	if result.Error != nil {
 		return nil, apperror.InternalServerError("Cannot find order")
 	}
 	return orders, nil

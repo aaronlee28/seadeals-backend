@@ -529,8 +529,8 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 		}
 
 		deliveryReq := &dto.DeliveryCalculateReq{
-			OriginCity:      strconv.FormatUint(uint64(req.BuyerAddressID), 10),
-			DestinationCity: seller.Address.CityID,
+			OriginCity:      seller.Address.CityID,
+			DestinationCity: strconv.FormatUint(uint64(req.BuyerAddressID), 10),
 			Weight:          strconv.Itoa(totalWeight),
 			Courier:         courier.Code,
 		}
@@ -559,7 +559,9 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 		}
 
 		//update order price with map - voucher id
-		err = w.walletRepository.UpdateOrder(tx, order, totalOrder)
+		order.Total = totalOrder
+		order.Status = dto.OrderWaitingSeller
+		err = w.walletRepository.UpdateOrder(tx, order)
 		if err != nil {
 			return nil, err
 		}

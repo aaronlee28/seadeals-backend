@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"gorm.io/gorm"
 	"seadeals-backend/apperror"
 	"seadeals-backend/config"
@@ -13,9 +14,9 @@ import (
 )
 
 type UserSeaPayAccountServ interface {
-	RegisterSeaLabsPayAccount(req *dto.RegisterSeaLabsPayReq) (*dto.RegisterSeaLabsPayRes, error)
-	CheckSeaLabsAccountExists(req *dto.CheckSeaLabsPayReq) (*dto.CheckSeaLabsPayRes, error)
-	UpdateSeaLabsAccountToMain(req *dto.UpdateSeaLabsPayToMainReq) (*model.UserSealabsPayAccount, error)
+	RegisterSeaLabsPayAccount(req *dto.RegisterSeaLabsPayReq, userID uint) (*dto.RegisterSeaLabsPayRes, error)
+	CheckSeaLabsAccountExists(req *dto.CheckSeaLabsPayReq, userID uint) (*dto.CheckSeaLabsPayRes, error)
+	UpdateSeaLabsAccountToMain(req *dto.UpdateSeaLabsPayToMainReq, userID uint) (*model.UserSealabsPayAccount, error)
 	GetSeaLabsAccountByUserID(userID uint) ([]*model.UserSealabsPayAccount, error)
 
 	PayWithSeaLabsPay(userID uint, req *dto.CheckoutCartReq) (string, *model.SeaLabsPayTransactionHolder, error)
@@ -41,7 +42,7 @@ type userSeaPayAccountServ struct {
 type UserSeaPayAccountServConfig struct {
 	DB                          *gorm.DB
 	UserSeaPayAccountRepo       repository.UserSeaPayAccountRepo
-	courierRepository           repository.CourierRepository
+	CourierRepository           repository.CourierRepository
 	DeliveryRepo                repository.DeliveryRepository
 	DeliveryActRepo             repository.DeliveryActivityRepository
 	OrderRepo                   repository.OrderRepository
@@ -56,7 +57,7 @@ func NewUserSeaPayAccountServ(c *UserSeaPayAccountServConfig) UserSeaPayAccountS
 	return &userSeaPayAccountServ{
 		db:                          c.DB,
 		userSeaPayAccountRepo:       c.UserSeaPayAccountRepo,
-		courierRepository:           c.courierRepository,
+		courierRepository:           c.CourierRepository,
 		deliveryRepo:                c.DeliveryRepo,
 		deliveryActRepo:             c.DeliveryActRepo,
 		orderRepo:                   c.OrderRepo,
@@ -68,12 +69,12 @@ func NewUserSeaPayAccountServ(c *UserSeaPayAccountServConfig) UserSeaPayAccountS
 	}
 }
 
-func (u *userSeaPayAccountServ) CheckSeaLabsAccountExists(req *dto.CheckSeaLabsPayReq) (*dto.CheckSeaLabsPayRes, error) {
+func (u *userSeaPayAccountServ) CheckSeaLabsAccountExists(req *dto.CheckSeaLabsPayReq, userID uint) (*dto.CheckSeaLabsPayRes, error) {
 	tx := u.db.Begin()
 	var err error
 	defer helper.CommitOrRollback(tx, &err)
 
-	hasExists, err := u.userSeaPayAccountRepo.HasExistsSeaLabsPayAccountWith(tx, req.UserID, req.AccountNumber)
+	hasExists, err := u.userSeaPayAccountRepo.HasExistsSeaLabsPayAccountWith(tx, userID, req.AccountNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -82,12 +83,12 @@ func (u *userSeaPayAccountServ) CheckSeaLabsAccountExists(req *dto.CheckSeaLabsP
 	return response, nil
 }
 
-func (u *userSeaPayAccountServ) RegisterSeaLabsPayAccount(req *dto.RegisterSeaLabsPayReq) (*dto.RegisterSeaLabsPayRes, error) {
+func (u *userSeaPayAccountServ) RegisterSeaLabsPayAccount(req *dto.RegisterSeaLabsPayReq, userID uint) (*dto.RegisterSeaLabsPayRes, error) {
 	tx := u.db.Begin()
 	var err error
 	defer helper.CommitOrRollback(tx, &err)
 
-	hasExists, err := u.userSeaPayAccountRepo.HasExistsSeaLabsPayAccountWith(tx, req.UserID, req.AccountNumber)
+	hasExists, err := u.userSeaPayAccountRepo.HasExistsSeaLabsPayAccountWith(tx, userID, req.AccountNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +98,7 @@ func (u *userSeaPayAccountServ) RegisterSeaLabsPayAccount(req *dto.RegisterSeaLa
 		return nil, err
 	}
 
-	seaLabsPayAccount, err := u.userSeaPayAccountRepo.RegisterSeaLabsPayAccount(tx, req)
+	seaLabsPayAccount, err := u.userSeaPayAccountRepo.RegisterSeaLabsPayAccount(tx, req, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -109,12 +110,12 @@ func (u *userSeaPayAccountServ) RegisterSeaLabsPayAccount(req *dto.RegisterSeaLa
 	return response, nil
 }
 
-func (u *userSeaPayAccountServ) UpdateSeaLabsAccountToMain(req *dto.UpdateSeaLabsPayToMainReq) (*model.UserSealabsPayAccount, error) {
+func (u *userSeaPayAccountServ) UpdateSeaLabsAccountToMain(req *dto.UpdateSeaLabsPayToMainReq, userID uint) (*model.UserSealabsPayAccount, error) {
 	tx := u.db.Begin()
 	var err error
 	defer helper.CommitOrRollback(tx, &err)
 
-	updatedData, err := u.userSeaPayAccountRepo.UpdateSeaLabsPayAccountToMain(tx, req)
+	updatedData, err := u.userSeaPayAccountRepo.UpdateSeaLabsPayAccountToMain(tx, req, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +141,8 @@ func (u *userSeaPayAccountServ) PayWithSeaLabsPay(userID uint, req *dto.Checkout
 	var err error
 	defer helper.CommitOrRollback(tx, &err)
 
-	hasAccount, err := u.userSeaPayAccountRepo.HasExistsSeaLabsPayAccountWith(tx, userID, req.AccountNumber)
+	var hasAccount bool
+	hasAccount, err = u.userSeaPayAccountRepo.HasExistsSeaLabsPayAccountWith(tx, userID, req.AccountNumber)
 	if err != nil {
 		return "", nil, err
 	}
@@ -149,7 +151,8 @@ func (u *userSeaPayAccountServ) PayWithSeaLabsPay(userID uint, req *dto.Checkout
 		return "", nil, err
 	}
 
-	globalVoucher, err := u.walletRepository.GetVoucher(tx, req.GlobalVoucherCode)
+	var globalVoucher = &model.Voucher{}
+	globalVoucher, err = u.walletRepository.GetVoucher(tx, req.GlobalVoucherCode)
 	if err != nil {
 		return "", nil, err
 	}
@@ -274,8 +277,8 @@ func (u *userSeaPayAccountServ) PayWithSeaLabsPay(userID uint, req *dto.Checkout
 		}
 
 		deliveryReq := &dto.DeliveryCalculateReq{
-			OriginCity:      strconv.FormatUint(uint64(req.BuyerAddressID), 10),
-			DestinationCity: seller.Address.CityID,
+			OriginCity:      seller.Address.CityID,
+			DestinationCity: strconv.FormatUint(uint64(req.BuyerAddressID), 10),
 			Weight:          strconv.Itoa(totalWeight),
 			Courier:         courier.Code,
 		}
@@ -304,7 +307,9 @@ func (u *userSeaPayAccountServ) PayWithSeaLabsPay(userID uint, req *dto.Checkout
 		}
 
 		// Update order price with map - voucher id
-		err = u.walletRepository.UpdateOrder(tx, order, totalOrder)
+		order.Total = totalOrder
+		order.Status = dto.OrderWaitingPayment
+		err = u.walletRepository.UpdateOrder(tx, order)
 		if err != nil {
 			return "", nil, err
 		}
@@ -371,6 +376,7 @@ func (u *userSeaPayAccountServ) PayWithSeaLabsPayCallback(txnID uint, status str
 			return nil, err
 		}
 		for _, order := range orders {
+			fmt.Println(order)
 			_, _ = u.deliveryRepo.UpdateDeliveryStatus(tx, order.Delivery.ID, dto.OrderWaitingSeller)
 		}
 	}

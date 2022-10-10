@@ -116,6 +116,7 @@ func Init() {
 		UserSeaPayAccountRepo:       userSeaLabsPayAccountRepo,
 		DeliveryRepo:                deliveryRepository,
 		DeliveryActRepo:             deliveryActivityRepo,
+		CourierRepository:           courierRepository,
 		OrderRepo:                   orderRepository,
 		SeaLabsPayTopUpHolderRepo:   seaLabsPayTopUpHolderRepo,
 		SeaLabsPayTransactionHolder: seaLabsPayTransactionHolderRepo,
