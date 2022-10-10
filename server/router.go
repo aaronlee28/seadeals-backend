@@ -59,7 +59,6 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		SellerAvailableCourServ: c.SellerAvailableCourServ,
 		AdminService:            c.AdminService,
 	})
-
 	r.Use(middleware.ErrorHandler)
 	r.Use(middleware.AllowCrossOrigin)
 	r.NoRoute()
