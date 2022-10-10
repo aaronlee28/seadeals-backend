@@ -127,6 +127,14 @@ func (w *walletService) PaginatedTransactions(q *repository.Query, userID uint) 
 	var err error
 	defer helper.CommitOrRollback(tx, &err)
 
+	status, err := w.walletRepository.GetWalletStatus(tx, userID)
+	if err != nil {
+		return nil, err
+	}
+	if status == repository.WalletBlocked {
+		return nil, apperror.BadRequestError("Wallet is currently blocked")
+	}
+
 	var ts = make([]dto.TransactionsRes, 0)
 	l, t, err := w.walletRepository.PaginatedTransactions(tx, q, userID)
 	if err != nil {
@@ -370,6 +378,14 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 	tx := w.db.Begin()
 	var err error
 	defer helper.CommitOrRollback(tx, &err)
+
+	status, err := w.walletRepository.GetWalletStatus(tx, userID)
+	if err != nil {
+		return nil, err
+	}
+	if status == repository.WalletBlocked {
+		return nil, apperror.BadRequestError("Wallet is currently blocked")
+	}
 
 	globalVoucher, err := w.walletRepository.GetVoucher(tx, req.GlobalVoucherCode)
 	if err != nil {
