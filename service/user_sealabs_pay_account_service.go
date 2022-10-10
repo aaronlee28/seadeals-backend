@@ -307,6 +307,14 @@ func (u *userSeaPayAccountServ) TopUpWithSeaLabsPay(amount float64, userID uint,
 	var err error
 	defer helper.CommitOrRollback(tx, &err)
 
+	status, err := u.walletRepository.GetWalletStatus(tx, userID)
+	if err != nil {
+		return nil, "", err
+	}
+	if status == repository.WalletBlocked {
+		return nil, "", apperror.BadRequestError("Wallet is currently blocked")
+	}
+
 	hasAccount, err := u.userSeaPayAccountRepo.HasExistsSeaLabsPayAccountWith(tx, userID, accountNumber)
 	if err != nil {
 		return nil, "", err
