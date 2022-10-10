@@ -16,6 +16,7 @@ type ProductService interface {
 	GetProductsBySellerID(query *dto.SellerProductSearchQuery, sellerID uint) ([]*dto.ProductRes, int64, int64, error)
 	GetProductsByCategoryID(query *dto.SellerProductSearchQuery, categoryID uint) ([]*dto.ProductRes, int64, int64, error)
 	GetProducts(q *repository.SearchQuery) ([]*dto.ProductRes, int64, int64, error)
+
 	CreateSellerProduct(userID uint, req *dto.PostCreateProductReq) (*dto.PostCreateProductRes, error)
 	UpdateProductAndDetails(userID uint, productID uint, req *dto.PatchProductAndDetailsReq) (*dto.PatchProductAndDetailsRes, error)
 	UpdateVariantAndDetails(userID uint, variantDetailsID uint, req *dto.PatchVariantAndDetails) (*dto.VariantAndDetails, error)

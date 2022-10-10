@@ -19,6 +19,7 @@ type OrderRepository interface {
 	GetOrderDetailByID(tx *gorm.DB, orderID uint) (*model.Order, error)
 
 	UpdateOrderStatus(tx *gorm.DB, orderID uint, status string) (*model.Order, error)
+	UpdateOrderStatusByTransID(tx *gorm.DB, transactionID uint, status string) ([]*model.Order, error)
 }
 
 type orderRepository struct{}
@@ -127,4 +128,16 @@ func (o *orderRepository) UpdateOrderStatus(tx *gorm.DB, orderID uint, status st
 		return nil, apperror.InternalServerError("Cannot find order")
 	}
 	return order, nil
+}
+
+func (o *orderRepository) UpdateOrderStatusByTransID(tx *gorm.DB, transactionID uint, status string) ([]*model.Order, error) {
+	var orders []*model.Order
+	result := tx.Model(&orders).Clauses(clause.Returning{}).Preload("Delivery").Where("transaction_id = ?", transactionID).Update("status", status)
+	if result.Error != nil {
+		if result.Error == gorm.ErrRecordNotFound {
+			return nil, apperror.BadRequestError("order doesn't exists")
+		}
+		return nil, apperror.InternalServerError("Cannot find order")
+	}
+	return orders, nil
 }

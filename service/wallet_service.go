@@ -37,28 +37,40 @@ type WalletService interface {
 }
 
 type walletService struct {
-	db               *gorm.DB
-	walletRepository repository.WalletRepository
-	userRepository   repository.UserRepository
-	walletTransRepo  repository.WalletTransactionRepository
-	userRoleRepo     repository.UserRoleRepository
+	db                *gorm.DB
+	walletRepository  repository.WalletRepository
+	courierRepository repository.CourierRepository
+	deliveryRepo      repository.DeliveryRepository
+	deliveryActRepo   repository.DeliveryActivityRepository
+	userRepository    repository.UserRepository
+	walletTransRepo   repository.WalletTransactionRepository
+	userRoleRepo      repository.UserRoleRepository
+	sellerRepository  repository.SellerRepository
 }
 
 type WalletServiceConfig struct {
-	DB               *gorm.DB
-	WalletRepository repository.WalletRepository
-	UserRepository   repository.UserRepository
-	WalletTransRepo  repository.WalletTransactionRepository
-	UserRoleRepo     repository.UserRoleRepository
+	DB                *gorm.DB
+	WalletRepository  repository.WalletRepository
+	CourierRepository repository.CourierRepository
+	DeliveryRepo      repository.DeliveryRepository
+	DeliveryActRepo   repository.DeliveryActivityRepository
+	UserRepository    repository.UserRepository
+	WalletTransRepo   repository.WalletTransactionRepository
+	UserRoleRepo      repository.UserRoleRepository
+	SellerRepository  repository.SellerRepository
 }
 
 func NewWalletService(c *WalletServiceConfig) WalletService {
 	return &walletService{
-		db:               c.DB,
-		walletRepository: c.WalletRepository,
-		userRepository:   c.UserRepository,
-		walletTransRepo:  c.WalletTransRepo,
-		userRoleRepo:     c.UserRoleRepo,
+		db:                c.DB,
+		walletRepository:  c.WalletRepository,
+		courierRepository: c.CourierRepository,
+		deliveryRepo:      c.DeliveryRepo,
+		deliveryActRepo:   c.DeliveryActRepo,
+		userRepository:    c.UserRepository,
+		walletTransRepo:   c.WalletTransRepo,
+		userRoleRepo:      c.UserRoleRepo,
+		sellerRepository:  c.SellerRepository,
 	}
 }
 
@@ -384,7 +396,8 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 		return nil, err
 	}
 	if status == repository.WalletBlocked {
-		return nil, apperror.BadRequestError("Wallet is currently blocked")
+		err = apperror.BadRequestError("Wallet is currently blocked")
+		return nil, err
 	}
 
 	globalVoucher, err := w.walletRepository.GetVoucher(tx, req.GlobalVoucherCode)
@@ -409,8 +422,8 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 		UserID:        userID,
 		VoucherID:     voucherID,
 		Total:         0,
-		PaymentMethod: dto.WALLET,
-		Status:        "Waiting for Seller",
+		PaymentMethod: dto.Wallet,
+		Status:        dto.TransactionPayed,
 	}
 
 	transaction, err = w.walletRepository.CreateTransaction(tx, transaction)
@@ -447,6 +460,7 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 			}
 		}
 		var totalOrder float64
+		var totalWeight int
 
 		for _, id := range item.CartItemID {
 			var totalOrderItem float64
@@ -475,6 +489,13 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 			}
 			totalOrder += totalOrderItem
 
+			// Get weight
+			totalWeight += int(cartItem.Quantity) * cartItem.ProductVariantDetail.Product.ProductDetail.Weight
+			if totalWeight > 20000 {
+				err = apperror.BadRequestError(cartItem.ProductVariantDetail.Product.Name + " exceeded weight limit of 20000")
+				return nil, apperror.BadRequestError(cartItem.ProductVariantDetail.Product.Name + " exceeded weight limit of 20000")
+			}
+
 			// update stock
 			err = w.walletRepository.UpdateStock(tx, cartItem.ProductVariantDetail, uint(newStock))
 			if err != nil {
@@ -493,6 +514,50 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 		if voucher != nil {
 			totalOrder -= voucher.Amount
 		}
+
+		var seller *model.Seller
+		seller, err = w.sellerRepository.FindSellerByID(tx, item.SellerID)
+		if err != nil {
+			return nil, err
+		}
+
+		// Create delivery
+		var courier *model.Courier
+		courier, err = w.courierRepository.GetCourierDetailByID(tx, item.CourierID)
+		if err != nil {
+			return nil, err
+		}
+
+		deliveryReq := &dto.DeliveryCalculateReq{
+			OriginCity:      strconv.FormatUint(uint64(req.BuyerAddressID), 10),
+			DestinationCity: seller.Address.CityID,
+			Weight:          strconv.Itoa(totalWeight),
+			Courier:         courier.Code,
+		}
+		var deliveryResult = &dto.DeliveryCalculateReturn{}
+		deliveryResult, err = helper.CalculateDeliveryPrice(deliveryReq)
+		if err != nil {
+			return nil, err
+		}
+		totalOrder += float64(deliveryResult.Total)
+
+		delivery := &model.Delivery{
+			Address:        seller.Address.Address,
+			Status:         dto.DeliveryWaitingForSeller,
+			DeliveryNumber: helper.RandomString(10),
+			OrderID:        order.ID,
+			CourierID:      courier.ID,
+		}
+		newDelivery := &model.Delivery{}
+		newDelivery, err = w.deliveryRepo.CreateDelivery(tx, delivery)
+		if err != nil {
+			return nil, err
+		}
+		_, err = w.deliveryActRepo.CreateActivity(tx, newDelivery.ID, "Process dibuat dan menunggu pembayaran dari buyer")
+		if err != nil {
+			return nil, err
+		}
+
 		//update order price with map - voucher id
 		err = w.walletRepository.UpdateOrder(tx, order, totalOrder)
 		if err != nil {
@@ -522,7 +587,7 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 		return nil, err
 	}
 
-	if req.PaymentMethod == dto.WALLET {
+	if req.PaymentMethod == dto.Wallet {
 		err = w.walletRepository.CreateWalletTransaction(tx, wallet.ID, transaction)
 		if err != nil {
 			return nil, err

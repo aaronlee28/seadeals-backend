@@ -12,6 +12,7 @@ type DeliveryRepository interface {
 
 	CreateDelivery(tx *gorm.DB, delivery *model.Delivery) (*model.Delivery, error)
 	UpdateDeliveryStatus(tx *gorm.DB, deliveryID uint, status string) (*model.Delivery, error)
+	UpdateDeliveryStatusByOrderID(tx *gorm.DB, orderID uint, status string) (*model.Delivery, error)
 }
 
 type deliveryRepository struct{}
@@ -44,6 +45,15 @@ func (d *deliveryRepository) UpdateDeliveryStatus(tx *gorm.DB, deliveryID uint, 
 	var delivery = &model.Delivery{}
 	delivery.ID = deliveryID
 	result := tx.Model(&delivery).Clauses(clause.Returning{}).Update("status", status)
+	if result.Error != nil {
+		return nil, apperror.InternalServerError("Cannot update delivery")
+	}
+	return delivery, nil
+}
+
+func (d *deliveryRepository) UpdateDeliveryStatusByOrderID(tx *gorm.DB, orderID uint, status string) (*model.Delivery, error) {
+	var delivery = &model.Delivery{}
+	result := tx.Model(&delivery).Clauses(clause.Returning{}).Where("order_id = ?", orderID).Update("status", status)
 	if result.Error != nil {
 		return nil, apperror.InternalServerError("Cannot update delivery")
 	}

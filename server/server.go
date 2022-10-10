@@ -99,25 +99,34 @@ func Init() {
 	})
 
 	walletService := service.NewWalletService(&service.WalletServiceConfig{
-		DB:               db.Get(),
-		WalletRepository: walletRepository,
-		UserRepository:   userRepository,
-		WalletTransRepo:  walletTransactionRepo,
-		UserRoleRepo:     userRoleRepository,
+		DB:                db.Get(),
+		WalletRepository:  walletRepository,
+		CourierRepository: courierRepository,
+		DeliveryRepo:      deliveryRepository,
+		DeliveryActRepo:   deliveryActivityRepo,
+		UserRepository:    userRepository,
+		WalletTransRepo:   walletTransactionRepo,
+		UserRoleRepo:      userRoleRepository,
+		SellerRepository:  sellerRepository,
 	})
 
 	userSeaLabsPayAccountServ := service.NewUserSeaPayAccountServ(&service.UserSeaPayAccountServConfig{
 		DB:                          db.Get(),
 		UserSeaPayAccountRepo:       userSeaLabsPayAccountRepo,
+		DeliveryRepo:                deliveryRepository,
+		DeliveryActRepo:             deliveryActivityRepo,
+		OrderRepo:                   orderRepository,
 		SeaLabsPayTopUpHolderRepo:   seaLabsPayTopUpHolderRepo,
+		SeaLabsPayTransactionHolder: seaLabsPayTransactionHolderRepo,
+		SellerRepository:            sellerRepository,
 		WalletRepository:            walletRepository,
 		WalletTransactionRepo:       walletTransactionRepo,
-		SeaLabsPayTransactionHolder: seaLabsPayTransactionHolderRepo,
 	})
 
 	orderItemService := service.NewCartItemService(&service.CartItemServiceConfig{
 		DB:                 db.Get(),
 		CartItemRepository: orderItemRepository,
+		ProductVarDetRepo:  productVarDetRepo,
 	})
 
 	refreshTokenService := service.NewRefreshTokenService(&service.RefreshTokenServiceConfig{
