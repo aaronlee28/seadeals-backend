@@ -8,10 +8,13 @@ import (
 )
 
 type AddressRepository interface {
-	CreateAddress(tx *gorm.DB, req *dto.CreateAddressReq, userID uint) (*model.Address, error)
 	GetAddressesByUserID(*gorm.DB, uint) ([]*model.Address, error)
 	GetAddressesByID(tx *gorm.DB, id, userID uint) (*model.Address, error)
+
 	UpdateAddress(*gorm.DB, *model.Address) (*model.Address, error)
+	CreateAddress(tx *gorm.DB, req *dto.CreateAddressReq, userID uint) (*model.Address, error)
+
+	CheckUserAddress(tx *gorm.DB, userID uint, addressID uint) (*model.Address, error)
 	GetUserMainAddress(tx *gorm.DB, userID uint) (*model.Address, error)
 	ChangeMainAddress(tx *gorm.DB, ID, userID uint) (*model.Address, error)
 }
@@ -79,6 +82,20 @@ func (a *addressRepository) UpdateAddress(tx *gorm.DB, newAddress *model.Address
 	}
 
 	return newAddress, result.Error
+}
+
+func (a *addressRepository) CheckUserAddress(tx *gorm.DB, userID uint, addressID uint) (*model.Address, error) {
+	var address *model.Address
+	address.ID = addressID
+	result := tx.Model(&address).Unscoped().Where("user_id = ?", userID).First(&address)
+	if result.Error != nil {
+		if result.Error != gorm.ErrRecordNotFound {
+			return nil, apperror.InternalServerError("Cannot find address")
+		}
+		return nil, apperror.BadRequestError("The user does not have this address")
+	}
+
+	return address, nil
 }
 
 func (a *addressRepository) GetUserMainAddress(tx *gorm.DB, userID uint) (*model.Address, error) {

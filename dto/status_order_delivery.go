@@ -1,9 +1,10 @@
 package dto
 
 const (
-	DeliveryOngoing = "ongoing"
-	DeliveryFailed  = "failed"
-	DeliveryDone    = "done"
+	DeliveryWaitingForSeller = "waiting for seller"
+	DeliveryOngoing          = "on delivery"
+	DeliveryFailed           = "failed"
+	DeliveryDone             = "done"
 )
 
 const (

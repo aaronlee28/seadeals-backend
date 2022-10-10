@@ -29,6 +29,7 @@ type RouterConfig struct {
 	PromotionService        service.PromotionService
 	CourierService          service.CourierService
 	OrderService            service.OrderService
+	DeliveryService         service.DeliveryService
 	SellerAvailableCourServ service.SellerAvailableCourService
 	AdminService            service.AdminService
 }
@@ -56,6 +57,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		PromotionService:        c.PromotionService,
 		CourierService:          c.CourierService,
 		OrderService:            c.OrderService,
+		DeliveryService:         c.DeliveryService,
 		SellerAvailableCourServ: c.SellerAvailableCourServ,
 		AdminService:            c.AdminService,
 	})
@@ -152,6 +154,11 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	// ORDER
 	r.GET("/sellers/orders", middleware.AuthorizeJWTFor(model.SellerRoleName), h.GetSellerOrders)
 	r.GET("/user/orders", middleware.AuthorizeJWTFor(model.SellerRoleName), h.GetBuyerOrders)
+
+	// DELIVERY
+	r.POST("/seller/deliver/order", middleware.AuthorizeJWTFor(model.SellerRoleName), middleware.RequestValidator(func() any {
+		return &dto.DeliverOrderReq{}
+	}), h.DeliverOrder)
 
 	// VOUCHER
 	r.POST("/vouchers", middleware.AuthorizeJWTFor(model.SellerRoleName), middleware.RequestValidator(func() any {

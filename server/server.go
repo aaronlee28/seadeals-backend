@@ -36,6 +36,8 @@ func Init() {
 	adminRepository := repository.NewAdminRepository()
 	complaintRepo := repository.NewComplaintRepository()
 	complaintPhotoRepo := repository.NewComplaintPhotoRepository()
+	deliveryRepository := repository.NewDeliveryRepository()
+	deliveryActivityRepo := repository.NewDeliveryActivityRepository()
 
 	userService := service.NewUserService(&service.UserServiceConfig{
 		DB:               db.Get(),
@@ -169,6 +171,15 @@ func Init() {
 		ComplaintPhotoRepo:        complaintPhotoRepo,
 	})
 
+	deliveryService := service.NewDeliveryService(&service.DeliveryServiceConfig{
+		DB:                  db.Get(),
+		DeliveryRepository:  deliveryRepository,
+		DeliverActivityRepo: deliveryActivityRepo,
+		AddressRepository:   addressRepository,
+		OrderRepository:     orderRepository,
+		SellerRepository:    sellerRepository,
+	})
+
 	sellerAvailableCourServ := service.NewSellerAvailableCourService(&service.SellerAvailableCourServiceConfig{
 		DB:                  db.Get(),
 		SellerAvailCourRepo: sellerAvailableCourRepo,
@@ -199,6 +210,7 @@ func Init() {
 		PromotionService:        promotionService,
 		CourierService:          courierService,
 		OrderService:            orderService,
+		DeliveryService:         deliveryService,
 		SellerAvailableCourServ: sellerAvailableCourServ,
 		AdminService:            adminService,
 	})
