@@ -1,10 +1,14 @@
 package repository
 
 import (
+	"fmt"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"seadeals-backend/apperror"
+	"seadeals-backend/db"
+	"seadeals-backend/dto"
 	"seadeals-backend/model"
+	"time"
 )
 
 type OrderQuery struct {
@@ -19,9 +23,16 @@ type OrderRepository interface {
 	GetOrderDetailByID(tx *gorm.DB, orderID uint) (*model.Order, error)
 
 	UpdateOrderStatus(tx *gorm.DB, orderID uint, status string) (*model.Order, error)
+	CheckAndUpdateOnDelivery()
+	CheckAndUpdateWaitingForSeller() []*model.Order
+	RefundToWalletByUserID(userID uint, refundedAmount float64) *model.Wallet
+	AddToWalletTransaction(walletID uint, refundAmount float64)
+	GetOrderItemsByOrderID(orderID uint) []*model.OrderItem
+	UpdateStockByProductVariantDetailID(pvdID uint, quantity uint)
 }
 
-type orderRepository struct{}
+type orderRepository struct {
+}
 
 func NewOrderRepo() OrderRepository {
 	return &orderRepository{}
@@ -126,5 +137,85 @@ func (o *orderRepository) UpdateOrderStatus(tx *gorm.DB, orderID uint, status st
 		}
 		return nil, apperror.InternalServerError("Cannot find order")
 	}
+
 	return order, nil
+}
+
+func (o *orderRepository) CheckAndUpdateOnDelivery() {
+	var order []*model.Order
+	tx := db.Get().Begin()
+	_ = tx.Clauses(clause.Returning{}).Where("status = ?", dto.OrderOnDelivery).Where("? >= updated_at at time zone 'UTC' + interval '2 day'", time.Now()).Find(&order).Update("status", dto.OrderDelivered)
+	tx.Commit()
+}
+
+func (o *orderRepository) CheckAndUpdateWaitingForSeller() []*model.Order {
+	tx := db.Get().Begin()
+	var orders []*model.Order
+	result := tx.Clauses(clause.Returning{}).Where("status = ?", dto.OrderWaitingSeller).Where("? >= updated_at at time zone 'UTC' + interval '3 day'", time.Now()).Find(&orders).Update("status", dto.OrderRefunded)
+	if result.Error != nil {
+		tx.Rollback()
+		fmt.Println("error:", result.Error)
+		return nil
+	}
+	tx.Commit()
+	return orders
+}
+
+func (o *orderRepository) RefundToWalletByUserID(userID uint, refundedAmount float64) *model.Wallet {
+	tx := db.Get().Begin()
+	var wallet *model.Wallet
+	result := tx.Clauses(clause.Returning{}).Where("id = ?", userID).First(&wallet).Update("balance", wallet.Balance+refundedAmount)
+	if result.Error != nil {
+		tx.Rollback()
+		fmt.Println("error:", result.Error)
+		return nil
+	}
+	tx.Commit()
+	return wallet
+}
+
+func (o *orderRepository) AddToWalletTransaction(walletID uint, refundAmount float64) {
+	tx := db.Get().Begin()
+	walletTransaction := model.WalletTransaction{
+		WalletID:      walletID,
+		TransactionID: nil,
+		Total:         refundAmount,
+		PaymentMethod: dto.WALLET,
+		PaymentType:   "credit",
+		Description:   "refund",
+	}
+	result := tx.Create(&walletTransaction)
+	if result.Error != nil {
+		tx.Rollback()
+		fmt.Println("error:", result.Error)
+		return
+	}
+	tx.Commit()
+	return
+}
+
+func (o *orderRepository) GetOrderItemsByOrderID(orderID uint) []*model.OrderItem {
+	tx := db.Get().Begin()
+	var orderItems []*model.OrderItem
+	result := tx.Clauses(clause.Returning{}).Where("order_id = ?", orderID).Find(&orderItems)
+	if result.Error != nil {
+		tx.Rollback()
+		fmt.Println("error:", result.Error)
+		return nil
+	}
+	tx.Commit()
+	return orderItems
+}
+
+func (o *orderRepository) UpdateStockByProductVariantDetailID(pvdID uint, quantity uint) {
+	tx := db.Get().Begin()
+	var pvd *model.ProductVariantDetail
+	result := tx.Clauses(clause.Returning{}).Where("id = ?", pvdID).Find(&pvd).Update("stock", pvd.Stock+quantity)
+	if result.Error != nil {
+		tx.Rollback()
+		fmt.Println("error:", result.Error)
+		return
+	}
+	tx.Commit()
+	return
 }
