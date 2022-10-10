@@ -3,6 +3,7 @@ package service
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/robfig/cron/v3"
 	"gorm.io/gorm"
 	"math"
 	"net/http"
@@ -19,11 +20,11 @@ import (
 type OrderService interface {
 	GetOrderBySellerID(userID uint, query *repository.OrderQuery) ([]*model.Order, int64, int64, error)
 	GetOrderByUserID(userID uint, query *repository.OrderQuery) ([]*model.Order, int64, int64, error)
-
 	CancelOrderBySeller(orderID uint, userID uint) (*model.Order, error)
 	RequestRefundByBuyer(req *dto.CreateComplaintReq, userID uint) (*dto.CreateComplaintRes, error)
 	AcceptRefundRequest(req *dto.RejectAcceptRefundReq, userID uint) (*dto.RejectAcceptRefundRes, error)
 	RejectRefundRequest(req *dto.RejectAcceptRefundReq, userID uint) (*dto.RejectAcceptRefundRes, error)
+	RunCronJobs()
 }
 
 type orderService struct {
@@ -443,4 +444,26 @@ func (o *orderService) RejectRefundRequest(req *dto.RejectAcceptRefundReq, userI
 	}
 
 	return response, nil
+}
+
+func (o *orderService) RunCronJobs() {
+	//tx := o.db.Begin()
+	c := cron.New(cron.WithLocation(time.UTC))
+	_, _ = c.AddFunc("@daily", func() { o.orderRepository.CheckAndUpdateOnDelivery() })
+	_, _ = c.AddFunc("@daily", func() {
+		orders := o.orderRepository.CheckAndUpdateWaitingForSeller()
+		for _, order := range orders {
+			var wallet *model.Wallet
+			var orderItems []*model.OrderItem
+			wallet = o.orderRepository.RefundToWalletByUserID(order.UserID, order.Total)
+			o.orderRepository.AddToWalletTransaction(wallet.ID, order.Total)
+			orderItems = o.orderRepository.GetOrderItemsByOrderID(order.ID)
+			for _, orderItem := range orderItems {
+				o.orderRepository.UpdateStockByProductVariantDetailID(orderItem.ProductVariantDetailID, orderItem.Quantity)
+			}
+
+		}
+	})
+	c.Start()
+
 }

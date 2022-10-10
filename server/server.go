@@ -3,6 +3,7 @@ package server
 import (
 	"log"
 	"seadeals-backend/config"
+	"seadeals-backend/cronjob"
 	"seadeals-backend/db"
 	"seadeals-backend/repository"
 	"seadeals-backend/service"
@@ -199,6 +200,14 @@ func Init() {
 		DB:        db.Get(),
 		AdminRepo: adminRepository,
 	})
+
+	runCronJobHelper := cronjob.NewCronJob(&cronjob.RunCronJobConfig{
+		DB:           db.Get(),
+		OrderService: orderService,
+	})
+
+	runCronJobHelper.RunCronJobs()
+
 	router := NewRouter(&RouterConfig{
 		UserService:             userService,
 		AuthService:             authService,
