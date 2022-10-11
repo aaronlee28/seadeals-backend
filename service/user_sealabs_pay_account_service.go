@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"gorm.io/gorm"
 	"seadeals-backend/apperror"
 	"seadeals-backend/config"
@@ -13,9 +14,9 @@ import (
 )
 
 type UserSeaPayAccountServ interface {
-	RegisterSeaLabsPayAccount(req *dto.RegisterSeaLabsPayReq) (*dto.RegisterSeaLabsPayRes, error)
-	CheckSeaLabsAccountExists(req *dto.CheckSeaLabsPayReq) (*dto.CheckSeaLabsPayRes, error)
-	UpdateSeaLabsAccountToMain(req *dto.UpdateSeaLabsPayToMainReq) (*model.UserSealabsPayAccount, error)
+	RegisterSeaLabsPayAccount(req *dto.RegisterSeaLabsPayReq, userID uint) (*dto.RegisterSeaLabsPayRes, error)
+	CheckSeaLabsAccountExists(req *dto.CheckSeaLabsPayReq, userID uint) (*dto.CheckSeaLabsPayRes, error)
+	UpdateSeaLabsAccountToMain(req *dto.UpdateSeaLabsPayToMainReq, userID uint) (*model.UserSealabsPayAccount, error)
 	GetSeaLabsAccountByUserID(userID uint) ([]*model.UserSealabsPayAccount, error)
 
 	PayWithSeaLabsPay(userID uint, req *dto.CheckoutCartReq) (string, *model.SeaLabsPayTransactionHolder, error)
@@ -27,7 +28,12 @@ type UserSeaPayAccountServ interface {
 type userSeaPayAccountServ struct {
 	db                          *gorm.DB
 	userSeaPayAccountRepo       repository.UserSeaPayAccountRepo
+	courierRepository           repository.CourierRepository
+	deliveryRepo                repository.DeliveryRepository
+	deliveryActRepo             repository.DeliveryActivityRepository
+	orderRepo                   repository.OrderRepository
 	seaLabsPayTopUpHolderRepo   repository.SeaLabsPayTopUpHolderRepository
+	sellerRepository            repository.SellerRepository
 	seaLabsPayTransactionHolder repository.SeaLabsPayTransactionHolderRepository
 	walletRepository            repository.WalletRepository
 	walletTransactionRepo       repository.WalletTransactionRepository
@@ -36,8 +42,13 @@ type userSeaPayAccountServ struct {
 type UserSeaPayAccountServConfig struct {
 	DB                          *gorm.DB
 	UserSeaPayAccountRepo       repository.UserSeaPayAccountRepo
+	CourierRepository           repository.CourierRepository
+	DeliveryRepo                repository.DeliveryRepository
+	DeliveryActRepo             repository.DeliveryActivityRepository
+	OrderRepo                   repository.OrderRepository
 	SeaLabsPayTopUpHolderRepo   repository.SeaLabsPayTopUpHolderRepository
 	SeaLabsPayTransactionHolder repository.SeaLabsPayTransactionHolderRepository
+	SellerRepository            repository.SellerRepository
 	WalletRepository            repository.WalletRepository
 	WalletTransactionRepo       repository.WalletTransactionRepository
 }
@@ -46,19 +57,24 @@ func NewUserSeaPayAccountServ(c *UserSeaPayAccountServConfig) UserSeaPayAccountS
 	return &userSeaPayAccountServ{
 		db:                          c.DB,
 		userSeaPayAccountRepo:       c.UserSeaPayAccountRepo,
+		courierRepository:           c.CourierRepository,
+		deliveryRepo:                c.DeliveryRepo,
+		deliveryActRepo:             c.DeliveryActRepo,
+		orderRepo:                   c.OrderRepo,
 		seaLabsPayTopUpHolderRepo:   c.SeaLabsPayTopUpHolderRepo,
+		sellerRepository:            c.SellerRepository,
 		seaLabsPayTransactionHolder: c.SeaLabsPayTransactionHolder,
 		walletRepository:            c.WalletRepository,
 		walletTransactionRepo:       c.WalletTransactionRepo,
 	}
 }
 
-func (u *userSeaPayAccountServ) CheckSeaLabsAccountExists(req *dto.CheckSeaLabsPayReq) (*dto.CheckSeaLabsPayRes, error) {
+func (u *userSeaPayAccountServ) CheckSeaLabsAccountExists(req *dto.CheckSeaLabsPayReq, userID uint) (*dto.CheckSeaLabsPayRes, error) {
 	tx := u.db.Begin()
 	var err error
 	defer helper.CommitOrRollback(tx, &err)
 
-	hasExists, err := u.userSeaPayAccountRepo.HasExistsSeaLabsPayAccountWith(tx, req.UserID, req.AccountNumber)
+	hasExists, err := u.userSeaPayAccountRepo.HasExistsSeaLabsPayAccountWith(tx, userID, req.AccountNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -67,12 +83,12 @@ func (u *userSeaPayAccountServ) CheckSeaLabsAccountExists(req *dto.CheckSeaLabsP
 	return response, nil
 }
 
-func (u *userSeaPayAccountServ) RegisterSeaLabsPayAccount(req *dto.RegisterSeaLabsPayReq) (*dto.RegisterSeaLabsPayRes, error) {
+func (u *userSeaPayAccountServ) RegisterSeaLabsPayAccount(req *dto.RegisterSeaLabsPayReq, userID uint) (*dto.RegisterSeaLabsPayRes, error) {
 	tx := u.db.Begin()
 	var err error
 	defer helper.CommitOrRollback(tx, &err)
 
-	hasExists, err := u.userSeaPayAccountRepo.HasExistsSeaLabsPayAccountWith(tx, req.UserID, req.AccountNumber)
+	hasExists, err := u.userSeaPayAccountRepo.HasExistsSeaLabsPayAccountWith(tx, userID, req.AccountNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +98,7 @@ func (u *userSeaPayAccountServ) RegisterSeaLabsPayAccount(req *dto.RegisterSeaLa
 		return nil, err
 	}
 
-	seaLabsPayAccount, err := u.userSeaPayAccountRepo.RegisterSeaLabsPayAccount(tx, req)
+	seaLabsPayAccount, err := u.userSeaPayAccountRepo.RegisterSeaLabsPayAccount(tx, req, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -94,12 +110,12 @@ func (u *userSeaPayAccountServ) RegisterSeaLabsPayAccount(req *dto.RegisterSeaLa
 	return response, nil
 }
 
-func (u *userSeaPayAccountServ) UpdateSeaLabsAccountToMain(req *dto.UpdateSeaLabsPayToMainReq) (*model.UserSealabsPayAccount, error) {
+func (u *userSeaPayAccountServ) UpdateSeaLabsAccountToMain(req *dto.UpdateSeaLabsPayToMainReq, userID uint) (*model.UserSealabsPayAccount, error) {
 	tx := u.db.Begin()
 	var err error
 	defer helper.CommitOrRollback(tx, &err)
 
-	updatedData, err := u.userSeaPayAccountRepo.UpdateSeaLabsPayAccountToMain(tx, req)
+	updatedData, err := u.userSeaPayAccountRepo.UpdateSeaLabsPayAccountToMain(tx, req, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +141,8 @@ func (u *userSeaPayAccountServ) PayWithSeaLabsPay(userID uint, req *dto.Checkout
 	var err error
 	defer helper.CommitOrRollback(tx, &err)
 
-	hasAccount, err := u.userSeaPayAccountRepo.HasExistsSeaLabsPayAccountWith(tx, userID, req.AccountNumber)
+	var hasAccount bool
+	hasAccount, err = u.userSeaPayAccountRepo.HasExistsSeaLabsPayAccountWith(tx, userID, req.AccountNumber)
 	if err != nil {
 		return "", nil, err
 	}
@@ -134,7 +151,8 @@ func (u *userSeaPayAccountServ) PayWithSeaLabsPay(userID uint, req *dto.Checkout
 		return "", nil, err
 	}
 
-	globalVoucher, err := u.walletRepository.GetVoucher(tx, req.GlobalVoucherCode)
+	var globalVoucher = &model.Voucher{}
+	globalVoucher, err = u.walletRepository.GetVoucher(tx, req.GlobalVoucherCode)
 	if err != nil {
 		return "", nil, err
 	}
@@ -156,8 +174,8 @@ func (u *userSeaPayAccountServ) PayWithSeaLabsPay(userID uint, req *dto.Checkout
 		UserID:        userID,
 		VoucherID:     voucherID,
 		Total:         0,
-		PaymentMethod: dto.SEA_LABS_PAY,
-		Status:        "Waiting for payment",
+		PaymentMethod: dto.SeaLabsPay,
+		Status:        dto.TransactionWaitingPayment,
 	}
 
 	transaction, err = u.walletRepository.CreateTransaction(tx, transaction)
@@ -192,6 +210,7 @@ func (u *userSeaPayAccountServ) PayWithSeaLabsPay(userID uint, req *dto.Checkout
 			}
 		}
 		var totalOrder float64
+		var totalWeight int
 
 		for _, id := range item.CartItemID {
 			var totalOrderItem float64
@@ -219,8 +238,15 @@ func (u *userSeaPayAccountServ) PayWithSeaLabsPay(userID uint, req *dto.Checkout
 			}
 			totalOrder += totalOrderItem
 
+			// Get weight
+			totalWeight += int(cartItem.Quantity) * cartItem.ProductVariantDetail.Product.ProductDetail.Weight
+			if totalWeight > 20000 {
+				err = apperror.BadRequestError(cartItem.ProductVariantDetail.Product.Name + " exceeded weight limit of 20000")
+				return "", nil, err
+			}
+
 			// update stock
-			err = u.walletRepository.UpdateStock(tx, cartItem.ProductVariantDetail, uint(newStock))
+			err = u.walletRepository.UpdateStock(tx, cartItem.ProductVariantDetail, newStock)
 			if err != nil {
 				return "", nil, err
 			}
@@ -236,8 +262,54 @@ func (u *userSeaPayAccountServ) PayWithSeaLabsPay(userID uint, req *dto.Checkout
 		if voucher != nil {
 			totalOrder -= voucher.Amount
 		}
-		//update order price with map - voucher id
-		err = u.walletRepository.UpdateOrder(tx, order, totalOrder)
+
+		var seller *model.Seller
+		seller, err = u.sellerRepository.FindSellerByID(tx, item.SellerID)
+		if err != nil {
+			return "", nil, err
+		}
+
+		// Create delivery
+		var courier *model.Courier
+		courier, err = u.courierRepository.GetCourierDetailByID(tx, item.CourierID)
+		if err != nil {
+			return "", nil, err
+		}
+
+		deliveryReq := &dto.DeliveryCalculateReq{
+			OriginCity:      seller.Address.CityID,
+			DestinationCity: strconv.FormatUint(uint64(req.BuyerAddressID), 10),
+			Weight:          strconv.Itoa(totalWeight),
+			Courier:         courier.Code,
+		}
+		var deliveryResult = &dto.DeliveryCalculateReturn{}
+		deliveryResult, err = helper.CalculateDeliveryPrice(deliveryReq)
+		if err != nil {
+			return "", nil, err
+		}
+		totalOrder += float64(deliveryResult.Total)
+
+		delivery := &model.Delivery{
+			Address:        seller.Address.Address,
+			Status:         dto.DeliveryWaitingForPayment,
+			DeliveryNumber: helper.RandomString(10),
+			OrderID:        order.ID,
+			CourierID:      courier.ID,
+		}
+		newDelivery := &model.Delivery{}
+		newDelivery, err = u.deliveryRepo.CreateDelivery(tx, delivery)
+		if err != nil {
+			return "", nil, err
+		}
+		_, err = u.deliveryActRepo.CreateActivity(tx, newDelivery.ID, "Process dibuat dan menunggu pembayaran dari buyer")
+		if err != nil {
+			return "", nil, err
+		}
+
+		// Update order price with map - voucher id
+		order.Total = totalOrder
+		order.Status = dto.OrderWaitingPayment
+		err = u.walletRepository.UpdateOrder(tx, order)
 		if err != nil {
 			return "", nil, err
 		}
@@ -290,12 +362,22 @@ func (u *userSeaPayAccountServ) PayWithSeaLabsPayCallback(txnID uint, status str
 	if status == dto.TXN_PAID {
 		transactionModel := &model.Transaction{
 			ID:            transactionHolder.TransactionID,
-			PaymentMethod: dto.SEA_LABS_PAY,
-			Status:        "Waiting for seller",
+			PaymentMethod: dto.SeaLabsPay,
+			Status:        dto.TransactionPayed,
 		}
 		err = u.walletRepository.UpdateTransaction(tx, transactionModel)
 		if err != nil {
 			return nil, err
+		}
+
+		var orders []*model.Order
+		orders, err = u.orderRepo.UpdateOrderStatusByTransID(tx, transactionHolder.TransactionID, dto.OrderWaitingSeller)
+		if err != nil {
+			return nil, err
+		}
+		for _, order := range orders {
+			fmt.Println(order)
+			_, _ = u.deliveryRepo.UpdateDeliveryStatus(tx, order.Delivery.ID, dto.OrderWaitingSeller)
 		}
 	}
 
@@ -375,7 +457,7 @@ func (u *userSeaPayAccountServ) TopUpWithSeaLabsPayCallback(txnID uint, status s
 		transactionModel := &model.WalletTransaction{
 			WalletID:      wallet.ID,
 			Total:         topUpHolder.Total,
-			PaymentMethod: dto.SEA_LABS_PAY,
+			PaymentMethod: dto.SeaLabsPay,
 			PaymentType:   "CREDIT",
 			Description:   "Top up from Sea Labs Pay",
 		}

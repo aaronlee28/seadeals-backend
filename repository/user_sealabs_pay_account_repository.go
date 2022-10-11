@@ -10,8 +10,8 @@ import (
 
 type UserSeaPayAccountRepo interface {
 	HasExistsSeaLabsPayAccountWith(tx *gorm.DB, userID uint, accountNumber string) (bool, error)
-	RegisterSeaLabsPayAccount(tx *gorm.DB, req *dto.RegisterSeaLabsPayReq) (*model.UserSealabsPayAccount, error)
-	UpdateSeaLabsPayAccountToMain(tx *gorm.DB, req *dto.UpdateSeaLabsPayToMainReq) (*model.UserSealabsPayAccount, error)
+	RegisterSeaLabsPayAccount(tx *gorm.DB, req *dto.RegisterSeaLabsPayReq, userID uint) (*model.UserSealabsPayAccount, error)
+	UpdateSeaLabsPayAccountToMain(tx *gorm.DB, req *dto.UpdateSeaLabsPayToMainReq, userID uint) (*model.UserSealabsPayAccount, error)
 	GetSeaLabsPayAccountByUserID(tx *gorm.DB, userID uint) ([]*model.UserSealabsPayAccount, error)
 }
 
@@ -21,10 +21,10 @@ func NewSeaPayAccountRepo() UserSeaPayAccountRepo {
 	return &userSeaPayAccountRepo{}
 }
 
-func (u *userSeaPayAccountRepo) RegisterSeaLabsPayAccount(tx *gorm.DB, req *dto.RegisterSeaLabsPayReq) (*model.UserSealabsPayAccount, error) {
+func (u *userSeaPayAccountRepo) RegisterSeaLabsPayAccount(tx *gorm.DB, req *dto.RegisterSeaLabsPayReq, userID uint) (*model.UserSealabsPayAccount, error) {
 	var newSeaAccount = &model.UserSealabsPayAccount{}
 	var isMain = false
-	result := tx.Model(&newSeaAccount).Where("user_id = ?", req.UserID).Where("is_main IS TRUE").First(&newSeaAccount)
+	result := tx.Model(&newSeaAccount).Where("user_id = ?", userID).Where("is_main IS TRUE").First(&newSeaAccount)
 	if result.Error != nil {
 		if result.Error != gorm.ErrRecordNotFound {
 			return nil, apperror.InternalServerError("Cannot find main sea labs pay account ")
@@ -33,7 +33,7 @@ func (u *userSeaPayAccountRepo) RegisterSeaLabsPayAccount(tx *gorm.DB, req *dto.
 	}
 
 	newSeaAccount = &model.UserSealabsPayAccount{
-		UserID:        req.UserID,
+		UserID:        userID,
 		ActiveDate:    time.Now(),
 		AccountNumber: req.AccountNumber,
 		Name:          req.Name,
@@ -46,9 +46,9 @@ func (u *userSeaPayAccountRepo) RegisterSeaLabsPayAccount(tx *gorm.DB, req *dto.
 	return newSeaAccount, nil
 }
 
-func (u *userSeaPayAccountRepo) UpdateSeaLabsPayAccountToMain(tx *gorm.DB, req *dto.UpdateSeaLabsPayToMainReq) (*model.UserSealabsPayAccount, error) {
+func (u *userSeaPayAccountRepo) UpdateSeaLabsPayAccountToMain(tx *gorm.DB, req *dto.UpdateSeaLabsPayToMainReq, userID uint) (*model.UserSealabsPayAccount, error) {
 	var updateSeaAccount = &model.UserSealabsPayAccount{}
-	result := tx.Model(&updateSeaAccount).Where("user_id = ?", req.UserID).Where("account_number LIKE ?", req.AccountNumber).First(&updateSeaAccount)
+	result := tx.Model(&updateSeaAccount).Where("user_id = ?", userID).Where("account_number LIKE ?", req.AccountNumber).First(&updateSeaAccount)
 	if result.Error != nil && result.Error != gorm.ErrRecordNotFound {
 		return nil, apperror.InternalServerError("Cannot find sea labs pay account")
 	}
@@ -58,7 +58,7 @@ func (u *userSeaPayAccountRepo) UpdateSeaLabsPayAccountToMain(tx *gorm.DB, req *
 	}
 
 	updateSeaAccount.ID = 0
-	result = tx.Model(&updateSeaAccount).Where("user_id = ?", req.UserID).Where("is_main IS TRUE").First(&updateSeaAccount)
+	result = tx.Model(&updateSeaAccount).Where("user_id = ?", userID).Where("is_main IS TRUE").First(&updateSeaAccount)
 	if result.Error != nil && result.Error != gorm.ErrRecordNotFound {
 		return nil, apperror.InternalServerError("Cannot find main sea labs pay account ")
 	}
@@ -71,7 +71,7 @@ func (u *userSeaPayAccountRepo) UpdateSeaLabsPayAccountToMain(tx *gorm.DB, req *
 	}
 
 	updateSeaAccount.IsMain = true
-	result = tx.Where("user_id = ?", req.UserID).Where("account_number LIKE ?", req.AccountNumber).Updates(&updateSeaAccount)
+	result = tx.Where("user_id = ?", userID).Where("account_number LIKE ?", req.AccountNumber).Updates(&updateSeaAccount)
 	if result.Error != nil {
 		return nil, apperror.InternalServerError("Cannot update sea labs pay account to main")
 	}
