@@ -9,6 +9,10 @@ import (
 	"seadeals-backend/model"
 )
 
+func (h *Handler) Ping(ctx *gin.Context) {
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse("Pong"))
+}
+
 func (h *Handler) Register(ctx *gin.Context) {
 	value, _ := ctx.Get("payload")
 	json, _ := value.(*dto.RegisterRequest)

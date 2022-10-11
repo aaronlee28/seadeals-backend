@@ -66,6 +66,9 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.NoRoute()
 
 	// AUTH
+	r.GET("/", h.Ping)
+
+	// AUTH
 	r.POST("/register", middleware.RequestValidator(func() any {
 		return &dto.RegisterRequest{}
 	}), h.Register)

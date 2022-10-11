@@ -1,7 +1,6 @@
 package service
 
 import (
-	"fmt"
 	"gorm.io/gorm"
 	"net/mail"
 	"regexp"
@@ -208,7 +207,6 @@ func (u *userService) RegisterAsSeller(req *dto.RegisterAsSellerReq) (*model.Sel
 	}
 	rolesString := strings.Join(roles[:], " ")
 	accessToken, err := helper.GenerateJWTToken(userJWT, rolesString, config.Config.JWTExpiredInMinuteTime*60, dto.JWTAccessToken)
-	fmt.Println(accessToken)
 
 	return createdSeller, accessToken, nil
 }
