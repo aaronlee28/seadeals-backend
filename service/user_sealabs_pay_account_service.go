@@ -1,7 +1,6 @@
 package service
 
 import (
-	"fmt"
 	"gorm.io/gorm"
 	"seadeals-backend/apperror"
 	"seadeals-backend/config"
@@ -376,8 +375,8 @@ func (u *userSeaPayAccountServ) PayWithSeaLabsPayCallback(txnID uint, status str
 			return nil, err
 		}
 		for _, order := range orders {
-			fmt.Println(order)
-			_, _ = u.deliveryRepo.UpdateDeliveryStatus(tx, order.Delivery.ID, dto.OrderWaitingSeller)
+			_, _ = u.deliveryRepo.UpdateDeliveryStatus(tx, order.Delivery.ID, dto.DeliveryWaitingForSeller)
+			_, _ = u.deliveryActRepo.CreateActivity(tx, order.Delivery.ID, "Pembayaran diterima dan menunggu Seller")
 		}
 	}
 

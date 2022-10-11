@@ -94,7 +94,7 @@ func (h *Handler) PayWithSeaLabsPay(ctx *gin.Context) {
 		return
 	}
 
-	redirectURL, total, err := h.seaLabsPayAccServ.PayWithSeaLabsPay(userID, json)
+	redirectURL, transaction, err := h.seaLabsPayAccServ.PayWithSeaLabsPay(userID, json)
 	if err != nil {
 		_ = ctx.Error(err)
 		return
@@ -104,7 +104,7 @@ func (h *Handler) PayWithSeaLabsPay(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, dto.StatusOKResponse(gin.H{"redirect_url": redirectURL, "total": total}))
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(gin.H{"redirect_url": redirectURL, "transaction": transaction}))
 }
 
 func (h *Handler) PayWithSeaLabsPayCallback(ctx *gin.Context) {

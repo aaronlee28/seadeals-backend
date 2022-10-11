@@ -17,5 +17,5 @@ type Order struct {
 	Status        string       `json:"status"`
 	OrderItems    []*OrderItem `json:"order_items"`
 	Delivery      *Delivery    `json:"delivery"`
-	Complaint     Complaint    `json:"complaint"`
+	Complaint     *Complaint   `json:"complaint"`
 }

@@ -193,7 +193,7 @@ func (p *productService) FindSimilarProducts(productID uint, query *repository.S
 		return nil, 0, 0, err
 	}
 
-	products, totalPage, totalData, err := p.productRepo.FindSimilarProduct(tx, product.CategoryID, query)
+	products, totalPage, _, err := p.productRepo.FindSimilarProduct(tx, product.CategoryID, query)
 	if err != nil {
 		return nil, 0, 0, err
 	}
@@ -227,7 +227,7 @@ func (p *productService) FindSimilarProducts(productID uint, query *repository.S
 		productsRes = append(productsRes, dtoProduct)
 	}
 
-	return productsRes, totalPage, totalData, nil
+	return productsRes, totalPage, int64(len(productsRes)), nil
 }
 
 func (p *productService) GetProducts(query *repository.SearchQuery) ([]*dto.ProductRes, int64, int64, error) {

@@ -13,13 +13,14 @@ import (
 )
 
 const (
-	REG = "REG"
+	JTR = "jtr"
 )
 
 func findRegularPrice(res []dto.DeliveryCalculateRes) *dto.DeliveryCalculateReturn {
 	for _, cost := range res[0].Costs {
-		if cost.Service == REG {
-			splitEta := strings.Split(cost.Cost[0].Etd, "-")
+		if cost.Service != JTR {
+			splitSpace := strings.Split(cost.Cost[0].Etd, " ")
+			splitEta := strings.Split(splitSpace[0], "-")
 			etaInt, _ := strconv.Atoi(splitEta[0])
 			result := &dto.DeliveryCalculateReturn{
 				Total: cost.Cost[0].Value,
@@ -45,7 +46,6 @@ func CalculateDeliveryPrice(r *dto.DeliveryCalculateReq) (*dto.DeliveryCalculate
 		`, "courier":"` + r.Courier + `"` +
 		`}`
 	var jsonStr = []byte(requestStr)
-	fmt.Println(requestStr)
 
 	req, err = http.NewRequest("POST", URL, bytes.NewBuffer(jsonStr))
 	if err != nil {
@@ -67,7 +67,6 @@ func CalculateDeliveryPrice(r *dto.DeliveryCalculateReq) (*dto.DeliveryCalculate
 		var j shippingError
 		err = json.NewDecoder(resp.Body).Decode(&j)
 		if err != nil {
-			fmt.Println(err)
 			return nil, err
 		}
 		return nil, apperror.BadRequestError(j.Message)
@@ -76,7 +75,6 @@ func CalculateDeliveryPrice(r *dto.DeliveryCalculateReq) (*dto.DeliveryCalculate
 	var dtoRes []dto.DeliveryCalculateRes
 	err = json.NewDecoder(resp.Body).Decode(&dtoRes)
 	if err != nil {
-		fmt.Println(err)
 		return nil, err
 	}
 
