@@ -199,7 +199,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		return &dto.PatchPromotionReq{}
 	}), h.UpdatePromotion)
 
-	// Wallet
+	// WALLET
 	r.GET("/user-wallet", middleware.AuthorizeJWTFor(model.UserRoleName), h.WalletDataTransactions)
 	r.GET("/transactions/:id", middleware.AuthorizeJWTFor(model.UserRoleName), h.TransactionDetails)
 	r.GET("/paginated-transaction", middleware.AuthorizeJWTFor(model.UserRoleName), h.PaginatedTransactions)

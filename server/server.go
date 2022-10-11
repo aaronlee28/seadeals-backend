@@ -178,6 +178,7 @@ func Init() {
 		OrderRepository:           orderRepository,
 		SellerRepository:          sellerRepository,
 		VoucherRepo:               voucherRepo,
+		DeliveryRepo:              deliveryRepository,
 		TransactionRepo:           transactionRepo,
 		WalletRepository:          walletRepository,
 		WalletTransRepo:           walletTransactionRepo,

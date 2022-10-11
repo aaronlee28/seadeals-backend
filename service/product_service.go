@@ -129,15 +129,16 @@ func (p *productService) GetProductsBySellerID(query *dto.SellerProductSearchQue
 			MinPrice: variantDetail.Min,
 			MaxPrice: variantDetail.Max,
 			Product: &dto.GetProductRes{
-				ID:            variantDetail.ProductID,
-				Price:         variantDetail.Min,
-				Name:          variantDetail.Product.Name,
-				Slug:          variantDetail.Product.Slug,
-				MediaURL:      photoURL,
-				City:          variantDetail.Product.Seller.Address.City,
-				Rating:        variantDetail.Avg,
-				TotalReviewer: variantDetail.Count,
-				TotalSold:     uint(variantDetail.Product.SoldCount),
+				ID:              variantDetail.ProductID,
+				Price:           variantDetail.Min,
+				Name:            variantDetail.Product.Name,
+				Slug:            variantDetail.Product.Slug,
+				MediaURL:        photoURL,
+				City:            variantDetail.Product.Seller.Address.City,
+				Rating:          variantDetail.Avg,
+				TotalReviewer:   variantDetail.Count,
+				PromotionAmount: variantDetail.PromotionAmount,
+				TotalSold:       uint(variantDetail.Product.SoldCount),
 			},
 		}
 		productsRes = append(productsRes, dtoProduct)
@@ -167,15 +168,16 @@ func (p *productService) GetProductsByCategoryID(query *dto.SellerProductSearchQ
 			MinPrice: variantDetail.Min,
 			MaxPrice: variantDetail.Max,
 			Product: &dto.GetProductRes{
-				ID:            variantDetail.ID,
-				Price:         variantDetail.Min,
-				Name:          variantDetail.Product.Name,
-				Slug:          variantDetail.Product.Slug,
-				MediaURL:      photoURL,
-				City:          variantDetail.Product.Seller.Address.City,
-				Rating:        variantDetail.Avg,
-				TotalReviewer: variantDetail.Count,
-				TotalSold:     uint(variantDetail.Product.SoldCount),
+				ID:              variantDetail.ID,
+				Price:           variantDetail.Min,
+				Name:            variantDetail.Product.Name,
+				Slug:            variantDetail.Product.Slug,
+				MediaURL:        photoURL,
+				City:            variantDetail.Product.Seller.Address.City,
+				Rating:          variantDetail.Avg,
+				TotalReviewer:   variantDetail.Count,
+				PromotionAmount: variantDetail.PromotionAmount,
+				TotalSold:       uint(variantDetail.Product.SoldCount),
 			},
 		}
 		productsRes = append(productsRes, dtoProduct)
@@ -194,7 +196,7 @@ func (p *productService) FindSimilarProducts(productID uint, query *repository.S
 		return nil, 0, 0, err
 	}
 
-	products, totalPage, totalData, err := p.productRepo.FindSimilarProduct(tx, product.CategoryID, query)
+	products, totalPage, _, err := p.productRepo.FindSimilarProduct(tx, product.CategoryID, query)
 	if err != nil {
 		return nil, 0, 0, err
 	}
@@ -213,21 +215,22 @@ func (p *productService) FindSimilarProducts(productID uint, query *repository.S
 			MinPrice: pdt.Min,
 			MaxPrice: pdt.Max,
 			Product: &dto.GetProductRes{
-				ID:            pdt.ID,
-				Price:         pdt.Min,
-				Name:          pdt.Name,
-				Slug:          pdt.Slug,
-				MediaURL:      imageURL,
-				Rating:        pdt.Avg,
-				TotalReviewer: pdt.Count,
-				TotalSold:     uint(pdt.Product.SoldCount),
-				City:          pdt.Seller.Address.City,
+				ID:              pdt.ID,
+				Price:           pdt.Min,
+				Name:            pdt.Name,
+				Slug:            pdt.Slug,
+				MediaURL:        imageURL,
+				Rating:          pdt.Avg,
+				TotalReviewer:   pdt.Count,
+				TotalSold:       uint(pdt.Product.SoldCount),
+				PromotionAmount: pdt.PromotionAmount,
+				City:            pdt.Seller.Address.City,
 			},
 		}
 		productsRes = append(productsRes, dtoProduct)
 	}
 
-	return productsRes, totalPage, totalData, nil
+	return productsRes, totalPage, int64(len(productsRes)), nil
 }
 
 func (p *productService) GetProducts(query *repository.SearchQuery) ([]*dto.ProductRes, int64, int64, error) {
@@ -251,15 +254,16 @@ func (p *productService) GetProducts(query *repository.SearchQuery) ([]*dto.Prod
 			MinPrice: variantDetail.Min,
 			MaxPrice: variantDetail.Max,
 			Product: &dto.GetProductRes{
-				ID:            variantDetail.ID,
-				Price:         variantDetail.Min,
-				Name:          variantDetail.Name,
-				Slug:          variantDetail.Slug,
-				MediaURL:      photoURL,
-				City:          variantDetail.Seller.Address.City,
-				Rating:        variantDetail.Avg,
-				TotalReviewer: variantDetail.Count,
-				TotalSold:     uint(variantDetail.Product.SoldCount),
+				ID:              variantDetail.ID,
+				Price:           variantDetail.Min,
+				Name:            variantDetail.Name,
+				Slug:            variantDetail.Slug,
+				MediaURL:        photoURL,
+				City:            variantDetail.Seller.Address.City,
+				Rating:          variantDetail.Avg,
+				TotalReviewer:   variantDetail.Count,
+				PromotionAmount: variantDetail.PromotionAmount,
+				TotalSold:       uint(variantDetail.Product.SoldCount),
 			},
 		}
 		productsRes = append(productsRes, dtoProduct)
@@ -289,15 +293,16 @@ func (p *productService) SearchRecommendProduct(q *repository.SearchQuery) ([]*d
 			MinPrice: product.Min,
 			MaxPrice: product.Max,
 			Product: &dto.GetProductRes{
-				ID:            product.ID,
-				Price:         product.Min,
-				Name:          product.Name,
-				Slug:          product.Slug,
-				MediaURL:      photoURL,
-				City:          product.Seller.Address.City,
-				Rating:        product.Avg,
-				TotalReviewer: product.Count,
-				TotalSold:     uint(product.Product.SoldCount),
+				ID:              product.ID,
+				Price:           product.Min,
+				Name:            product.Name,
+				Slug:            product.Slug,
+				MediaURL:        photoURL,
+				City:            product.Seller.Address.City,
+				Rating:          product.Avg,
+				TotalReviewer:   product.Count,
+				PromotionAmount: product.PromotionAmount,
+				TotalSold:       uint(product.Product.SoldCount),
 			},
 		}
 		productsRes = append(productsRes, dtoProduct)

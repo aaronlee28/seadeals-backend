@@ -539,12 +539,12 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 		if err != nil {
 			return nil, err
 		}
-		totalOrder += float64(deliveryResult.Total)
 
 		delivery := &model.Delivery{
 			Address:        seller.Address.Address,
 			Status:         dto.DeliveryWaitingForSeller,
 			DeliveryNumber: helper.RandomString(10),
+			Total:          float64(deliveryResult.Total),
 			OrderID:        order.ID,
 			CourierID:      courier.ID,
 		}
@@ -559,7 +559,7 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 		}
 
 		//update order price with map - voucher id
-		order.Total = totalOrder
+		order.Total = totalOrder + delivery.Total
 		order.Status = dto.OrderWaitingSeller
 		err = w.walletRepository.UpdateOrder(tx, order)
 		if err != nil {

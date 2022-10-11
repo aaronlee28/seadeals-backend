@@ -1,7 +1,6 @@
 package service
 
 import (
-	"fmt"
 	"gorm.io/gorm"
 	"seadeals-backend/apperror"
 	"seadeals-backend/config"
@@ -287,12 +286,12 @@ func (u *userSeaPayAccountServ) PayWithSeaLabsPay(userID uint, req *dto.Checkout
 		if err != nil {
 			return "", nil, err
 		}
-		totalOrder += float64(deliveryResult.Total)
 
 		delivery := &model.Delivery{
 			Address:        seller.Address.Address,
 			Status:         dto.DeliveryWaitingForPayment,
 			DeliveryNumber: helper.RandomString(10),
+			Total:          float64(deliveryResult.Total),
 			OrderID:        order.ID,
 			CourierID:      courier.ID,
 		}
@@ -313,7 +312,7 @@ func (u *userSeaPayAccountServ) PayWithSeaLabsPay(userID uint, req *dto.Checkout
 		if err != nil {
 			return "", nil, err
 		}
-		totalTransaction += totalOrder
+		totalTransaction += totalOrder + delivery.Total
 	}
 
 	transaction.Total = totalTransaction
@@ -376,8 +375,8 @@ func (u *userSeaPayAccountServ) PayWithSeaLabsPayCallback(txnID uint, status str
 			return nil, err
 		}
 		for _, order := range orders {
-			fmt.Println(order)
-			_, _ = u.deliveryRepo.UpdateDeliveryStatus(tx, order.Delivery.ID, dto.OrderWaitingSeller)
+			_, _ = u.deliveryRepo.UpdateDeliveryStatus(tx, order.Delivery.ID, dto.DeliveryWaitingForSeller)
+			_, _ = u.deliveryActRepo.CreateActivity(tx, order.Delivery.ID, "Pembayaran diterima dan menunggu Seller")
 		}
 	}
 

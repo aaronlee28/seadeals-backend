@@ -118,12 +118,7 @@ func (h *Handler) RegisterAsSeller(ctx *gin.Context) {
 	user, _ := userPayload.(dto.UserJWT)
 	userID := user.UserID
 
-	if userID != json.UserID {
-		ctx.JSON(http.StatusBadRequest, apperror.BadRequestError("Cannot register another user as seller"))
-		return
-	}
-
-	seller, accessToken, err := h.userService.RegisterAsSeller(json)
+	seller, accessToken, err := h.userService.RegisterAsSeller(json, userID)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, err)
 		return

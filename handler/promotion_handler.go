@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"seadeals-backend/apperror"
@@ -71,7 +70,6 @@ func (h *Handler) UpdatePromotion(ctx *gin.Context) {
 
 	payload, _ := ctx.Get("payload")
 	req := payload.(*dto.PatchPromotionReq)
-	fmt.Println("here")
 	result, err := h.promotionService.UpdatePromotion(req, uintPromoID, userID)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, err)

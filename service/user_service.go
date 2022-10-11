@@ -17,7 +17,7 @@ import (
 type UserService interface {
 	Register(req *dto.RegisterRequest) (*dto.RegisterResponse, *gorm.DB, error)
 	CheckGoogleAccount(email string) (*model.User, error)
-	RegisterAsSeller(req *dto.RegisterAsSellerReq) (*model.Seller, string, error)
+	RegisterAsSeller(req *dto.RegisterAsSellerReq, userID uint) (*model.Seller, string, error)
 }
 
 type userService struct {
@@ -146,12 +146,12 @@ func (u *userService) CheckGoogleAccount(email string) (*model.User, error) {
 	return user, nil
 }
 
-func (u *userService) RegisterAsSeller(req *dto.RegisterAsSellerReq) (*model.Seller, string, error) {
+func (u *userService) RegisterAsSeller(req *dto.RegisterAsSellerReq, userID uint) (*model.Seller, string, error) {
 	tx := u.db.Begin()
 	var err error
 	defer helper.CommitOrRollback(tx, &err)
 
-	user, err := u.userRepository.GetUserByID(tx, req.UserID)
+	user, err := u.userRepository.GetUserByID(tx, userID)
 	if err != nil {
 		return nil, "", err
 	}
