@@ -205,7 +205,6 @@ func (h *Handler) CreateSellerProduct(ctx *gin.Context) {
 		userID = user.UserID
 	}
 	value, _ := ctx.Get("payload")
-	fmt.Println("value", value)
 	json, _ := value.(*dto.PostCreateProductReq)
 	res, err := h.productService.CreateSellerProduct(userID, json)
 
@@ -316,7 +315,8 @@ func (h *Handler) AddProductPhoto(ctx *gin.Context) {
 	if isValid {
 		userID = user.UserID
 	} else {
-		fmt.Println("non valid")
+		_ = ctx.Error(apperror.BadRequestError("User is invalid"))
+		return
 	}
 	value, _ := ctx.Get("payload")
 	json, ok := value.(*dto.ProductPhotoReq)
@@ -345,7 +345,8 @@ func (h *Handler) DeleteProductPhoto(ctx *gin.Context) {
 	if isValid {
 		userID = user.UserID
 	} else {
-		fmt.Println("non valid")
+		_ = ctx.Error(apperror.BadRequestError("User is invalid"))
+		return
 	}
 	value, _ := ctx.Get("payload")
 	json, ok := value.(*dto.DeleteProductPhoto)
@@ -373,7 +374,8 @@ func (h *Handler) DeleteProduct(ctx *gin.Context) {
 	if isValid {
 		userID = user.UserID
 	} else {
-		fmt.Println("non valid")
+		_ = ctx.Error(apperror.BadRequestError("User is invalid"))
+		return
 	}
 
 	idString := ctx.Param("id")

@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"seadeals-backend/apperror"
@@ -46,7 +45,8 @@ func (h *Handler) CreateUpdateReview(ctx *gin.Context) {
 	if isValid {
 		userID = user.UserID
 	} else {
-		fmt.Println("user is not valid")
+		_ = ctx.Error(apperror.BadRequestError("User is invalid"))
+		return
 	}
 
 	value, _ := ctx.Get("payload")
@@ -68,7 +68,8 @@ func (h *Handler) UserReviewHistory(ctx *gin.Context) {
 	if isValid {
 		userID = user.UserID
 	} else {
-		fmt.Println("user is not valid")
+		_ = ctx.Error(apperror.BadRequestError("User is invalid"))
+		return
 	}
 
 	res, err := h.reviewService.UserReviewHistory(userID)
