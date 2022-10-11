@@ -286,12 +286,12 @@ func (u *userSeaPayAccountServ) PayWithSeaLabsPay(userID uint, req *dto.Checkout
 		if err != nil {
 			return "", nil, err
 		}
-		totalOrder += float64(deliveryResult.Total)
 
 		delivery := &model.Delivery{
 			Address:        seller.Address.Address,
 			Status:         dto.DeliveryWaitingForPayment,
 			DeliveryNumber: helper.RandomString(10),
+			Total:          float64(deliveryResult.Total),
 			OrderID:        order.ID,
 			CourierID:      courier.ID,
 		}
@@ -312,7 +312,7 @@ func (u *userSeaPayAccountServ) PayWithSeaLabsPay(userID uint, req *dto.Checkout
 		if err != nil {
 			return "", nil, err
 		}
-		totalTransaction += totalOrder
+		totalTransaction += totalOrder + delivery.Total
 	}
 
 	transaction.Total = totalTransaction

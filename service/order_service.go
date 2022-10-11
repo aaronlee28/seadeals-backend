@@ -32,6 +32,7 @@ type orderService struct {
 	orderRepository           repository.OrderRepository
 	transactionRepo           repository.TransactionRepository
 	voucherRepo               repository.VoucherRepository
+	deliveryRepo              repository.DeliveryRepository
 	sellerRepository          repository.SellerRepository
 	walletRepository          repository.WalletRepository
 	walletTransRepo           repository.WalletTransactionRepository
@@ -46,6 +47,7 @@ type OrderServiceConfig struct {
 	OrderRepository           repository.OrderRepository
 	SellerRepository          repository.SellerRepository
 	VoucherRepo               repository.VoucherRepository
+	DeliveryRepo              repository.DeliveryRepository
 	TransactionRepo           repository.TransactionRepository
 	WalletRepository          repository.WalletRepository
 	WalletTransRepo           repository.WalletTransactionRepository
@@ -61,6 +63,7 @@ func NewOrderService(c *OrderServiceConfig) OrderService {
 		orderRepository:           c.OrderRepository,
 		sellerRepository:          c.SellerRepository,
 		voucherRepo:               c.VoucherRepo,
+		deliveryRepo:              c.DeliveryRepo,
 		transactionRepo:           c.TransactionRepo,
 		walletRepository:          c.WalletRepository,
 		walletTransRepo:           c.WalletTransRepo,
@@ -69,6 +72,36 @@ func NewOrderService(c *OrderServiceConfig) OrderService {
 		complaintRepo:             c.ComplainRepo,
 		complaintPhotoRepo:        c.ComplaintPhotoRepo,
 	}
+}
+
+func refundMoneyToSeaLabsPay(URL string, jsonStr []byte) error {
+	client := &http.Client{}
+	bearer := "Bearer " + config.Config.SeaLabsPayAPIKey
+	httpReq, err := http.NewRequest("POST", URL, bytes.NewBuffer(jsonStr))
+	if err != nil {
+		return err
+	}
+	httpReq.Header.Add("Authorization", bearer)
+	httpReq.Header.Set("Content-Type", "application/json")
+	resp, err := client.Do(httpReq)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != 200 {
+		type seaLabsPayError struct {
+			Code    string `json:"code"`
+			Message string `json:"message"`
+			Data    struct {
+			} `json:"data"`
+		}
+		var j seaLabsPayError
+		err = json.NewDecoder(resp.Body).Decode(&j)
+		if err != nil {
+			panic(err)
+		}
+		return apperror.BadRequestError(j.Message)
+	}
+	return nil
 }
 
 func (o *orderService) GetOrderBySellerID(userID uint, query *repository.OrderQuery) ([]*model.Order, int64, int64, error) {
@@ -127,6 +160,7 @@ func (o *orderService) CancelOrderBySeller(orderID uint, userID uint) (*model.Or
 
 	var priceBeforeGlobalDisc float64
 	var voucher *model.Voucher
+	var delivery *model.Delivery
 	var amountRefunded = order.Total
 	if order.Transaction.VoucherID != nil {
 		priceBeforeGlobalDisc, err = o.transactionRepo.GetPriceBeforeGlobalDisc(tx, order.TransactionID)
@@ -144,6 +178,11 @@ func (o *orderService) CancelOrderBySeller(orderID uint, userID uint) (*model.Or
 			amountRefunded = order.Total - amountReduced
 		}
 	}
+	delivery, err = o.deliveryRepo.GetDeliveryByOrderID(tx, order.ID)
+	if err != nil {
+		return nil, err
+	}
+	amountRefunded += delivery.Total
 
 	var buyerWallet *model.Wallet
 	var transHolder *model.SeaLabsPayTransactionHolder
@@ -299,6 +338,7 @@ func (o *orderService) AcceptRefundRequest(req *dto.RejectAcceptRefundReq, userI
 
 	var priceBeforeGlobalDisc float64
 	var voucher *model.Voucher
+	var delivery *model.Delivery
 	var amountRefunded = order.Total
 	if order.Transaction.VoucherID != nil {
 		priceBeforeGlobalDisc, err = o.transactionRepo.GetPriceBeforeGlobalDisc(tx, order.TransactionID)
@@ -316,11 +356,14 @@ func (o *orderService) AcceptRefundRequest(req *dto.RejectAcceptRefundReq, userI
 			amountRefunded = order.Total - amountReduced
 		}
 	}
+	delivery, err = o.deliveryRepo.GetDeliveryByOrderID(tx, order.ID)
+	if err != nil {
+		return nil, err
+	}
+	amountRefunded += delivery.Total
 
 	var buyerWallet *model.Wallet
 	var transHolder *model.SeaLabsPayTransactionHolder
-	var httpReq *http.Request
-	var resp *http.Response
 	if order.Transaction.PaymentMethod == dto.Wallet {
 		buyerWallet, err = o.walletRepository.GetWalletByUserID(tx, order.UserID)
 		if err != nil {
@@ -351,34 +394,12 @@ func (o *orderService) AcceptRefundRequest(req *dto.RejectAcceptRefundReq, userI
 			return nil, err
 		}
 
-		client := &http.Client{}
 		URL := config.Config.SeaLabsPayRefundURL
 		var jsonStr = []byte(`{"reason":"Seller cancel the order", "amount":` + strconv.Itoa(int(amountRefunded)) + `, "txn_id":` + strconv.Itoa(int(transHolder.TxnID)) + `}`)
 
-		bearer := "Bearer " + config.Config.SeaLabsPayAPIKey
-		httpReq, err = http.NewRequest("POST", URL, bytes.NewBuffer(jsonStr))
+		err = refundMoneyToSeaLabsPay(URL, jsonStr)
 		if err != nil {
 			return nil, err
-		}
-		httpReq.Header.Add("Authorization", bearer)
-		httpReq.Header.Set("Content-Type", "application/json")
-		resp, err = client.Do(httpReq)
-		if err != nil {
-			return nil, err
-		}
-		if resp.StatusCode != 200 {
-			type seaLabsPayError struct {
-				Code    string `json:"code"`
-				Message string `json:"message"`
-				Data    struct {
-				} `json:"data"`
-			}
-			var j seaLabsPayError
-			err = json.NewDecoder(resp.Body).Decode(&j)
-			if err != nil {
-				panic(err)
-			}
-			return nil, apperror.BadRequestError(j.Message)
 		}
 	}
 
@@ -450,18 +471,67 @@ func (o *orderService) RunCronJobs() {
 	//tx := o.db.Begin()
 	c := cron.New(cron.WithLocation(time.UTC))
 	_, _ = c.AddFunc("@daily", func() { o.orderRepository.CheckAndUpdateOnDelivery() })
-	_, _ = c.AddFunc("@daily", func() {
+	_, _ = c.AddFunc("@every 5s", func() {
 		orders := o.orderRepository.CheckAndUpdateWaitingForSeller()
 		for _, order := range orders {
-			var wallet *model.Wallet
-			var orderItems []*model.OrderItem
-			wallet = o.orderRepository.RefundToWalletByUserID(order.UserID, order.Total)
-			o.orderRepository.AddToWalletTransaction(wallet.ID, order.Total)
-			orderItems = o.orderRepository.GetOrderItemsByOrderID(order.ID)
-			for _, orderItem := range orderItems {
-				o.orderRepository.UpdateStockByProductVariantDetailID(orderItem.ProductVariantDetailID, orderItem.Quantity)
-			}
+			tx := o.db.Begin()
+			orderDetail, _ := o.orderRepository.GetOrderDetailByID(tx, order.ID)
+			if orderDetail.Transaction.PaymentMethod == dto.Wallet {
+				var wallet *model.Wallet
+				var orderItems []*model.OrderItem
+				var amountRefunded = orderDetail.Total
+				if orderDetail.Transaction.VoucherID != nil {
+					priceBeforeGlobalDisc, _ := o.transactionRepo.GetPriceBeforeGlobalDisc(tx, orderDetail.TransactionID)
+					voucher, _ := o.voucherRepo.FindVoucherDetailByID(tx, *orderDetail.Transaction.VoucherID)
+					if voucher.AmountType == "percentage" {
+						amountRefunded = orderDetail.Total - ((voucher.Amount / 100) * orderDetail.Total)
+					} else {
+						amountReduced := (orderDetail.Total / priceBeforeGlobalDisc) * orderDetail.Total
+						amountRefunded = orderDetail.Total - amountReduced
+					}
+				}
+				delivery, _ := o.deliveryRepo.GetDeliveryByOrderID(tx, orderDetail.ID)
+				amountRefunded += delivery.Total
+				tx.Commit()
 
+				wallet = o.orderRepository.RefundToWalletByUserID(orderDetail.UserID, amountRefunded)
+				o.orderRepository.AddToWalletTransaction(wallet.ID, amountRefunded)
+				orderItems = o.orderRepository.GetOrderItemsByOrderID(orderDetail.ID)
+				for _, orderItem := range orderItems {
+					o.orderRepository.UpdateStockByProductVariantDetailID(orderItem.ProductVariantDetailID, orderItem.Quantity)
+				}
+			} else {
+				if orderDetail.Transaction.VoucherID != nil {
+					var amountRefunded = orderDetail.Total
+					if orderDetail.Transaction.VoucherID != nil {
+						priceBeforeGlobalDisc, _ := o.transactionRepo.GetPriceBeforeGlobalDisc(tx, orderDetail.TransactionID)
+						voucher, _ := o.voucherRepo.FindVoucherDetailByID(tx, *orderDetail.Transaction.VoucherID)
+						if voucher.AmountType == "percentage" {
+							amountRefunded = orderDetail.Total - ((voucher.Amount / 100) * orderDetail.Total)
+						} else {
+							amountReduced := (orderDetail.Total / priceBeforeGlobalDisc) * orderDetail.Total
+							amountRefunded = orderDetail.Total - amountReduced
+						}
+					}
+
+					delivery, _ := o.deliveryRepo.GetDeliveryByOrderID(tx, orderDetail.ID)
+					amountRefunded += delivery.Total
+
+					transHolder, err := o.seaLabsPayTransHolderRepo.GetTransHolderFromTransactionID(tx, orderDetail.TransactionID)
+					URL := config.Config.SeaLabsPayRefundURL
+					var jsonStr = []byte(`{"reason":"Seller cancel the order", "amount":` + strconv.Itoa(int(amountRefunded)) + `, "txn_id":` + strconv.Itoa(int(transHolder.TxnID)) + `}`)
+
+					err = refundMoneyToSeaLabsPay(URL, jsonStr)
+					orderItems := o.orderRepository.GetOrderItemsByOrderID(orderDetail.ID)
+					for _, orderItem := range orderItems {
+						o.orderRepository.UpdateStockByProductVariantDetailID(orderItem.ProductVariantDetailID, orderItem.Quantity)
+					}
+					if err != nil {
+						tx.Rollback()
+					}
+				}
+				tx.Commit()
+			}
 		}
 	})
 	c.Start()
