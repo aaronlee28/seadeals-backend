@@ -206,7 +206,7 @@ func (u *userService) RegisterAsSeller(req *dto.RegisterAsSellerReq) (*model.Sel
 		roles = append(roles, role.Role.Name)
 	}
 	rolesString := strings.Join(roles[:], " ")
-	accessToken, err := helper.GenerateJWTToken(userJWT, rolesString, config.Config.JWTExpiredInMinuteTime*60, dto.JWTAccessToken)
+	accessToken, err := helper.GenerateJWTToken(userJWT, rolesString+" seller", config.Config.JWTExpiredInMinuteTime*60, dto.JWTAccessToken)
 
 	return createdSeller, accessToken, nil
 }
