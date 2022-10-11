@@ -40,6 +40,7 @@ type orderService struct {
 	seaLabsPayTransHolderRepo repository.SeaLabsPayTransactionHolderRepository
 	complaintRepo             repository.ComplaintRepository
 	complaintPhotoRepo        repository.ComplaintPhotoRepository
+	notificationRepo          repository.NotificationRepository
 }
 
 type OrderServiceConfig struct {
@@ -55,6 +56,7 @@ type OrderServiceConfig struct {
 	SeaLabsPayTransHolderRepo repository.SeaLabsPayTransactionHolderRepository
 	ComplainRepo              repository.ComplaintRepository
 	ComplaintPhotoRepo        repository.ComplaintPhotoRepository
+	NotificationRepo          repository.NotificationRepository
 }
 
 func NewOrderService(c *OrderServiceConfig) OrderService {
@@ -71,6 +73,7 @@ func NewOrderService(c *OrderServiceConfig) OrderService {
 		seaLabsPayTransHolderRepo: c.SeaLabsPayTransHolderRepo,
 		complaintRepo:             c.ComplainRepo,
 		complaintPhotoRepo:        c.ComplaintPhotoRepo,
+		notificationRepo:          c.NotificationRepo,
 	}
 }
 
@@ -261,6 +264,15 @@ func (o *orderService) CancelOrderBySeller(orderID uint, userID uint) (*model.Or
 		return nil, err
 	}
 
+	newNotification := &model.Notification{
+		UserID:   order.UserID,
+		SellerID: order.SellerID,
+		Title:    dto.NotificationSellerMembatalkanPesanan,
+		Detail:   "Seller membatalkan pesanan",
+	}
+
+	o.notificationRepo.AddToNotificationFromModel(tx, newNotification)
+
 	return refundedOrder, nil
 }
 
@@ -419,6 +431,14 @@ func (o *orderService) AcceptRefundRequest(req *dto.RejectAcceptRefundReq, userI
 		Order:          refundedOrder,
 		AmountRefunded: amountRefunded,
 	}
+	newNotification := &model.Notification{
+		UserID:   order.UserID,
+		SellerID: order.SellerID,
+		Title:    dto.NotificationSellerMenyetujuiRefund,
+		Detail:   "Seller menyetujui refund request",
+	}
+
+	o.notificationRepo.AddToNotificationFromModel(tx, newNotification)
 
 	return response, nil
 }
@@ -463,14 +483,46 @@ func (o *orderService) RejectRefundRequest(req *dto.RejectAcceptRefundReq, userI
 		Order:          doneOrder,
 		AmountRefunded: 0,
 	}
+	newNotification := &model.Notification{
+		UserID:   order.UserID,
+		SellerID: order.SellerID,
+		Title:    dto.NotificationSellerMenolakRefund,
+		Detail:   "Seller menolak refund request",
+	}
 
+	o.notificationRepo.AddToNotificationFromModel(tx, newNotification)
 	return response, nil
 }
 
 func (o *orderService) RunCronJobs() {
 	//tx := o.db.Begin()
 	c := cron.New(cron.WithLocation(time.UTC))
-	_, _ = c.AddFunc("@daily", func() { o.orderRepository.CheckAndUpdateOnDelivery() })
+	_, _ = c.AddFunc("@daily", func() {
+		orders := o.orderRepository.CheckAndUpdateOnDelivery()
+		for _, order := range orders {
+			newNotification := &model.Notification{
+				UserID:   order.UserID,
+				SellerID: order.SellerID,
+				Title:    dto.NotificationPesananSampai,
+				Detail:   "Order sampai",
+			}
+			o.notificationRepo.AddToNotificationFromModelForCron(newNotification)
+		}
+	})
+
+	_, _ = c.AddFunc("@daily", func() {
+		orders := o.orderRepository.CheckAndUpdateOnOrderDelivered()
+		for _, order := range orders {
+			newNotification := &model.Notification{
+				UserID:   order.UserID,
+				SellerID: order.SellerID,
+				Title:    dto.NotificationPesananSelesai,
+				Detail:   "Order selesai",
+			}
+			o.notificationRepo.AddToNotificationFromModelForCron(newNotification)
+		}
+	})
+
 	_, _ = c.AddFunc("@daily", func() {
 		orders := o.orderRepository.CheckAndUpdateWaitingForSeller()
 		for _, order := range orders {

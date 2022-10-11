@@ -34,6 +34,7 @@ type productService struct {
 	productVarDetRepo repository.ProductVariantDetailRepository
 	sellerRepo        repository.SellerRepository
 	socialGraphRepo   repository.SocialGraphRepository
+	notificationRepo  repository.NotificationRepository
 }
 
 type ProductConfig struct {
@@ -43,6 +44,7 @@ type ProductConfig struct {
 	ProductVarDetRepo repository.ProductVariantDetailRepository
 	SellerRepo        repository.SellerRepository
 	SocialGraphRepo   repository.SocialGraphRepository
+	NotificationRepo  repository.NotificationRepository
 }
 
 func NewProductService(config *ProductConfig) ProductService {
@@ -53,6 +55,7 @@ func NewProductService(config *ProductConfig) ProductService {
 		productVarDetRepo: config.ProductVarDetRepo,
 		sellerRepo:        config.SellerRepo,
 		socialGraphRepo:   config.SocialGraphRepo,
+		notificationRepo:  config.NotificationRepo,
 	}
 }
 
@@ -389,6 +392,18 @@ func (p *productService) CreateSellerProduct(userID uint, req *dto.PostCreatePro
 		ProductPhoto:         productPhotos,
 		ProductVariantDetail: productVariantDetails,
 	}
+	var userArray []*model.Favorite
+	userArray, err = p.socialGraphRepo.GetFollowerUserID(tx, seller.ID)
+	for _, user := range userArray {
+		newNotification := &model.Notification{
+			UserID:   user.UserID,
+			SellerID: seller.ID,
+			Title:    dto.NotificationFollowProduk,
+			Detail:   "Seller adds new product",
+		}
+		p.notificationRepo.AddToNotificationFromModel(tx, newNotification)
+	}
+
 	return &ret, nil
 }
 func (p *productService) UpdateProductAndDetails(userID uint, productID uint, req *dto.PatchProductAndDetailsReq) (*dto.PatchProductAndDetailsRes, error) {
@@ -440,7 +455,6 @@ func (p *productService) UpdateProductAndDetails(userID uint, productID uint, re
 	return &res, nil
 }
 
-//when update, check kalo ada variant yang nil, kalau ada, delete variant null
 func (p *productService) UpdateVariantAndDetails(userID uint, variantDetailsID uint, req *dto.PatchVariantAndDetails) (*dto.VariantAndDetails, error) {
 	tx := p.db.Begin()
 	var err error
@@ -508,6 +522,56 @@ func (p *productService) UpdateVariantAndDetails(userID uint, variantDetailsID u
 		Variant2Name:          &updatedProductVariant2.Name,
 		ProductVariantDetails: pvdRet,
 	}
+	var userArray []*model.Favorite
+	var title string
+	var title2 string
+	var detail string
+	var detail2 string
+	if req.ProductVariantDetails.Stock != 0 {
+		title = dto.NotificationFavoriteStok
+		detail = "Favorite item stock change"
+	}
+	if productVariantDetails.Price == 0 && req.ProductVariantDetails.Price != 0 {
+		title = dto.NotificationFavoriteHarga
+		detail = "Favorite item price change"
+	}
+	userArray, err = p.socialGraphRepo.GetFavoriteUserID(tx, updatedProductVariantDetails.ProductID)
+
+	if productVariantDetails.Price == 0 && req.ProductVariantDetails.Price != 0 && req.ProductVariantDetails.Stock != 0 {
+		title = dto.NotificationFavoriteStok
+		detail = "Favorite item stock change"
+		title2 = dto.NotificationFavoriteHarga
+		detail2 = "Favorite item price change"
+		for _, user := range userArray {
+			newNotificationStock := &model.Notification{
+				UserID:   user.UserID,
+				SellerID: seller.ID,
+				Title:    title,
+				Detail:   detail,
+			}
+
+			p.notificationRepo.AddToNotificationFromModel(tx, newNotificationStock)
+			newNotificationHarga := &model.Notification{
+				UserID:   user.UserID,
+				SellerID: seller.ID,
+				Title:    title2,
+				Detail:   detail2,
+			}
+
+			p.notificationRepo.AddToNotificationFromModel(tx, newNotificationHarga)
+		}
+	} else {
+		for _, user := range userArray {
+			newNotification := &model.Notification{
+				UserID:   user.UserID,
+				SellerID: seller.ID,
+				Title:    title,
+				Detail:   detail,
+			}
+			p.notificationRepo.AddToNotificationFromModel(tx, newNotification)
+		}
+	}
+
 	return ret, nil
 }
 

@@ -37,6 +37,7 @@ func Init() {
 	adminRepository := repository.NewAdminRepository()
 	complaintRepo := repository.NewComplaintRepository()
 	complaintPhotoRepo := repository.NewComplaintPhotoRepository()
+	notificationRepo := repository.NewNotificationRepository()
 	deliveryRepository := repository.NewDeliveryRepository()
 	deliveryActivityRepo := repository.NewDeliveryActivityRepository()
 
@@ -75,6 +76,7 @@ func Init() {
 		ProductVarDetRepo: productVarDetRepo,
 		SellerRepo:        sellerRepository,
 		SocialGraphRepo:   socialGraphRepo,
+		NotificationRepo:  notificationRepo,
 	})
 
 	productVariantService := service.NewProductVariantService(&service.ProductVariantServiceConfig{
@@ -162,6 +164,8 @@ func Init() {
 		PromotionRepository: promotionRepository,
 		SellerRepo:          sellerRepository,
 		ProductRepo:         productRepository,
+		SocialGraphRepo:     socialGraphRepo,
+		NotificationRepo:    notificationRepo,
 	})
 
 	courierService := service.NewCourierService(&service.CourierServiceConfig{
@@ -182,15 +186,17 @@ func Init() {
 		SeaLabsPayTransHolderRepo: seaLabsPayTransactionHolderRepo,
 		ComplainRepo:              complaintRepo,
 		ComplaintPhotoRepo:        complaintPhotoRepo,
+		NotificationRepo:          notificationRepo,
 	})
 
 	deliveryService := service.NewDeliveryService(&service.DeliveryServiceConfig{
-		DB:                  db.Get(),
-		DeliveryRepository:  deliveryRepository,
-		DeliverActivityRepo: deliveryActivityRepo,
-		AddressRepository:   addressRepository,
-		OrderRepository:     orderRepository,
-		SellerRepository:    sellerRepository,
+		DB:                     db.Get(),
+		DeliveryRepository:     deliveryRepository,
+		DeliverActivityRepo:    deliveryActivityRepo,
+		AddressRepository:      addressRepository,
+		OrderRepository:        orderRepository,
+		SellerRepository:       sellerRepository,
+		NotificationRepository: notificationRepo,
 	})
 
 	sellerAvailableCourServ := service.NewSellerAvailableCourService(&service.SellerAvailableCourServiceConfig{

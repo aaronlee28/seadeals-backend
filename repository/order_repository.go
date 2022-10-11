@@ -23,13 +23,14 @@ type OrderRepository interface {
 	GetOrderDetailByID(tx *gorm.DB, orderID uint) (*model.Order, error)
 
 	UpdateOrderStatus(tx *gorm.DB, orderID uint, status string) (*model.Order, error)
-	CheckAndUpdateOnDelivery()
+	CheckAndUpdateOnDelivery() []*model.Order
 	CheckAndUpdateWaitingForSeller() []*model.Order
 	RefundToWalletByUserID(userID uint, refundedAmount float64) *model.Wallet
 	AddToWalletTransaction(walletID uint, refundAmount float64)
 	GetOrderItemsByOrderID(orderID uint) []*model.OrderItem
 	UpdateStockByProductVariantDetailID(pvdID uint, quantity uint)
 	UpdateOrderStatusByTransID(tx *gorm.DB, transactionID uint, status string) ([]*model.Order, error)
+	CheckAndUpdateOnOrderDelivered() []*model.Order
 }
 
 type orderRepository struct {
@@ -142,11 +143,24 @@ func (o *orderRepository) UpdateOrderStatus(tx *gorm.DB, orderID uint, status st
 	return order, nil
 }
 
-func (o *orderRepository) CheckAndUpdateOnDelivery() {
+func (o *orderRepository) CheckAndUpdateOnDelivery() []*model.Order {
 	var order []*model.Order
 	tx := db.Get().Begin()
 	_ = tx.Clauses(clause.Returning{}).Where("status = ?", dto.OrderOnDelivery).Where("? >= updated_at at time zone 'UTC' + interval '2 day'", time.Now()).Find(&order).Update("status", dto.OrderDelivered)
+
 	tx.Commit()
+	return order
+
+}
+
+func (o *orderRepository) CheckAndUpdateOnOrderDelivered() []*model.Order {
+	var order []*model.Order
+	tx := db.Get().Begin()
+	_ = tx.Clauses(clause.Returning{}).Where("status = ?", dto.OrderDelivered).Where("? >= updated_at at time zone 'UTC' + interval '2 day'", time.Now()).Find(&order).Update("status", dto.OrderDone)
+
+	tx.Commit()
+	return order
+
 }
 
 func (o *orderRepository) CheckAndUpdateWaitingForSeller() []*model.Order {

@@ -14,31 +14,34 @@ type DeliveryService interface {
 }
 
 type deliveryService struct {
-	db                   *gorm.DB
-	deliveryRepository   repository.DeliveryRepository
-	deliveryActivityRepo repository.DeliveryActivityRepository
-	sellerRepository     repository.SellerRepository
-	addressRepository    repository.AddressRepository
-	orderRepository      repository.OrderRepository
+	db                     *gorm.DB
+	deliveryRepository     repository.DeliveryRepository
+	deliveryActivityRepo   repository.DeliveryActivityRepository
+	sellerRepository       repository.SellerRepository
+	addressRepository      repository.AddressRepository
+	orderRepository        repository.OrderRepository
+	notificationRepository repository.NotificationRepository
 }
 
 type DeliveryServiceConfig struct {
-	DB                  *gorm.DB
-	DeliveryRepository  repository.DeliveryRepository
-	DeliverActivityRepo repository.DeliveryActivityRepository
-	SellerRepository    repository.SellerRepository
-	AddressRepository   repository.AddressRepository
-	OrderRepository     repository.OrderRepository
+	DB                     *gorm.DB
+	DeliveryRepository     repository.DeliveryRepository
+	DeliverActivityRepo    repository.DeliveryActivityRepository
+	SellerRepository       repository.SellerRepository
+	AddressRepository      repository.AddressRepository
+	OrderRepository        repository.OrderRepository
+	NotificationRepository repository.NotificationRepository
 }
 
 func NewDeliveryService(c *DeliveryServiceConfig) DeliveryService {
 	return &deliveryService{
-		db:                   c.DB,
-		deliveryRepository:   c.DeliveryRepository,
-		deliveryActivityRepo: c.DeliverActivityRepo,
-		sellerRepository:     c.SellerRepository,
-		addressRepository:    c.AddressRepository,
-		orderRepository:      c.OrderRepository,
+		db:                     c.DB,
+		deliveryRepository:     c.DeliveryRepository,
+		deliveryActivityRepo:   c.DeliverActivityRepo,
+		sellerRepository:       c.SellerRepository,
+		addressRepository:      c.AddressRepository,
+		orderRepository:        c.OrderRepository,
+		notificationRepository: c.NotificationRepository,
 	}
 }
 
@@ -81,6 +84,15 @@ func (d *deliveryService) DeliverOrder(req *dto.DeliverOrderReq, userID uint) (*
 	if err != nil {
 		return nil, err
 	}
+
+	newNotification := &model.Notification{
+		UserID:   order.UserID,
+		SellerID: order.SellerID,
+		Title:    dto.NotificationPesananPerjalanan,
+		Detail:   "Pesanan Dalam Perjalanan",
+	}
+
+	d.notificationRepository.AddToNotificationFromModel(tx, newNotification)
 
 	return updatedDelivery, nil
 }
