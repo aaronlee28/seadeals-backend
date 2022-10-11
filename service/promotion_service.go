@@ -21,6 +21,8 @@ type promotionService struct {
 	promotionRepository repository.PromotionRepository
 	sellerRepo          repository.SellerRepository
 	productRepo         repository.ProductRepository
+	socialGraphRepo     repository.SocialGraphRepository
+	notificationRepo    repository.NotificationRepository
 }
 
 type PromotionServiceConfig struct {
@@ -28,6 +30,8 @@ type PromotionServiceConfig struct {
 	PromotionRepository repository.PromotionRepository
 	SellerRepo          repository.SellerRepository
 	ProductRepo         repository.ProductRepository
+	SocialGraphRepo     repository.SocialGraphRepository
+	NotificationRepo    repository.NotificationRepository
 }
 
 func NewPromotionService(c *PromotionServiceConfig) PromotionService {
@@ -36,6 +40,8 @@ func NewPromotionService(c *PromotionServiceConfig) PromotionService {
 		promotionRepository: c.PromotionRepository,
 		sellerRepo:          c.SellerRepo,
 		productRepo:         c.ProductRepo,
+		socialGraphRepo:     c.SocialGraphRepo,
+		notificationRepo:    c.NotificationRepo,
 	}
 }
 
@@ -97,6 +103,17 @@ func (p *promotionService) CreatePromotion(id uint, req *dto.CreatePromotionReq)
 		ID:        createPromo.ID,
 		ProductID: createPromo.ProductID,
 		Name:      createPromo.Name,
+	}
+	var userArray []*model.Favorite
+	userArray, err = p.socialGraphRepo.GetFollowerUserID(tx, seller.ID)
+	for _, user := range userArray {
+		newNotification := &model.Notification{
+			UserID:   user.UserID,
+			SellerID: seller.ID,
+			Title:    dto.NotificationFollowPromosi,
+			Detail:   "Seller adds new promotion",
+		}
+		p.notificationRepo.AddToNotificationFromModel(tx, newNotification)
 	}
 	return &ret, nil
 }
