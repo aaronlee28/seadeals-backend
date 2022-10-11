@@ -37,7 +37,7 @@ type WalletRepository interface {
 	CreateTransaction(tx *gorm.DB, transaction *model.Transaction) (*model.Transaction, error)
 	CreateOrder(tx *gorm.DB, sellerID uint, voucherID *uint, transactionID uint, userID uint) (*model.Order, error)
 	CreateOrderItemAndRemoveFromCart(tx *gorm.DB, productVariantDetailID uint, product *model.Product, orderID uint, userID uint, quantity uint, subtotal float64, cartItem *model.CartItem) error
-	UpdateOrder(tx *gorm.DB, order *model.Order, total float64) error
+	UpdateOrder(tx *gorm.DB, order *model.Order) error
 	UpdateTransaction(tx *gorm.DB, transaction *model.Transaction) error
 	UpdateStock(tx *gorm.DB, productVariantDetail *model.ProductVariantDetail, newStock uint) error
 	CreateWalletTransaction(tx *gorm.DB, walletID uint, transaction *model.Transaction) error
@@ -361,7 +361,7 @@ func (w *walletRepository) UpdateWallet(tx *gorm.DB, userID uint, newBalance flo
 func (w *walletRepository) GetCartItem(tx *gorm.DB, cartID uint) (*model.CartItem, error) {
 	var cartItem *model.CartItem
 
-	result := tx.Preload("ProductVariantDetail.Product").Where("id = ?", cartID).First(&cartItem)
+	result := tx.Preload("ProductVariantDetail.Product.ProductDetail").Where("id = ?", cartID).First(&cartItem)
 	if result.Error != nil {
 		return nil, apperror.InternalServerError("cannot find cart item")
 	}
@@ -433,8 +433,8 @@ func (w *walletRepository) CreateOrder(tx *gorm.DB, sellerID uint, voucherID *ui
 
 	return order, nil
 }
-func (w *walletRepository) UpdateOrder(tx *gorm.DB, order *model.Order, total float64) error {
-	result := tx.Model(&order).Update("total", total)
+func (w *walletRepository) UpdateOrder(tx *gorm.DB, order *model.Order) error {
+	result := tx.Model(&order).Updates(&order)
 
 	if result.Error != nil {
 		return apperror.InternalServerError("failed to update order")

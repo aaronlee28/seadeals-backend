@@ -17,12 +17,8 @@ func (h *Handler) RegisterSeaLabsPayAccount(ctx *gin.Context) {
 
 	value, _ := ctx.Get("payload")
 	json, _ := value.(*dto.RegisterSeaLabsPayReq)
-	if user.(dto.UserJWT).UserID != json.UserID {
-		_ = ctx.Error(apperror.ForbiddenError("Cannot register another user Sea Labs PayWithSeaLabsPay Account"))
-		return
-	}
 
-	result, err := h.seaLabsPayAccServ.RegisterSeaLabsPayAccount(json)
+	result, err := h.seaLabsPayAccServ.RegisterSeaLabsPayAccount(json, user.(dto.UserJWT).UserID)
 	if err != nil {
 		_ = ctx.Error(err)
 		return
@@ -40,12 +36,8 @@ func (h *Handler) CheckSeaLabsPayAccount(ctx *gin.Context) {
 
 	value, _ := ctx.Get("payload")
 	json, _ := value.(*dto.CheckSeaLabsPayReq)
-	if user.(dto.UserJWT).UserID != json.UserID {
-		_ = ctx.Error(apperror.ForbiddenError("Cannot check another user Sea Labs PayWithSeaLabsPay Account"))
-		return
-	}
 
-	result, err := h.seaLabsPayAccServ.CheckSeaLabsAccountExists(json)
+	result, err := h.seaLabsPayAccServ.CheckSeaLabsAccountExists(json, user.(dto.UserJWT).UserID)
 	if err != nil {
 		_ = ctx.Error(err)
 		return
@@ -63,12 +55,8 @@ func (h *Handler) UpdateSeaLabsPayToMain(ctx *gin.Context) {
 
 	value, _ := ctx.Get("payload")
 	json, _ := value.(*dto.UpdateSeaLabsPayToMainReq)
-	if user.(dto.UserJWT).UserID != json.UserID {
-		_ = ctx.Error(apperror.ForbiddenError("Cannot check another user Sea Labs PayWithSeaLabsPay Account"))
-		return
-	}
 
-	result, err := h.seaLabsPayAccServ.UpdateSeaLabsAccountToMain(json)
+	result, err := h.seaLabsPayAccServ.UpdateSeaLabsAccountToMain(json, user.(dto.UserJWT).UserID)
 	if err != nil {
 		_ = ctx.Error(err)
 		return

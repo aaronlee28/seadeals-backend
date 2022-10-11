@@ -29,6 +29,7 @@ type RouterConfig struct {
 	PromotionService        service.PromotionService
 	CourierService          service.CourierService
 	OrderService            service.OrderService
+	DeliveryService         service.DeliveryService
 	SellerAvailableCourServ service.SellerAvailableCourService
 	AdminService            service.AdminService
 }
@@ -56,6 +57,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		PromotionService:        c.PromotionService,
 		CourierService:          c.CourierService,
 		OrderService:            c.OrderService,
+		DeliveryService:         c.DeliveryService,
 		SellerAvailableCourServ: c.SellerAvailableCourServ,
 		AdminService:            c.AdminService,
 	})
@@ -152,6 +154,11 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.GET("/sellers/orders", middleware.AuthorizeJWTFor(model.SellerRoleName), h.GetSellerOrders)
 	r.GET("/user/orders", middleware.AuthorizeJWTFor(model.SellerRoleName), h.GetBuyerOrders)
 
+	// DELIVERY
+	r.POST("/seller/deliver/order", middleware.AuthorizeJWTFor(model.SellerRoleName), middleware.RequestValidator(func() any {
+		return &dto.DeliverOrderReq{}
+	}), h.DeliverOrder)
+
 	// VOUCHER
 	r.POST("/vouchers", middleware.AuthorizeJWTFor(model.SellerRoleName), middleware.RequestValidator(func() any {
 		return &dto.PostVoucherReq{}
@@ -189,7 +196,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		return &dto.PatchPromotionReq{}
 	}), h.UpdatePromotion)
 
-	// WALLET
+	// Wallet
 	r.GET("/user-wallet", middleware.AuthorizeJWTFor(model.UserRoleName), h.WalletDataTransactions)
 	r.GET("/transactions/:id", middleware.AuthorizeJWTFor(model.UserRoleName), h.TransactionDetails)
 	r.GET("/paginated-transaction", middleware.AuthorizeJWTFor(model.UserRoleName), h.PaginatedTransactions)
@@ -254,7 +261,6 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 
 	// ADMIN
 	r.POST("/create-global-voucher", middleware.RequestValidator(func() any { return &dto.CreateGlobalVoucher{} }), middleware.AuthorizeJWTFor(model.AdminRoleName), h.CreateGlobalVoucher)
-
 	r.POST("/create-category", middleware.RequestValidator(func() any { return &dto.CreateCategory{} }), middleware.AuthorizeJWTFor(model.AdminRoleName), h.CreateCategory)
 
 	// REVIEWS

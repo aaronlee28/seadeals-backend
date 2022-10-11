@@ -27,3 +27,8 @@ func (_ *TransactionsRes) FromTransaction(t *model.Transaction) *TransactionsRes
 		UpdatedAt:     t.UpdatedAt,
 	}
 }
+
+const (
+	TransactionWaitingPayment = "waiting for payment"
+	TransactionPayed          = "payed"
+)

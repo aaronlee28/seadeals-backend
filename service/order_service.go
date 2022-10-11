@@ -149,7 +149,7 @@ func (o *orderService) CancelOrderBySeller(orderID uint, userID uint) (*model.Or
 	var transHolder *model.SeaLabsPayTransactionHolder
 	var req *http.Request
 	var resp *http.Response
-	if order.Transaction.PaymentMethod == dto.WALLET {
+	if order.Transaction.PaymentMethod == dto.Wallet {
 		buyerWallet, err = o.walletRepository.GetWalletByUserID(tx, order.UserID)
 		if err != nil {
 			return nil, err
@@ -164,7 +164,7 @@ func (o *orderService) CancelOrderBySeller(orderID uint, userID uint) (*model.Or
 			WalletID:      buyerWallet.ID,
 			TransactionID: &order.TransactionID,
 			Total:         math.Floor(amountRefunded),
-			PaymentMethod: dto.WALLET,
+			PaymentMethod: dto.Wallet,
 			PaymentType:   "CREDIT",
 			Description:   "Refund from transaction ID " + strconv.FormatUint(uint64(order.TransactionID), 10),
 			CreatedAt:     time.Time{},
@@ -173,7 +173,7 @@ func (o *orderService) CancelOrderBySeller(orderID uint, userID uint) (*model.Or
 		if err != nil {
 			return nil, err
 		}
-	} else if order.Transaction.PaymentMethod == dto.SEA_LABS_PAY {
+	} else if order.Transaction.PaymentMethod == dto.SeaLabsPay {
 		transHolder, err = o.seaLabsPayTransHolderRepo.GetTransHolderFromTransactionID(tx, order.TransactionID)
 		if err != nil {
 			return nil, err
@@ -321,7 +321,7 @@ func (o *orderService) AcceptRefundRequest(req *dto.RejectAcceptRefundReq, userI
 	var transHolder *model.SeaLabsPayTransactionHolder
 	var httpReq *http.Request
 	var resp *http.Response
-	if order.Transaction.PaymentMethod == dto.WALLET {
+	if order.Transaction.PaymentMethod == dto.Wallet {
 		buyerWallet, err = o.walletRepository.GetWalletByUserID(tx, order.UserID)
 		if err != nil {
 			return nil, err
@@ -336,7 +336,7 @@ func (o *orderService) AcceptRefundRequest(req *dto.RejectAcceptRefundReq, userI
 			WalletID:      buyerWallet.ID,
 			TransactionID: &order.TransactionID,
 			Total:         math.Floor(amountRefunded),
-			PaymentMethod: dto.WALLET,
+			PaymentMethod: dto.Wallet,
 			PaymentType:   "CREDIT",
 			Description:   "Refund from transaction ID " + strconv.FormatUint(uint64(order.TransactionID), 10),
 			CreatedAt:     time.Time{},
@@ -345,7 +345,7 @@ func (o *orderService) AcceptRefundRequest(req *dto.RejectAcceptRefundReq, userI
 		if err != nil {
 			return nil, err
 		}
-	} else if order.Transaction.PaymentMethod == dto.SEA_LABS_PAY {
+	} else if order.Transaction.PaymentMethod == dto.SeaLabsPay {
 		transHolder, err = o.seaLabsPayTransHolderRepo.GetTransHolderFromTransactionID(tx, order.TransactionID)
 		if err != nil {
 			return nil, err
