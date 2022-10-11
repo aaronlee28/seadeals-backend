@@ -7,6 +7,7 @@ import (
 	"seadeals-backend/dto"
 	"seadeals-backend/model"
 	"strconv"
+	"time"
 )
 
 type ProductRepository interface {
@@ -117,9 +118,13 @@ func (r *productRepository) FindProductDetailByID(tx *gorm.DB, productID uint, u
 func (r *productRepository) FindSimilarProduct(tx *gorm.DB, categoryID uint, query *SearchQuery) ([]*dto.SellerProductsCustomTable, int64, int64, error) {
 	var products []*dto.SellerProductsCustomTable
 
+	promotions := tx.Model(&model.Promotion{})
+	promotions = promotions.Where("start_date <= ? AND end_date >= ?", time.Now(), time.Now())
+
 	s1 := tx.Model(&model.ProductVariantDetail{})
-	s1 = s1.Select("min(price), max(price), product_id")
-	s1 = s1.Group("product_id")
+	s1 = s1.Select("min(price - COALESCE(promotions.amount, 0)), max(price - COALESCE(promotions.amount, 0)), product_variant_details.product_id")
+	s1 = s1.Joins("LEFT JOIN (?) as promotions ON promotions.product_id = product_variant_details.product_id", promotions)
+	s1 = s1.Group("product_variant_details.product_id")
 
 	s2 := tx.Model(&model.Review{})
 	s2 = s2.Select("count(*), AVG(rating), product_id")
@@ -130,8 +135,9 @@ func (r *productRepository) FindSimilarProduct(tx *gorm.DB, categoryID uint, que
 	seller = seller.Select("city, city_id, sellers.id, name")
 
 	result := tx.Model(&dto.SellerProductsCustomTable{})
-	result = result.Select("products.name, min, max, city, city_id, products.id, products.slug, products.category_id, products.favorite_count, products.seller_id, products.sold_count, avg, count, parent_id, products.created_at")
+	result = result.Select("products.name, min, max, city, city_id, products.id, p.amount as promotion_amount, products.slug, products.category_id, products.favorite_count, products.seller_id, products.sold_count, avg, count, parent_id, products.created_at")
 	result = result.Joins("JOIN product_categories as c ON products.category_id = c.id")
+	result = result.Joins("LEFT JOIN promotions as p ON p.product_id = products.id")
 	result = result.Joins("JOIN (?) as seller ON products.seller_id = seller.id", seller)
 	result = result.Joins("JOIN (?) as s1 ON products.id = s1.product_id", s1)
 	result = result.Joins("LEFT JOIN (?) as s2 ON products.id = s2.product_id", s2)
@@ -230,9 +236,13 @@ func (r *productRepository) SearchProduct(tx *gorm.DB, q *SearchQuery) (*[]model
 func (r *productRepository) SearchRecommendProduct(tx *gorm.DB, query *SearchQuery) ([]*dto.SellerProductsCustomTable, int64, int64, error) {
 	var products []*dto.SellerProductsCustomTable
 
+	promotions := tx.Model(&model.Promotion{})
+	promotions = promotions.Where("start_date <= ? AND end_date >= ?", time.Now(), time.Now())
+
 	s1 := tx.Model(&model.ProductVariantDetail{})
-	s1 = s1.Select("min(price), max(price), product_id")
-	s1 = s1.Group("product_id")
+	s1 = s1.Select("min(price - COALESCE(promotions.amount, 0)), max(price - COALESCE(promotions.amount, 0)), product_variant_details.product_id")
+	s1 = s1.Joins("LEFT JOIN (?) as promotions ON promotions.product_id = product_variant_details.product_id", promotions)
+	s1 = s1.Group("product_variant_details.product_id")
 
 	s2 := tx.Model(&model.Review{})
 	s2 = s2.Select("count(*), AVG(rating), product_id")
@@ -243,8 +253,9 @@ func (r *productRepository) SearchRecommendProduct(tx *gorm.DB, query *SearchQue
 	seller = seller.Select("city, city_id, sellers.id, name")
 
 	result := tx.Model(&dto.SellerProductsCustomTable{})
-	result = result.Select("products.name, min, max, city, city_id, products.id, products.slug, products.category_id, products.favorite_count, products.seller_id, products.sold_count, avg, count, parent_id, products.created_at")
+	result = result.Select("products.name, min, max, city, city_id, products.id, p.amount as promotion_amount, products.slug, products.category_id, products.favorite_count, products.seller_id, products.sold_count, avg, count, parent_id, products.created_at")
 	result = result.Joins("JOIN product_categories as c ON products.category_id = c.id")
+	result = result.Joins("LEFT JOIN promotions as p ON p.product_id = products.id")
 	result = result.Joins("JOIN (?) as seller ON products.seller_id = seller.id", seller)
 	result = result.Joins("JOIN (?) as s1 ON products.id = s1.product_id", s1)
 	result = result.Joins("LEFT JOIN (?) as s2 ON products.id = s2.product_id", s2)
