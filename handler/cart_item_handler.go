@@ -43,6 +43,24 @@ func (h *Handler) AddToCart(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, successResponse)
 }
 
+func (h *Handler) UpdateCart(ctx *gin.Context) {
+	payload, _ := ctx.Get("user")
+	user, _ := payload.(dto.UserJWT)
+	userID := user.UserID
+
+	value, _ := ctx.Get("payload")
+	json, _ := value.(*dto.UpdateCartItemReq)
+
+	result, err := h.orderItemService.UpdateCart(userID, json)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	successResponse := dto.StatusOKResponse(result)
+	ctx.JSON(http.StatusOK, successResponse)
+}
+
 func (h *Handler) GetCartItem(ctx *gin.Context) {
 	payload, _ := ctx.Get("user")
 	user, _ := payload.(dto.UserJWT)

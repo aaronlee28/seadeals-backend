@@ -255,6 +255,9 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.POST("/user/cart", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.AddToCartReq{}
 	}), h.AddToCart)
+	r.PATCH("/user/cart", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
+		return &dto.UpdateCartItemReq{}
+	}), h.UpdateCart)
 	r.DELETE("/user/cart", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.DeleteFromCartReq{}
 	}), h.DeleteCartItem)

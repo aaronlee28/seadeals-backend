@@ -3,13 +3,15 @@ package repository
 import (
 	"gorm.io/gorm"
 	"seadeals-backend/apperror"
+	"seadeals-backend/dto"
 	"seadeals-backend/model"
 	"strconv"
 )
 
 type CartItemRepository interface {
-	AddToCart(tx *gorm.DB, orderItem *model.CartItem) (*model.CartItem, error)
-	DeleteCartItem(tx *gorm.DB, orderItemID uint, userID uint) (*model.CartItem, error)
+	AddToCart(tx *gorm.DB, cartItem *model.CartItem) (*model.CartItem, error)
+	UpdateCart(tx *gorm.DB, req *dto.UpdateCartItemReq, userID uint) (*model.CartItem, error)
+	DeleteCartItem(tx *gorm.DB, cartItemID uint, userID uint) (*model.CartItem, error)
 	GetCartItem(tx *gorm.DB, query *Query, userID uint) ([]*model.CartItem, int64, int64, error)
 }
 
@@ -19,7 +21,7 @@ func NewCartItemRepository() CartItemRepository {
 	return &cartItemRepository{}
 }
 
-func (o *cartItemRepository) AddToCart(tx *gorm.DB, cartItem *model.CartItem) (*model.CartItem, error) {
+func (c *cartItemRepository) AddToCart(tx *gorm.DB, cartItem *model.CartItem) (*model.CartItem, error) {
 	var existingCartItem = &model.CartItem{}
 	result := tx.Where("user_id = ?", cartItem.UserID).Where("product_variant_detail_id = ?", cartItem.ProductVariantDetailID).First(&existingCartItem)
 	if result.Error == nil {
@@ -39,7 +41,7 @@ func (o *cartItemRepository) AddToCart(tx *gorm.DB, cartItem *model.CartItem) (*
 	return cartItem, nil
 }
 
-func (o *cartItemRepository) DeleteCartItem(tx *gorm.DB, cartItemID uint, userID uint) (*model.CartItem, error) {
+func (c *cartItemRepository) DeleteCartItem(tx *gorm.DB, cartItemID uint, userID uint) (*model.CartItem, error) {
 	var existingCartItem = &model.CartItem{ID: cartItemID}
 	result := tx.First(&existingCartItem)
 	if result.Error != nil {
@@ -57,7 +59,27 @@ func (o *cartItemRepository) DeleteCartItem(tx *gorm.DB, cartItemID uint, userID
 	return existingCartItem, nil
 }
 
-func (o *cartItemRepository) GetCartItem(tx *gorm.DB, query *Query, userID uint) ([]*model.CartItem, int64, int64, error) {
+func (c *cartItemRepository) UpdateCart(tx *gorm.DB, req *dto.UpdateCartItemReq, userID uint) (*model.CartItem, error) {
+	var existingCartItem = &model.CartItem{
+		ID: req.CartItemID,
+	}
+	result := tx.First(&existingCartItem)
+	if result.Error != nil {
+		return nil, apperror.NotFoundError("Cannot find cart item")
+	}
+
+	if existingCartItem.UserID != userID {
+		return nil, apperror.UnauthorizedError("Cannot update other user cart item")
+	}
+
+	result = tx.Model(&existingCartItem).Update("quantity", req.CurrentQuantity)
+	if result.Error != nil {
+		return nil, apperror.InternalServerError("Cannot update cart item")
+	}
+	return existingCartItem, nil
+}
+
+func (c *cartItemRepository) GetCartItem(tx *gorm.DB, query *Query, userID uint) ([]*model.CartItem, int64, int64, error) {
 	var cartItems []*model.CartItem
 	var count int64
 	result := tx.Model(&model.CartItem{})
