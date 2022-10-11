@@ -143,6 +143,7 @@ func Init() {
 	favoriteService := service.NewFavoriteService(&service.FavoriteServiceConfig{
 		DB:                 db.Get(),
 		FavoriteRepository: favoriteRepository,
+		ProductRepository:  productRepository,
 	})
 
 	socialGraphService := service.NewSocialGraphService(&service.SocialGraphServiceConfig{
