@@ -1,12 +1,12 @@
 package middleware
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"net/http"
 	"reflect"
 	"seadeals-backend/apperror"
-	"seadeals-backend/dto"
 )
 
 func RequestValidator(creator func() any) gin.HandlerFunc {
@@ -14,16 +14,9 @@ func RequestValidator(creator func() any) gin.HandlerFunc {
 		model := creator()
 		if err := context.ShouldBindJSON(&model); err != nil {
 			if reflect.TypeOf(err).String() == "validator.ValidationErrors" {
-				var e []map[string]any
-				for _, valErr := range err.(validator.ValidationErrors) {
-					tmp := map[string]any{"key": valErr.Namespace(), "tag": valErr.Tag()}
-					e = append(e, tmp)
-				}
-				badRequest := &dto.AppResponse{
-					StatusCode: http.StatusBadRequest,
-					Status:     "BAD_REQUEST_ERROR",
-					Data:       e,
-				}
+				e := err.(validator.ValidationErrors)[0]
+				msg := fmt.Sprintf("%s failed on '%s' validation", e.Field(), e.Tag())
+				badRequest := apperror.BadRequestError(msg)
 				context.AbortWithStatusJSON(badRequest.StatusCode, badRequest)
 				return
 			}
