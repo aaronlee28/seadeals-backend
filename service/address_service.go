@@ -9,9 +9,9 @@ import (
 )
 
 type AddressService interface {
-	CreateAddress(*dto.CreateAddressReq, uint) (*model.Address, error)
-	UpdateAddress(*dto.UpdateAddressReq) (*model.Address, error)
-	GetAddressesByUserID(uint) ([]*dto.GetAddressRes, error)
+	CreateAddress(req *dto.CreateAddressReq, userID uint) (*model.Address, error)
+	UpdateAddress(req *dto.UpdateAddressReq, userID uint) (*model.Address, error)
+	GetAddressesByUserID(userID uint) ([]*dto.GetAddressRes, error)
 	GetUserMainAddress(userID uint) (*dto.GetAddressRes, error)
 	ChangeMainAddress(ID, userID uint) (*dto.GetAddressRes, error)
 }
@@ -46,7 +46,7 @@ func (a *addressService) CreateAddress(req *dto.CreateAddressReq, userID uint) (
 	return address, nil
 }
 
-func (a *addressService) UpdateAddress(req *dto.UpdateAddressReq) (*model.Address, error) {
+func (a *addressService) UpdateAddress(req *dto.UpdateAddressReq, userID uint) (*model.Address, error) {
 	tx := a.db.Begin()
 	var err error
 	defer helper.CommitOrRollback(tx, &err)

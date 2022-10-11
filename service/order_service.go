@@ -471,7 +471,7 @@ func (o *orderService) RunCronJobs() {
 	//tx := o.db.Begin()
 	c := cron.New(cron.WithLocation(time.UTC))
 	_, _ = c.AddFunc("@daily", func() { o.orderRepository.CheckAndUpdateOnDelivery() })
-	_, _ = c.AddFunc("@every 5s", func() {
+	_, _ = c.AddFunc("@daily", func() {
 		orders := o.orderRepository.CheckAndUpdateWaitingForSeller()
 		for _, order := range orders {
 			tx := o.db.Begin()
