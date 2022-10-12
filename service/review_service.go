@@ -78,7 +78,6 @@ func (s *reviewService) FindReviewByProductID(productID uint, qp *model.ReviewQu
 	if totalReviews > 0 {
 		avgRating = avgRating / float64(totalReviews)
 	}
-
 	res := &dto.GetReviewsRes{
 		Limit:         qp.Limit,
 		Page:          qp.Page,
