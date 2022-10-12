@@ -73,6 +73,20 @@ func (u *userSeaPayAccountServ) CheckSeaLabsAccountExists(req *dto.CheckSeaLabsP
 	var err error
 	defer helper.CommitOrRollback(tx, &err)
 
+	merchantCode := config.Config.SeaLabsPayMerchantCode
+	apiKey := config.Config.SeaLabsPayAPIKey
+	combinedString := req.AccountNumber + ":" + strconv.Itoa(1) + ":" + merchantCode
+
+	sign := helper.GenerateHMACSHA256(combinedString, apiKey)
+	_, _, err = helper.TransactionToSeaLabsPay(req.AccountNumber, strconv.Itoa(1), sign, "/order/pay/sea-labs-pay/callback")
+	if err != nil {
+		if err.Error() == "user not found" {
+			return nil, apperror.BadRequestError("Invalid Sea Labs Pay Account")
+		} else if err.Error() != "insufficient fund to create transaction" {
+			return nil, err
+		}
+	}
+
 	hasExists, err := u.userSeaPayAccountRepo.HasExistsSeaLabsPayAccountWith(tx, userID, req.AccountNumber)
 	if err != nil {
 		return nil, err
@@ -86,6 +100,20 @@ func (u *userSeaPayAccountServ) RegisterSeaLabsPayAccount(req *dto.RegisterSeaLa
 	tx := u.db.Begin()
 	var err error
 	defer helper.CommitOrRollback(tx, &err)
+
+	merchantCode := config.Config.SeaLabsPayMerchantCode
+	apiKey := config.Config.SeaLabsPayAPIKey
+	combinedString := req.AccountNumber + ":" + strconv.Itoa(1) + ":" + merchantCode
+
+	sign := helper.GenerateHMACSHA256(combinedString, apiKey)
+	_, _, err = helper.TransactionToSeaLabsPay(req.AccountNumber, strconv.Itoa(1), sign, "/order/pay/sea-labs-pay/callback")
+	if err != nil {
+		if err.Error() == "user not found" {
+			return nil, apperror.BadRequestError("Invalid Sea Labs Pay Account")
+		} else if err.Error() != "insufficient fund to create transaction" {
+			return nil, err
+		}
+	}
 
 	hasExists, err := u.userSeaPayAccountRepo.HasExistsSeaLabsPayAccountWith(tx, userID, req.AccountNumber)
 	if err != nil {
