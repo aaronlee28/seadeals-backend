@@ -33,7 +33,7 @@ func (p *productVariantDetailRepository) GetProductsBySellerID(tx *gorm.DB, quer
 	promotions = promotions.Where("start_date <= ? AND end_date >= ?", time.Now(), time.Now())
 
 	s1 := tx.Model(&model.ProductVariantDetail{})
-	s1 = s1.Select("min(price - COALESCE(promotions.amount, 0)), max(price - COALESCE(promotions.amount, 0)), product_variant_details.product_id")
+	s1 = s1.Select("min(price - COALESCE(promotions.amount, 0)) as min, max(price - COALESCE(promotions.amount, 0)) as max, min(price) as min_before_disc, max(price) as max_before_disc, product_variant_details.product_id")
 	s1 = s1.Joins("LEFT JOIN (?) as promotions ON promotions.product_id = product_variant_details.product_id", promotions)
 	s1 = s1.Group("product_variant_details.product_id")
 
@@ -41,15 +41,20 @@ func (p *productVariantDetailRepository) GetProductsBySellerID(tx *gorm.DB, quer
 	s2 = s2.Select("count(*), AVG(rating), product_id")
 	s2 = s2.Group("product_id")
 
+	seller := tx.Model(&model.Seller{})
+	seller = seller.Joins("Address")
+	seller = seller.Select("city, city_id, sellers.id, name")
+
 	result := tx.Model(&dto.SellerProductsCustomTable{})
-	result = result.Select("*")
+	result = result.Select("products.name, min, max, min_before_disc, max_before_disc, city, city_id, products.id, products.slug, p.amount as promotion_amount, p.id as promotion_id, products.category_id, products.favorite_count, products.seller_id, products.sold_count, avg, count, parent_id, products.created_at")
 	result = result.Joins("JOIN product_categories as c ON products.category_id = c.id")
-	result = result.Joins("LEFT JOIN promotions as p ON promotions.product_id = products.id")
+	result = result.Joins("LEFT JOIN promotions as p ON p.product_id = products.id")
+	result = result.Joins("JOIN (?) as seller ON products.seller_id = seller.id", seller)
 	result = result.Joins("JOIN (?) as s1 ON products.id = s1.product_id", s1)
 	result = result.Joins("LEFT JOIN (?) as s2 ON products.id = s2.product_id", s2)
 
 	// CHANGE THIS CODE BELLOW TO CHANGE LIST OF PRODUCT BY...
-	result = result.Where("seller_id = ?", sellerID)
+	result = result.Where("products.seller_id = ?", sellerID)
 
 	orderByString := query.SortBy
 	if query.SortBy == "price" {
@@ -112,7 +117,7 @@ func (p *productVariantDetailRepository) GetProductsByCategoryID(tx *gorm.DB, qu
 	promotions = promotions.Where("start_date <= ? AND end_date >= ?", time.Now(), time.Now())
 
 	s1 := tx.Model(&model.ProductVariantDetail{})
-	s1 = s1.Select("min(price - COALESCE(promotions.amount, 0)), max(price - COALESCE(promotions.amount, 0)), product_variant_details.product_id")
+	s1 = s1.Select("min(price - COALESCE(promotions.amount, 0)) as min, max(price - COALESCE(promotions.amount, 0)) as max, min(price) as min_before_disc, max(price) as max_before_disc, product_variant_details.product_id")
 	s1 = s1.Joins("LEFT JOIN (?) as promotions ON promotions.product_id = product_variant_details.product_id", promotions)
 	s1 = s1.Group("product_variant_details.product_id")
 
@@ -120,10 +125,15 @@ func (p *productVariantDetailRepository) GetProductsByCategoryID(tx *gorm.DB, qu
 	s2 = s2.Select("count(*), AVG(rating), product_id")
 	s2 = s2.Group("product_id")
 
+	seller := tx.Model(&model.Seller{})
+	seller = seller.Joins("Address")
+	seller = seller.Select("city, city_id, sellers.id, name")
+
 	result := tx.Model(&dto.SellerProductsCustomTable{})
-	result = result.Select("*")
+	result = result.Select("products.name, min, max, min_before_disc, max_before_disc, city, city_id, products.id, products.slug, p.amount as promotion_amount, p.id as promotion_id, products.category_id, products.favorite_count, products.seller_id, products.sold_count, avg, count, parent_id, products.created_at")
 	result = result.Joins("JOIN product_categories as c ON products.category_id = c.id")
-	result = result.Joins("LEFT JOIN promotions as p ON promotions.product_id = products.id")
+	result = result.Joins("LEFT JOIN promotions as p ON p.product_id = products.id")
+	result = result.Joins("JOIN (?) as seller ON products.seller_id = seller.id", seller)
 	result = result.Joins("JOIN (?) as s1 ON products.id = s1.product_id", s1)
 	result = result.Joins("LEFT JOIN (?) as s2 ON products.id = s2.product_id", s2)
 
@@ -191,7 +201,7 @@ func (p *productVariantDetailRepository) SearchProducts(tx *gorm.DB, query *Sear
 	promotions = promotions.Where("start_date <= ? AND end_date >= ?", time.Now(), time.Now())
 
 	s1 := tx.Model(&model.ProductVariantDetail{})
-	s1 = s1.Select("min(price - COALESCE(promotions.amount, 0)), max(price - COALESCE(promotions.amount, 0)), product_variant_details.product_id")
+	s1 = s1.Select("min(price - COALESCE(promotions.amount, 0)) as min, max(price - COALESCE(promotions.amount, 0)) as max, min(price) as min_before_disc, max(price) as max_before_disc, product_variant_details.product_id")
 	s1 = s1.Joins("LEFT JOIN (?) as promotions ON promotions.product_id = product_variant_details.product_id", promotions)
 	s1 = s1.Group("product_variant_details.product_id")
 
@@ -204,7 +214,7 @@ func (p *productVariantDetailRepository) SearchProducts(tx *gorm.DB, query *Sear
 	seller = seller.Select("city, city_id, sellers.id, name")
 
 	result := tx.Model(&dto.SellerProductsCustomTable{})
-	result = result.Select("products.name, min, max, city, city_id, products.id, products.slug, p.amount as promotion_amount, products.category_id, products.favorite_count, products.seller_id, products.sold_count, avg, count, parent_id, products.created_at")
+	result = result.Select("products.name, min, max, min_before_disc, max_before_disc, city, city_id, products.id, products.slug, p.amount as promotion_amount, p.id as promotion_id, products.category_id, products.favorite_count, products.seller_id, products.sold_count, avg, count, parent_id, products.created_at")
 	result = result.Joins("JOIN product_categories as c ON products.category_id = c.id")
 	result = result.Joins("LEFT JOIN promotions as p ON p.product_id = products.id")
 	result = result.Joins("JOIN (?) as seller ON products.seller_id = seller.id", seller)
@@ -216,7 +226,7 @@ func (p *productVariantDetailRepository) SearchProducts(tx *gorm.DB, query *Sear
 		result = result.Where("(category_id = ? OR parent_id = ?)", query.CategoryID, query.CategoryID)
 	}
 	if query.SellerID != 0 {
-		result = result.Where("seller_id = ?", query.SellerID)
+		result = result.Where("products.seller_id = ?", query.SellerID)
 	}
 	if query.City != "" {
 		citiesSplit := strings.Split(query.City, ",")
