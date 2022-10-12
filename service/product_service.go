@@ -126,8 +126,10 @@ func (p *productService) GetProductsBySellerID(query *dto.SellerProductSearchQue
 		}
 
 		dtoProduct := &dto.ProductRes{
-			MinPrice: variantDetail.Min,
-			MaxPrice: variantDetail.Max,
+			MinPriceBeforeDisc: variantDetail.MinBeforeDisc,
+			MaxPriceBeforeDisc: variantDetail.MaxBeforeDisc,
+			MinPrice:           variantDetail.Min,
+			MaxPrice:           variantDetail.Max,
 			Product: &dto.GetProductRes{
 				ID:              variantDetail.ProductID,
 				Price:           variantDetail.Min,
@@ -165,8 +167,10 @@ func (p *productService) GetProductsByCategoryID(query *dto.SellerProductSearchQ
 		}
 
 		dtoProduct := &dto.ProductRes{
-			MinPrice: variantDetail.Min,
-			MaxPrice: variantDetail.Max,
+			MinPriceBeforeDisc: variantDetail.MinBeforeDisc,
+			MaxPriceBeforeDisc: variantDetail.MaxBeforeDisc,
+			MinPrice:           variantDetail.Min,
+			MaxPrice:           variantDetail.Max,
 			Product: &dto.GetProductRes{
 				ID:              variantDetail.ID,
 				Price:           variantDetail.Min,
@@ -212,8 +216,10 @@ func (p *productService) FindSimilarProducts(productID uint, query *repository.S
 			imageURL = pdt.ProductPhotos[0].PhotoURL
 		}
 		dtoProduct := &dto.ProductRes{
-			MinPrice: pdt.Min,
-			MaxPrice: pdt.Max,
+			MinPriceBeforeDisc: pdt.MinBeforeDisc,
+			MaxPriceBeforeDisc: pdt.MaxBeforeDisc,
+			MinPrice:           pdt.Min,
+			MaxPrice:           pdt.Max,
 			Product: &dto.GetProductRes{
 				ID:              pdt.ID,
 				Price:           pdt.Min,
@@ -251,8 +257,10 @@ func (p *productService) GetProducts(query *repository.SearchQuery) ([]*dto.Prod
 		}
 
 		dtoProduct := &dto.ProductRes{
-			MinPrice: variantDetail.Min,
-			MaxPrice: variantDetail.Max,
+			MinPriceBeforeDisc: variantDetail.MinBeforeDisc,
+			MaxPriceBeforeDisc: variantDetail.MaxBeforeDisc,
+			MinPrice:           variantDetail.Min,
+			MaxPrice:           variantDetail.Max,
 			Product: &dto.GetProductRes{
 				ID:              variantDetail.ID,
 				Price:           variantDetail.Min,
@@ -290,8 +298,10 @@ func (p *productService) SearchRecommendProduct(q *repository.SearchQuery) ([]*d
 		}
 
 		dtoProduct := &dto.ProductRes{
-			MinPrice: product.Min,
-			MaxPrice: product.Max,
+			MinPriceBeforeDisc: product.MinBeforeDisc,
+			MaxPriceBeforeDisc: product.MaxBeforeDisc,
+			MinPrice:           product.Min,
+			MaxPrice:           product.Max,
 			Product: &dto.GetProductRes{
 				ID:              product.ID,
 				Price:           product.Min,

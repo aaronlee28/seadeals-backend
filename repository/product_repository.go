@@ -122,7 +122,7 @@ func (r *productRepository) FindSimilarProduct(tx *gorm.DB, categoryID uint, que
 	promotions = promotions.Where("start_date <= ? AND end_date >= ?", time.Now(), time.Now())
 
 	s1 := tx.Model(&model.ProductVariantDetail{})
-	s1 = s1.Select("min(price - COALESCE(promotions.amount, 0)), max(price - COALESCE(promotions.amount, 0)), product_variant_details.product_id")
+	s1 = s1.Select("min(price - COALESCE(promotions.amount, 0)) as min, max(price - COALESCE(promotions.amount, 0)) as max, min(price) as min_before_disc, max(price) as max_before_disc, product_variant_details.product_id")
 	s1 = s1.Joins("LEFT JOIN (?) as promotions ON promotions.product_id = product_variant_details.product_id", promotions)
 	s1 = s1.Group("product_variant_details.product_id")
 
@@ -135,7 +135,7 @@ func (r *productRepository) FindSimilarProduct(tx *gorm.DB, categoryID uint, que
 	seller = seller.Select("city, city_id, sellers.id, name")
 
 	result := tx.Model(&dto.SellerProductsCustomTable{})
-	result = result.Select("products.name, min, max, city, city_id, products.id, p.amount as promotion_amount, products.slug, products.category_id, products.favorite_count, products.seller_id, products.sold_count, avg, count, parent_id, products.created_at")
+	result = result.Select("products.name, min, max, min_before_disc, max_before_disc, city, city_id, products.id, products.slug, p.amount as promotion_amount, p.id as promotion_id, products.category_id, products.favorite_count, products.seller_id, products.sold_count, avg, count, parent_id, products.created_at")
 	result = result.Joins("JOIN product_categories as c ON products.category_id = c.id")
 	result = result.Joins("LEFT JOIN promotions as p ON p.product_id = products.id")
 	result = result.Joins("JOIN (?) as seller ON products.seller_id = seller.id", seller)
@@ -240,7 +240,7 @@ func (r *productRepository) SearchRecommendProduct(tx *gorm.DB, query *SearchQue
 	promotions = promotions.Where("start_date <= ? AND end_date >= ?", time.Now(), time.Now())
 
 	s1 := tx.Model(&model.ProductVariantDetail{})
-	s1 = s1.Select("min(price - COALESCE(promotions.amount, 0)), max(price - COALESCE(promotions.amount, 0)), product_variant_details.product_id")
+	s1 = s1.Select("min(price - COALESCE(promotions.amount, 0)) as min, max(price - COALESCE(promotions.amount, 0)) as max, min(price) as min_before_disc, max(price) as max_before_disc, product_variant_details.product_id")
 	s1 = s1.Joins("LEFT JOIN (?) as promotions ON promotions.product_id = product_variant_details.product_id", promotions)
 	s1 = s1.Group("product_variant_details.product_id")
 
@@ -253,7 +253,7 @@ func (r *productRepository) SearchRecommendProduct(tx *gorm.DB, query *SearchQue
 	seller = seller.Select("city, city_id, sellers.id, name")
 
 	result := tx.Model(&dto.SellerProductsCustomTable{})
-	result = result.Select("products.name, min, max, city, city_id, products.id, p.amount as promotion_amount, products.slug, products.category_id, products.favorite_count, products.seller_id, products.sold_count, avg, count, parent_id, products.created_at")
+	result = result.Select("products.name, min, max, min_before_disc, max_before_disc, city, city_id, products.id, products.slug, p.amount as promotion_amount, p.id as promotion_id, products.category_id, products.favorite_count, products.seller_id, products.sold_count, avg, count, parent_id, products.created_at")
 	result = result.Joins("JOIN product_categories as c ON products.category_id = c.id")
 	result = result.Joins("LEFT JOIN promotions as p ON p.product_id = products.id")
 	result = result.Joins("JOIN (?) as seller ON products.seller_id = seller.id", seller)
