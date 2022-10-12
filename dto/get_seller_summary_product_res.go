@@ -1,6 +1,8 @@
 package dto
 
-import "seadeals-backend/model"
+import (
+	"seadeals-backend/model"
+)
 
 type GetSellerSummaryProductRes struct {
 	ID                   uint                    `json:"id"`
@@ -13,6 +15,7 @@ type GetSellerSummaryProductRes struct {
 	IsArchived           bool                    `json:"is_archived"`
 	ProductVariantDetail []*ProductVariantDetail `json:"product_variant_detail"`
 	Photo                string                  `json:"photo"`
+	IsDeleted            bool                    `json:"is_deleted"`
 }
 
 func (_ *GetSellerSummaryProductRes) From(p *model.Product) *GetSellerSummaryProductRes {
@@ -37,5 +40,6 @@ func (_ *GetSellerSummaryProductRes) From(p *model.Product) *GetSellerSummaryPro
 		IsArchived:           p.IsArchived,
 		ProductVariantDetail: pvd,
 		Photo:                photoURL,
+		IsDeleted:            p.DeletedAt.Valid,
 	}
 }
