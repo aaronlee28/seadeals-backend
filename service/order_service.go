@@ -25,6 +25,7 @@ type OrderService interface {
 	AcceptRefundRequest(req *dto.RejectAcceptRefundReq, userID uint) (*dto.RejectAcceptRefundRes, error)
 	RejectRefundRequest(req *dto.RejectAcceptRefundReq, userID uint) (*dto.RejectAcceptRefundRes, error)
 	RunCronJobs()
+	GetTotalPredictedPrice(req *dto.TotalPredictedPriceReq, userID uint) (*dto.TotalPredictedPriceRes, error)
 }
 
 type orderService struct {
@@ -586,6 +587,122 @@ func (o *orderService) RunCronJobs() {
 			}
 		}
 	})
+
 	c.Start()
 
+}
+
+func (o *orderService) GetTotalPredictedPrice(req *dto.TotalPredictedPriceReq, userID uint) (*dto.TotalPredictedPriceRes, error) {
+	tx := o.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
+
+	status, err := o.walletRepository.GetWalletStatus(tx, userID)
+	if err != nil {
+		return nil, err
+	}
+	if status == repository.WalletBlocked {
+		err = apperror.BadRequestError("Wallet is currently blocked")
+		return nil, err
+	}
+
+	var res *dto.TotalPredictedPriceRes
+
+	globalVoucher, err := o.walletRepository.GetVoucher(tx, req.GlobalVoucherCode)
+	if err != nil {
+		return nil, err
+	}
+	timeNow := time.Now()
+
+	if globalVoucher != nil {
+		if timeNow.After(globalVoucher.EndDate) || timeNow.Before(globalVoucher.StartDate) {
+			err = apperror.InternalServerError("Level 3 Voucher invalid")
+			return nil, err
+		}
+	}
+
+	var voucherID *uint
+	if globalVoucher != nil {
+		voucherID = &globalVoucher.ID
+	}
+	var totalPredictedPrice []*dto.PredictedPriceRes
+	res.GlobalVoucherID = voucherID
+
+	for _, item := range req.Cart {
+		var predictedPrice *dto.PredictedPriceRes
+		var voucher *model.Voucher
+		voucher, err = o.walletRepository.GetVoucher(tx, item.VoucherCode)
+		if err != nil {
+			return nil, err
+		}
+
+		predictedPrice.SellerID = item.SellerID
+
+		if voucher != nil {
+			if timeNow.After(voucher.EndDate) || timeNow.Before(voucher.StartDate) {
+				err = apperror.InternalServerError("Level 2 Voucher invalid")
+				return nil, err
+			}
+			predictedPrice.VoucherID = &voucher.ID
+		} else {
+			predictedPrice.VoucherID = nil
+		}
+
+		var totalOrder float64
+		var totalWeight int
+
+		for _, id := range item.CartItemID {
+
+			var totalOrderItem float64
+			var cartItem *model.CartItem
+			cartItem, err = o.walletRepository.GetCartItem(tx, id)
+			if err != nil {
+				return nil, err
+			}
+
+			if cartItem.ProductVariantDetail.Product.SellerID != item.SellerID {
+				err = apperror.BadRequestError("That cart item does not belong to that seller")
+				return nil, err
+			}
+
+			//check stock
+			newStock := cartItem.ProductVariantDetail.Stock - cartItem.Quantity
+			if newStock < 0 {
+				err = apperror.InternalServerError(cartItem.ProductVariantDetail.Product.Name + "is out of stock")
+				return nil, err
+			}
+
+			if cartItem.ProductVariantDetail.Product.Promotion != nil {
+				totalOrderItem = (cartItem.ProductVariantDetail.Price - cartItem.ProductVariantDetail.Product.Promotion.Amount) * float64(cartItem.Quantity)
+			} else {
+				totalOrderItem = cartItem.ProductVariantDetail.Price * float64(cartItem.Quantity)
+			}
+			totalOrder += totalOrderItem
+
+			// Get weight
+			totalWeight += int(cartItem.Quantity) * cartItem.ProductVariantDetail.Product.ProductDetail.Weight
+			if totalWeight > 20000 {
+				err = apperror.BadRequestError(cartItem.ProductVariantDetail.Product.Name + " exceeded weight limit of 20000")
+				return nil, apperror.BadRequestError(cartItem.ProductVariantDetail.Product.Name + " exceeded weight limit of 20000")
+			}
+
+		}
+		//order - voucher
+		if voucher != nil {
+			totalOrder -= voucher.Amount
+		}
+		predictedPrice.TotalOrder = totalOrder
+		///insert get delivery price and predicted price here
+		var deliveryPrice float64
+		//deliveryPrice = (call repo to get delivery price)
+
+		predictedPrice.DeliveryPrice = deliveryPrice
+		predictedPrice.TotalOrder = totalOrder + deliveryPrice
+
+		totalPredictedPrice = append(totalPredictedPrice, predictedPrice)
+	}
+	res.PredictedPrices = totalPredictedPrice
+	/// insert total predicted prices
+
+	return res, nil
 }
