@@ -507,14 +507,11 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 			if err != nil {
 				return nil, err
 			}
-
 		}
-
 		//order - voucher
 		if voucher != nil {
 			totalOrder -= voucher.Amount
 		}
-
 		var seller *model.Seller
 		seller, err = w.sellerRepository.FindSellerByID(tx, item.SellerID)
 		if err != nil {
