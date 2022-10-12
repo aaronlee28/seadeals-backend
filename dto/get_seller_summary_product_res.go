@@ -9,7 +9,6 @@ type GetSellerSummaryProductRes struct {
 	CategoryName         string                  `json:"category"`
 	Name                 string                  `json:"name"`
 	Slug                 string                  `json:"slug"`
-	IsBulkEnabled        bool                    `json:"is_bulk_enabled"`
 	SoldCount            int                     `json:"sold_count"`
 	FavoriteCount        uint                    `json:"favorite_count"`
 	IsArchived           bool                    `json:"is_archived"`
@@ -34,7 +33,6 @@ func (_ *GetSellerSummaryProductRes) From(p *model.Product) *GetSellerSummaryPro
 		CategoryName:         p.Category.Name,
 		Name:                 p.Name,
 		Slug:                 p.Slug,
-		IsBulkEnabled:        p.IsBulkEnabled,
 		SoldCount:            p.SoldCount,
 		FavoriteCount:        p.FavoriteCount,
 		IsArchived:           p.IsArchived,
