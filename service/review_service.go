@@ -86,7 +86,6 @@ func (s *reviewService) FindReviewByProductID(productID uint, qp *model.ReviewQu
 	}
 
 	ratio := math.Pow(10, float64(1))
-
 	RoundedAvgRating := math.Round(avgRating*ratio) / ratio
 
 	res := &dto.GetReviewsRes{
