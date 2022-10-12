@@ -14,6 +14,7 @@ type ProductService interface {
 	FindSimilarProducts(productID uint, query *repository.SearchQuery) ([]*dto.ProductRes, int64, int64, error)
 	SearchRecommendProduct(q *repository.SearchQuery) ([]*dto.ProductRes, int64, int64, error)
 	GetProductsBySellerID(query *dto.SellerProductSearchQuery, sellerID uint) ([]*dto.ProductRes, int64, int64, error)
+	GetProductsByUserIDUnscoped(query *dto.SellerProductSearchQuery, userID uint) ([]*dto.GetSellerSummaryProductRes, int64, int64, error)
 	GetProductsByCategoryID(query *dto.SellerProductSearchQuery, categoryID uint) ([]*dto.ProductRes, int64, int64, error)
 	GetProducts(q *repository.SearchQuery) ([]*dto.ProductRes, int64, int64, error)
 
@@ -143,6 +144,39 @@ func (p *productService) GetProductsBySellerID(query *dto.SellerProductSearchQue
 				TotalSold:       uint(variantDetail.Product.SoldCount),
 			},
 		}
+		productsRes = append(productsRes, dtoProduct)
+	}
+
+	return productsRes, totalPage, totalData, nil
+}
+
+func (p *productService) GetProductsByUserIDUnscoped(query *dto.SellerProductSearchQuery, userID uint) ([]*dto.GetSellerSummaryProductRes, int64, int64, error) {
+	tx := p.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
+
+	seller, err := p.sellerRepo.FindSellerByUserID(tx, userID)
+	if err != nil {
+		return nil, 0, 0, err
+	}
+
+	products, totalData, err := p.productVarDetRepo.GetProductsBySellerIDUnscoped(tx, query, seller.ID)
+	if err != nil {
+		return nil, 0, 0, err
+	}
+
+	totalPage := (totalData + int64(query.Limit) - 1) / int64(query.Limit)
+
+	var productsRes = make([]*dto.GetSellerSummaryProductRes, 0)
+	for _, product := range products {
+		var avgRating float64
+		var totalReviews int64
+		avgRating, totalReviews, err = p.reviewRepo.GetReviewsAvgAndCountByProductID(tx, product.ID)
+		if err != nil {
+			return nil, 0, 0, err
+		}
+
+		dtoProduct := new(dto.GetSellerSummaryProductRes).From(product, avgRating, totalReviews)
 		productsRes = append(productsRes, dtoProduct)
 	}
 

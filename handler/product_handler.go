@@ -99,6 +99,34 @@ func (h *Handler) GetProductsBySellerID(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, dto.StatusOKResponse(gin.H{"products": res, "total_data": totalData, "total_page": totalPage, "current_page": productQuery.Page, "limit": productQuery.Limit}))
 }
 
+func (h *Handler) GetProductsByUserIDUnscoped(ctx *gin.Context) {
+	query := map[string]string{
+		"page":      ctx.Query("page"),
+		"s":         ctx.Query("s"),
+		"sortBy":    ctx.Query("sortBy"),
+		"sort":      ctx.Query("sort"),
+		"limit":     ctx.Query("limit"),
+		"minAmount": ctx.Query("minAmount"),
+		"maxAmount": ctx.Query("maxAmount"),
+	}
+	productQuery, err := new(dto.SellerProductSearchQuery).FromQuery(query)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	userPayload, _ := ctx.Get("user")
+	user := userPayload.(dto.UserJWT)
+
+	res, totalPage, totalData, err := h.productService.GetProductsByUserIDUnscoped(productQuery, user.UserID)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(gin.H{"products": res, "total_data": totalData, "total_page": totalPage, "current_page": productQuery.Page, "limit": productQuery.Limit}))
+}
+
 func (h *Handler) GetProductsByCategoryID(ctx *gin.Context) {
 	query := map[string]string{
 		"page":      ctx.Query("page"),

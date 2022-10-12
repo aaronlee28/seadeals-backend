@@ -142,6 +142,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.POST("/sellers/follow", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.FollowSellerReq{}
 	}), h.FollowToSeller)
+	r.GET("/sellers/products", middleware.AuthorizeJWTFor(model.SellerRoleName), h.GetProductsByUserIDUnscoped)
 
 	// SELLER
 	r.GET("/sellers/:id", middleware.OptionalAuthorizeJWTFor(model.UserRoleName), h.FindSellerByID)
