@@ -269,7 +269,7 @@ func (s *voucherService) DeleteVoucherByID(id, userID uint) (bool, error) {
 		return false, err
 	}
 
-	if v.Seller.User.ID != userID {
+	if v.Seller.UserID != userID {
 		err = apperror.UnauthorizedError("cannot delete other shop voucher")
 		return false, err
 	}
