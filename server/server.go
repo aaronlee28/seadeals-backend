@@ -103,6 +103,7 @@ func Init() {
 
 	walletService := service.NewWalletService(&service.WalletServiceConfig{
 		DB:                db.Get(),
+		AddressRepository: addressRepository,
 		WalletRepository:  walletRepository,
 		CourierRepository: courierRepository,
 		DeliveryRepo:      deliveryRepository,
@@ -115,6 +116,7 @@ func Init() {
 
 	userSeaLabsPayAccountServ := service.NewUserSeaPayAccountServ(&service.UserSeaPayAccountServConfig{
 		DB:                          db.Get(),
+		AddressRepository:           addressRepository,
 		UserSeaPayAccountRepo:       userSeaLabsPayAccountRepo,
 		DeliveryRepo:                deliveryRepository,
 		DeliveryActRepo:             deliveryActivityRepo,
@@ -176,6 +178,8 @@ func Init() {
 	orderService := service.NewOrderService(&service.OrderServiceConfig{
 		DB:                        db.Get(),
 		OrderRepository:           orderRepository,
+		AddressRepository:         addressRepository,
+		CourierRepository:         courierRepository,
 		SellerRepository:          sellerRepository,
 		VoucherRepo:               voucherRepo,
 		DeliveryRepo:              deliveryRepository,
