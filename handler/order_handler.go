@@ -89,6 +89,26 @@ func (h *Handler) RejectRefundRequest(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, dto.StatusOKResponse(response))
 }
 
+func (h *Handler) FinishOrder(ctx *gin.Context) {
+	payload, _ := ctx.Get("user")
+	user, isValid := payload.(dto.UserJWT)
+	if !isValid {
+		_ = ctx.Error(apperror.BadRequestError("Invalid user"))
+		return
+	}
+
+	value, _ := ctx.Get("payload")
+	json, _ := value.(*dto.FinishOrderReq)
+
+	response, err := h.orderService.FinishOrder(json, user.UserID)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(response))
+}
+
 func (h *Handler) GetSellerOrders(ctx *gin.Context) {
 	query := &repository.OrderQuery{
 		Filter: helper.GetQuery(ctx, "filter", ""),

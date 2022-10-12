@@ -319,6 +319,7 @@ func (u *userSeaPayAccountServ) PayWithSeaLabsPay(userID uint, req *dto.Checkout
 			Address:        seller.Address.Address,
 			Status:         dto.DeliveryWaitingForPayment,
 			DeliveryNumber: helper.RandomString(10),
+			Eta:            deliveryResult.Eta,
 			Total:          float64(deliveryResult.Total),
 			OrderID:        order.ID,
 			CourierID:      courier.ID,

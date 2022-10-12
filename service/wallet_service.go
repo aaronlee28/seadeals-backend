@@ -545,6 +545,7 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 			Status:         dto.DeliveryWaitingForSeller,
 			DeliveryNumber: helper.RandomString(10),
 			Total:          float64(deliveryResult.Total),
+			Eta:            deliveryResult.Eta,
 			OrderID:        order.ID,
 			CourierID:      courier.ID,
 		}
@@ -559,14 +560,14 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 		}
 
 		//update order price with map - voucher id
-		order.Total = totalOrder + delivery.Total
+		order.Total = totalOrder
 		order.Status = dto.OrderWaitingSeller
 		err = w.walletRepository.UpdateOrder(tx, order)
 		if err != nil {
 			return nil, err
 		}
 
-		totalTransaction += totalOrder
+		totalTransaction += totalOrder + delivery.Total
 	}
 	//total transaction - voucher
 	//4. check user wallet balance is sufficient

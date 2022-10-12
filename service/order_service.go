@@ -20,10 +20,13 @@ import (
 type OrderService interface {
 	GetOrderBySellerID(userID uint, query *repository.OrderQuery) ([]*model.Order, int64, int64, error)
 	GetOrderByUserID(userID uint, query *repository.OrderQuery) ([]*model.Order, int64, int64, error)
+
 	CancelOrderBySeller(orderID uint, userID uint) (*model.Order, error)
 	RequestRefundByBuyer(req *dto.CreateComplaintReq, userID uint) (*dto.CreateComplaintRes, error)
 	AcceptRefundRequest(req *dto.RejectAcceptRefundReq, userID uint) (*dto.RejectAcceptRefundRes, error)
 	RejectRefundRequest(req *dto.RejectAcceptRefundReq, userID uint) (*dto.RejectAcceptRefundRes, error)
+	FinishOrder(req *dto.FinishOrderReq, userID uint) (*model.Order, error)
+
 	RunCronJobs()
 }
 
@@ -494,20 +497,58 @@ func (o *orderService) RejectRefundRequest(req *dto.RejectAcceptRefundReq, userI
 	return response, nil
 }
 
+func (o *orderService) FinishOrder(req *dto.FinishOrderReq, userID uint) (*model.Order, error) {
+	tx := o.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
+
+	order, err := o.orderRepository.GetOrderDetailByID(tx, req.OrderID)
+	if err != nil {
+		return nil, err
+	}
+	if order.UserID != userID {
+		err = apperror.BadRequestError("Tidak bisa menyelesaikan order user lain")
+		return nil, err
+	}
+	if order.Status != dto.OrderDelivered {
+		err = apperror.BadRequestError("Tidak bisa menyelesaikan order yang sedang dalam proses " + order.Status)
+		return nil, err
+	}
+
+	doneOrder, err := o.orderRepository.UpdateOrderStatus(tx, req.OrderID, dto.OrderDone)
+	if err != nil {
+		return nil, err
+	}
+
+	// ADD GET HOLDING ACCOUNT MONEY HERE
+
+	newNotification := &model.Notification{
+		UserID:   order.UserID,
+		SellerID: order.SellerID,
+		Title:    dto.NotificationSellerMenolakRefund,
+		Detail:   "Seller menolak refund request",
+	}
+	o.notificationRepo.AddToNotificationFromModel(tx, newNotification)
+
+	return doneOrder, nil
+}
+
 func (o *orderService) RunCronJobs() {
-	//tx := o.db.Begin()
 	c := cron.New(cron.WithLocation(time.UTC))
 	_, _ = c.AddFunc("@daily", func() {
-		orders := o.orderRepository.CheckAndUpdateOnDelivery()
-		for _, order := range orders {
+		deliveries, _ := o.deliveryRepo.CheckAndUpdateToDelivered()
+		tx := o.db.Begin()
+		for _, delivery := range deliveries {
+			order, _ := o.orderRepository.UpdateOrderStatus(tx, delivery.OrderID, dto.OrderDelivered)
 			newNotification := &model.Notification{
 				UserID:   order.UserID,
 				SellerID: order.SellerID,
 				Title:    dto.NotificationPesananSampai,
-				Detail:   "Order sampai",
+				Detail:   "Order dengan ID " + strconv.FormatUint(uint64(order.ID), 10) + " sampai Tujuan",
 			}
 			o.notificationRepo.AddToNotificationFromModelForCron(newNotification)
 		}
+		tx.Commit()
 	})
 
 	_, _ = c.AddFunc("@daily", func() {
@@ -517,7 +558,7 @@ func (o *orderService) RunCronJobs() {
 				UserID:   order.UserID,
 				SellerID: order.SellerID,
 				Title:    dto.NotificationPesananSelesai,
-				Detail:   "Order selesai",
+				Detail:   "Order dengan ID " + strconv.FormatUint(uint64(order.ID), 10) + " selesai",
 			}
 			o.notificationRepo.AddToNotificationFromModelForCron(newNotification)
 		}
