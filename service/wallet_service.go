@@ -38,6 +38,7 @@ type WalletService interface {
 
 type walletService struct {
 	db                *gorm.DB
+	addressRepository repository.AddressRepository
 	walletRepository  repository.WalletRepository
 	courierRepository repository.CourierRepository
 	deliveryRepo      repository.DeliveryRepository
@@ -50,6 +51,7 @@ type walletService struct {
 
 type WalletServiceConfig struct {
 	DB                *gorm.DB
+	AddressRepository repository.AddressRepository
 	WalletRepository  repository.WalletRepository
 	CourierRepository repository.CourierRepository
 	DeliveryRepo      repository.DeliveryRepository
@@ -63,6 +65,7 @@ type WalletServiceConfig struct {
 func NewWalletService(c *WalletServiceConfig) WalletService {
 	return &walletService{
 		db:                c.DB,
+		addressRepository: c.AddressRepository,
 		walletRepository:  c.WalletRepository,
 		courierRepository: c.CourierRepository,
 		deliveryRepo:      c.DeliveryRepo,
@@ -509,8 +512,12 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 			}
 		}
 		//order - voucher
-		if voucher != nil {
-			totalOrder -= voucher.Amount
+		if voucher != nil && voucher.MinSpending <= totalOrder {
+			if voucher.AmountType == "percentage" {
+				totalOrder -= (voucher.Amount / 100) * totalOrder
+			} else {
+				totalOrder -= voucher.Amount
+			}
 		}
 		var seller *model.Seller
 		seller, err = w.sellerRepository.FindSellerByID(tx, item.SellerID)
@@ -525,12 +532,19 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 			return nil, err
 		}
 
+		var buyerAddress *model.Address
+		buyerAddress, err = w.addressRepository.CheckUserAddress(tx, req.BuyerAddressID, userID)
+		if err != nil {
+			return nil, err
+		}
+
 		deliveryReq := &dto.DeliveryCalculateReq{
 			OriginCity:      seller.Address.CityID,
-			DestinationCity: strconv.FormatUint(uint64(req.BuyerAddressID), 10),
+			DestinationCity: buyerAddress.CityID,
 			Weight:          strconv.Itoa(totalWeight),
 			Courier:         courier.Code,
 		}
+
 		var deliveryResult = &dto.DeliveryCalculateReturn{}
 		deliveryResult, err = helper.CalculateDeliveryPrice(deliveryReq)
 		if err != nil {
@@ -572,8 +586,12 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 	if err != nil {
 		return nil, err
 	}
-	if globalVoucher != nil {
-		totalTransaction -= globalVoucher.Amount
+	if globalVoucher != nil && globalVoucher.SellerID == nil && globalVoucher.MinSpending <= totalTransaction {
+		if globalVoucher.AmountType == "percentage" {
+			totalTransaction -= (globalVoucher.Amount / 100) * totalTransaction
+		} else {
+			totalTransaction -= globalVoucher.Amount
+		}
 	}
 
 	if wallet.Balance-totalTransaction < 0 {

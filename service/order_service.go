@@ -33,7 +33,9 @@ type OrderService interface {
 
 type orderService struct {
 	db                        *gorm.DB
+	addressRepository         repository.AddressRepository
 	orderRepository           repository.OrderRepository
+	courierRepository         repository.CourierRepository
 	transactionRepo           repository.TransactionRepository
 	voucherRepo               repository.VoucherRepository
 	deliveryRepo              repository.DeliveryRepository
@@ -49,7 +51,9 @@ type orderService struct {
 
 type OrderServiceConfig struct {
 	DB                        *gorm.DB
+	AddressRepository         repository.AddressRepository
 	OrderRepository           repository.OrderRepository
+	CourierRepository         repository.CourierRepository
 	SellerRepository          repository.SellerRepository
 	VoucherRepo               repository.VoucherRepository
 	DeliveryRepo              repository.DeliveryRepository
@@ -66,7 +70,9 @@ type OrderServiceConfig struct {
 func NewOrderService(c *OrderServiceConfig) OrderService {
 	return &orderService{
 		db:                        c.DB,
+		addressRepository:         c.AddressRepository,
 		orderRepository:           c.OrderRepository,
+		courierRepository:         c.CourierRepository,
 		sellerRepository:          c.SellerRepository,
 		voucherRepo:               c.VoucherRepo,
 		deliveryRepo:              c.DeliveryRepo,
@@ -647,7 +653,7 @@ func (o *orderService) GetTotalPredictedPrice(req *dto.TotalPredictedPriceReq, u
 		return nil, err
 	}
 
-	var res *dto.TotalPredictedPriceRes
+	var res = &dto.TotalPredictedPriceRes{}
 
 	globalVoucher, err := o.walletRepository.GetVoucher(tx, req.GlobalVoucherCode)
 	if err != nil {
@@ -666,11 +672,12 @@ func (o *orderService) GetTotalPredictedPrice(req *dto.TotalPredictedPriceReq, u
 	if globalVoucher != nil {
 		voucherID = &globalVoucher.ID
 	}
-	var totalPredictedPrice []*dto.PredictedPriceRes
+	var ordersPrices []*dto.PredictedPriceRes
 	res.GlobalVoucherID = voucherID
+	var totalAllPrices float64
 
 	for _, item := range req.Cart {
-		var predictedPrice *dto.PredictedPriceRes
+		var predictedPrice = &dto.PredictedPriceRes{}
 		var voucher *model.Voucher
 		voucher, err = o.walletRepository.GetVoucher(tx, item.VoucherCode)
 		if err != nil {
@@ -729,21 +736,62 @@ func (o *orderService) GetTotalPredictedPrice(req *dto.TotalPredictedPriceReq, u
 
 		}
 		//order - voucher
-		if voucher != nil {
-			totalOrder -= voucher.Amount
+		if voucher != nil && voucher.MinSpending <= totalOrder {
+			if voucher.AmountType == "percentage" {
+				totalOrder -= (voucher.Amount / 100) * totalOrder
+			} else {
+				totalOrder -= voucher.Amount
+			}
 		}
+
+		var seller *model.Seller
+		seller, err = o.sellerRepository.FindSellerByID(tx, item.SellerID)
+		if err != nil {
+			return nil, err
+		}
+
+		// Create delivery
+		var courier *model.Courier
+		courier, err = o.courierRepository.GetCourierDetailByID(tx, item.CourierID)
+		if err != nil {
+			return nil, err
+		}
+		var buyerAddress *model.Address
+		buyerAddress, err = o.addressRepository.CheckUserAddress(tx, req.BuyerAddressID, userID)
+		if err != nil {
+			return nil, err
+		}
+
+		deliveryReq := &dto.DeliveryCalculateReq{
+			OriginCity:      seller.Address.CityID,
+			DestinationCity: buyerAddress.CityID,
+			Weight:          strconv.Itoa(totalWeight),
+			Courier:         courier.Code,
+		}
+
+		var deliveryCalcResult *dto.DeliveryCalculateReturn
+		deliveryCalcResult, err = helper.CalculateDeliveryPrice(deliveryReq)
+		if err != nil {
+			return nil, err
+		}
+
+		predictedPrice.DeliveryPrice = float64(deliveryCalcResult.Total)
 		predictedPrice.TotalOrder = totalOrder
-		///insert get delivery price and predicted price here
-		var deliveryPrice float64
-		//deliveryPrice = (call repo to get delivery price)
+		predictedPrice.PredictedPrice = totalOrder + float64(deliveryCalcResult.Total)
 
-		predictedPrice.DeliveryPrice = deliveryPrice
-		predictedPrice.TotalOrder = totalOrder + deliveryPrice
-
-		totalPredictedPrice = append(totalPredictedPrice, predictedPrice)
+		ordersPrices = append(ordersPrices, predictedPrice)
+		totalAllPrices += predictedPrice.PredictedPrice
 	}
-	res.PredictedPrices = totalPredictedPrice
-	/// insert total predicted prices
 
+	res.PredictedPrices = ordersPrices
+
+	if globalVoucher != nil && globalVoucher.SellerID == nil && globalVoucher.MinSpending <= totalAllPrices {
+		if globalVoucher.AmountType == "percentage" {
+			totalAllPrices -= (globalVoucher.Amount / 100) * totalAllPrices
+		} else {
+			totalAllPrices -= globalVoucher.Amount
+		}
+	}
+	res.TotalPredictedPrice = totalAllPrices
 	return res, nil
 }

@@ -26,6 +26,7 @@ type UserSeaPayAccountServ interface {
 
 type userSeaPayAccountServ struct {
 	db                          *gorm.DB
+	addressRepository           repository.AddressRepository
 	userSeaPayAccountRepo       repository.UserSeaPayAccountRepo
 	courierRepository           repository.CourierRepository
 	deliveryRepo                repository.DeliveryRepository
@@ -40,6 +41,7 @@ type userSeaPayAccountServ struct {
 
 type UserSeaPayAccountServConfig struct {
 	DB                          *gorm.DB
+	AddressRepository           repository.AddressRepository
 	UserSeaPayAccountRepo       repository.UserSeaPayAccountRepo
 	CourierRepository           repository.CourierRepository
 	DeliveryRepo                repository.DeliveryRepository
@@ -55,6 +57,7 @@ type UserSeaPayAccountServConfig struct {
 func NewUserSeaPayAccountServ(c *UserSeaPayAccountServConfig) UserSeaPayAccountServ {
 	return &userSeaPayAccountServ{
 		db:                          c.DB,
+		addressRepository:           c.AddressRepository,
 		userSeaPayAccountRepo:       c.UserSeaPayAccountRepo,
 		courierRepository:           c.CourierRepository,
 		deliveryRepo:                c.DeliveryRepo,
@@ -286,8 +289,12 @@ func (u *userSeaPayAccountServ) PayWithSeaLabsPay(userID uint, req *dto.Checkout
 		}
 
 		//order - voucher
-		if voucher != nil {
-			totalOrder -= voucher.Amount
+		if voucher != nil && voucher.MinSpending <= totalOrder {
+			if voucher.AmountType == "percentage" {
+				totalOrder -= (voucher.Amount / 100) * totalOrder
+			} else {
+				totalOrder -= voucher.Amount
+			}
 		}
 
 		var seller *model.Seller
@@ -303,9 +310,15 @@ func (u *userSeaPayAccountServ) PayWithSeaLabsPay(userID uint, req *dto.Checkout
 			return "", nil, err
 		}
 
+		var buyerAddress *model.Address
+		buyerAddress, err = u.addressRepository.CheckUserAddress(tx, req.BuyerAddressID, userID)
+		if err != nil {
+			return "", nil, err
+		}
+
 		deliveryReq := &dto.DeliveryCalculateReq{
 			OriginCity:      seller.Address.CityID,
-			DestinationCity: strconv.FormatUint(uint64(req.BuyerAddressID), 10),
+			DestinationCity: buyerAddress.CityID,
 			Weight:          strconv.Itoa(totalWeight),
 			Courier:         courier.Code,
 		}
@@ -342,6 +355,14 @@ func (u *userSeaPayAccountServ) PayWithSeaLabsPay(userID uint, req *dto.Checkout
 			return "", nil, err
 		}
 		totalTransaction += totalOrder + delivery.Total
+	}
+
+	if globalVoucher != nil && globalVoucher.SellerID == nil && globalVoucher.MinSpending <= totalTransaction {
+		if globalVoucher.AmountType == "percentage" {
+			totalTransaction -= (globalVoucher.Amount / 100) * totalTransaction
+		} else {
+			totalTransaction -= globalVoucher.Amount
+		}
 	}
 
 	transaction.Total = totalTransaction
