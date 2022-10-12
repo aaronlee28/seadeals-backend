@@ -152,3 +152,23 @@ func (h *Handler) GetBuyerOrders(ctx *gin.Context) {
 	}
 	ctx.JSON(http.StatusOK, dto.StatusOKResponse(gin.H{"orders": result, "total_data": totalData, "total_page": totalPage, "current_page": query.Page, "limit": query.Limit}))
 }
+
+func (h *Handler) GetTotalPredictedPrice(ctx *gin.Context) {
+	payload, _ := ctx.Get("user")
+	user, isValid := payload.(dto.UserJWT)
+	if !isValid {
+		_ = ctx.Error(apperror.BadRequestError("Invalid user"))
+		return
+	}
+
+	value, _ := ctx.Get("payload")
+	json, _ := value.(*dto.TotalPredictedPriceReq)
+
+	response, err := h.orderService.GetTotalPredictedPrice(json, user.UserID)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(response))
+}
