@@ -47,7 +47,7 @@ func (r *voucherRepository) UpdateVoucher(tx *gorm.DB, v *model.Voucher, id uint
 func (r *voucherRepository) FindVoucherByID(tx *gorm.DB, id uint) (*model.Voucher, error) {
 	var v *model.Voucher
 	result := tx.First(&v, id)
-	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+	if result.RowsAffected == 0 {
 		return nil, apperror.NotFoundError(new(apperror.VoucherNotFoundError).Error())
 	}
 	return v, result.Error
@@ -55,8 +55,8 @@ func (r *voucherRepository) FindVoucherByID(tx *gorm.DB, id uint) (*model.Vouche
 
 func (r *voucherRepository) FindVoucherDetailByID(tx *gorm.DB, id uint) (*model.Voucher, error) {
 	var v *model.Voucher
-	result := tx.Preload("Seller.User").First(&v, id)
-	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+	result := tx.Preload("Seller").First(&v, id)
+	if result.RowsAffected == 0 {
 		return nil, apperror.NotFoundError(new(apperror.VoucherNotFoundError).Error())
 	}
 	return v, result.Error

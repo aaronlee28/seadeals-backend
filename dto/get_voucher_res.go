@@ -25,6 +25,7 @@ type GetVoucherRes struct {
 	AmountType  string    `json:"amount_type"`
 	Amount      float64   `json:"amount"`
 	MinSpending float64   `json:"min_spending"`
+	IsDeleted   bool      `json:"is_deleted"`
 }
 
 func (_ *GetVoucherRes) From(v *model.Voucher) *GetVoucherRes {
@@ -47,5 +48,6 @@ func (_ *GetVoucherRes) From(v *model.Voucher) *GetVoucherRes {
 		AmountType:  v.AmountType,
 		Amount:      v.Amount,
 		MinSpending: v.MinSpending,
+		IsDeleted:   v.DeletedAt.Valid,
 	}
 }
