@@ -13,11 +13,9 @@ type GetSellerSummaryProductRes struct {
 	IsArchived           bool                    `json:"is_archived"`
 	ProductVariantDetail []*ProductVariantDetail `json:"product_variant_detail"`
 	Photo                string                  `json:"photo"`
-	Rating               float64                 `json:"rating"`
-	TotalReview          int64                   `json:"total_review"`
 }
 
-func (_ *GetSellerSummaryProductRes) From(p *model.Product, rating float64, totalReview int64) *GetSellerSummaryProductRes {
+func (_ *GetSellerSummaryProductRes) From(p *model.Product) *GetSellerSummaryProductRes {
 	var pvd []*ProductVariantDetail
 	for _, detail := range p.ProductVariantDetail {
 		pvd = append(pvd, new(ProductVariantDetail).From(detail))
@@ -39,7 +37,5 @@ func (_ *GetSellerSummaryProductRes) From(p *model.Product, rating float64, tota
 		IsArchived:           p.IsArchived,
 		ProductVariantDetail: pvd,
 		Photo:                photoURL,
-		Rating:               rating,
-		TotalReview:          totalReview,
 	}
 }

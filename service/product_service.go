@@ -169,14 +169,7 @@ func (p *productService) GetProductsByUserIDUnscoped(query *dto.SellerProductSea
 
 	var productsRes = make([]*dto.GetSellerSummaryProductRes, 0)
 	for _, product := range products {
-		var avgRating float64
-		var totalReviews int64
-		avgRating, totalReviews, err = p.reviewRepo.GetReviewsAvgAndCountByProductID(tx, product.ID)
-		if err != nil {
-			return nil, 0, 0, err
-		}
-
-		dtoProduct := new(dto.GetSellerSummaryProductRes).From(product, avgRating, totalReviews)
+		dtoProduct := new(dto.GetSellerSummaryProductRes).From(product)
 		productsRes = append(productsRes, dtoProduct)
 	}
 
