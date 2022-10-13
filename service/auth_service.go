@@ -60,6 +60,7 @@ func (a *authService) AuthAfterRegister(user *model.User, wallet *model.Wallet, 
 	rolesString := strings.Join(roles[:], " ")
 
 	userJWT := &dto.UserJWT{
+		Name:     user.FullName,
 		UserID:   user.ID,
 		Email:    user.Email,
 		Username: user.Username,
@@ -91,6 +92,7 @@ func (a *authService) SignInWithGoogle(user *model.User) (string, string, error)
 		return "", "", err
 	}
 	userJWT := &dto.UserJWT{
+		Name:     user.FullName,
 		UserID:   user.ID,
 		Email:    user.Email,
 		Username: user.Username,
@@ -136,6 +138,7 @@ func (a *authService) SignIn(req *dto.SignInReq) (string, string, error) {
 	}
 
 	userJWT := &dto.UserJWT{
+		Name:     user.FullName,
 		UserID:   user.ID,
 		Email:    user.Email,
 		Username: user.Username,
