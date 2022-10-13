@@ -5,7 +5,7 @@ import "gorm.io/gorm"
 const (
 	SortReviewDefault   = "desc"
 	SortByReviewDefault = ""
-	LimitReviewDefault  = 6
+	LimitReviewDefault  = 99999999
 	PageReviewDefault   = 1
 )
 
