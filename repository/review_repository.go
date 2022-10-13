@@ -17,6 +17,7 @@ type ReviewRepository interface {
 	CreateReview(tx *gorm.DB, req *model.Review) (*model.Review, error)
 	UpdateReview(tx *gorm.DB, reviewID uint, req *model.Review) (*model.Review, error)
 	UserReviewHistory(tx *gorm.DB, userID uint) ([]*model.Review, error)
+	FindReviewByProductIDNoQuery(tx *gorm.DB, productID uint) ([]*model.Review, error)
 }
 
 type reviewRepository struct{}
@@ -121,4 +122,13 @@ func (r *reviewRepository) UserReviewHistory(tx *gorm.DB, userID uint) ([]*model
 		return nil, apperror.InternalServerError("Cannot find transaction")
 	}
 	return reviewHistory, result.Error
+}
+
+func (r *reviewRepository) FindReviewByProductIDNoQuery(tx *gorm.DB, productID uint) ([]*model.Review, error) {
+	var reviews []*model.Review
+	result := tx.Clauses(clause.Returning{}).Where("product_id = ?", productID).Find(&reviews)
+	if result.Error != nil {
+		return nil, apperror.InternalServerError("Cannot find reviews")
+	}
+	return reviews, nil
 }

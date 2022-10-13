@@ -65,7 +65,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.Use(middleware.AllowCrossOrigin)
 	r.NoRoute()
 
-	// AUTH
+	// PING
 	r.GET("/", h.Ping)
 
 	// AUTH
@@ -87,6 +87,14 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		return &dto.GoogleLogin{}
 	}), h.GoogleSignIn)
 
+	// USER
+	r.GET("/user/profiles", middleware.AuthorizeJWTFor(model.UserRoleName), h.UserDetails)
+	r.PATCH("/user/change-profiles", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
+		return &dto.ChangeUserDetails{}
+	}), h.ChangeUserDetails)
+	r.PATCH("/user/change-password", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
+		return &dto.ChangePasswordReq{}
+	}), h.ChangeUserPassword)
 	// ADDRESS
 	r.POST("/user/profiles/addresses", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.CreateAddressReq{}
@@ -157,6 +165,9 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	// ORDER
 	r.GET("/sellers/orders", middleware.AuthorizeJWTFor(model.SellerRoleName), h.GetSellerOrders)
 	r.GET("/user/orders", middleware.AuthorizeJWTFor(model.SellerRoleName), h.GetBuyerOrders)
+	r.POST("/user/finish/orders", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
+		return &dto.FinishOrderReq{}
+	}), h.FinishOrder)
 
 	// DELIVERY
 	r.POST("/seller/deliver/order", middleware.AuthorizeJWTFor(model.SellerRoleName), middleware.RequestValidator(func() any {

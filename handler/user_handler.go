@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"os"
@@ -125,4 +126,59 @@ func (h *Handler) RegisterAsSeller(ctx *gin.Context) {
 	}
 	successResponse := dto.StatusOKResponse(gin.H{"seller": seller, "id_token": accessToken})
 	ctx.JSON(http.StatusOK, successResponse)
+}
+
+func (h *Handler) UserDetails(ctx *gin.Context) {
+
+	userPayload, _ := ctx.Get("user")
+	user, _ := userPayload.(dto.UserJWT)
+	userID := user.UserID
+
+	res, err := h.userService.UserDetails(userID)
+	fmt.Println("userid", userID)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(res))
+}
+
+func (h *Handler) ChangeUserDetails(ctx *gin.Context) {
+
+	userPayload, _ := ctx.Get("user")
+	user, _ := userPayload.(dto.UserJWT)
+	userID := user.UserID
+
+	value, _ := ctx.Get("payload")
+	json, _ := value.(*dto.ChangeUserDetails)
+
+	res, err := h.userService.ChangeUserDetailsLessPassword(userID, json)
+	fmt.Println("userid", userID)
+
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(res))
+}
+
+func (h *Handler) ChangeUserPassword(ctx *gin.Context) {
+
+	userPayload, _ := ctx.Get("user")
+	user, _ := userPayload.(dto.UserJWT)
+	userID := user.UserID
+
+	value, _ := ctx.Get("payload")
+	json, _ := value.(*dto.ChangePasswordReq)
+
+	err := h.userService.ChangeUserPassword(userID, json)
+
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse("Ok"))
 }
