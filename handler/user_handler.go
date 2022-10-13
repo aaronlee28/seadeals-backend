@@ -28,6 +28,7 @@ func (h *Handler) Register(ctx *gin.Context) {
 		ID:       result.ID,
 		Email:    result.Email,
 		Username: result.Username,
+		FullName: result.FullName,
 	}
 	accessToken, refreshToken, err := h.authService.AuthAfterRegister(userJWT, &result.Wallet, tx)
 	if err != nil {
