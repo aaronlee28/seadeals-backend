@@ -93,7 +93,7 @@ func (c *cartItemRepository) GetCartItem(tx *gorm.DB, query *Query, userID uint)
 		result = result.Limit(limit)
 	}
 
-	result = result.Preload("ProductVariantDetail").Preload("ProductVariantDetail.Product.ProductPhotos").Preload("ProductVariantDetail.Product.Seller").Preload("ProductVariantDetail.Product.Promotion").Find(&cartItems)
+	result = result.Preload("ProductVariantDetail.ProductVariant2").Preload("ProductVariantDetail.ProductVariant1").Preload("ProductVariantDetail.Product.ProductPhotos").Preload("ProductVariantDetail.Product.Seller").Preload("ProductVariantDetail.Product.Promotion").Find(&cartItems)
 	if result.Error != nil {
 		return nil, 0, 0, apperror.NotFoundError("Cannot get cart item")
 	}

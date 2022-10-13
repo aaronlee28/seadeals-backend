@@ -3,6 +3,11 @@ package dto
 type CartItemRes struct {
 	ID                  uint     `json:"id"`
 	Quantity            uint     `json:"quantity"`
+	ProductVariant      string   `json:"product_variant"`
+	MinQuantity         uint     `json:"min_quantity"`
+	MaxQuantity         uint     `json:"max_quantity"`
+	Stock               uint     `json:"stock"`
+	ProductSlug         string   `json:"product_slug"`
 	DiscountPercent     *int     `json:"discount_percent"`
 	DiscountNominal     *float64 `json:"discount_nominal"`
 	PriceBeforeDiscount float64  `json:"price_before_discount"`
