@@ -1,7 +1,6 @@
 package service
 
 import (
-	"fmt"
 	"gorm.io/gorm"
 	"math"
 	"seadeals-backend/dto"
@@ -62,29 +61,27 @@ func (s *reviewService) FindReviewByProductID(productID uint, qp *model.ReviewQu
 	tx := s.db.Begin()
 	var err error
 	defer helper.CommitOrRollback(tx, &err)
-	reviewsRaw, err := s.reviewRepo.FindReviewByProductIDNoQuery(tx, productID)
-	fmt.Println("totalReview", len(reviewsRaw))
+	allReviews, err := s.reviewRepo.FindReviewByProductIDNoQuery(tx, productID)
+	reviewsNoLimit, err := s.reviewRepo.FindReviewByProductIDNoLimit(tx, productID, qp)
 	reviews, err := s.reviewRepo.FindReviewByProductID(tx, productID, qp)
 	if err != nil {
 		return nil, err
 	}
 
-	totalReviews := uint(len(reviews))
-	totalRawReviews := uint(len(reviewsRaw))
-
+	totalReviews := uint(len(reviewsNoLimit))
 	totalPages := (totalReviews + qp.Limit - 1) / qp.Limit
 
 	var reviewsRes = make([]*dto.GetReviewRes, 0)
 	var avgRating float64
-
+	var allReviewsLength = uint(len(allReviews))
 	for _, review := range reviews {
 		reviewsRes = append(reviewsRes, new(dto.GetReviewRes).From(review))
 	}
-	for _, rev := range reviewsRaw {
+	for _, rev := range allReviews {
 		avgRating += float64(rev.Rating)
 	}
-	if totalRawReviews > 0 {
-		avgRating = avgRating / float64(totalRawReviews)
+	if allReviewsLength > 0 {
+		avgRating = avgRating / float64(allReviewsLength)
 	}
 
 	ratio := math.Pow(10, float64(1))
@@ -98,7 +95,10 @@ func (s *reviewService) FindReviewByProductID(productID uint, qp *model.ReviewQu
 		AverageRating: RoundedAvgRating,
 		Reviews:       reviewsRes,
 	}
-
+	//if qp.Rating == 0 && qp.WithDescriptionOnly == false && qp.WithImageOnly == false {
+	//	res.TotalReviews = totalRawReviews
+	//	res.TotalPages = totalRawPages
+	//}
 	return res, nil
 }
 
