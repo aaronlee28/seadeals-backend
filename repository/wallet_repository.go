@@ -361,7 +361,7 @@ func (w *walletRepository) UpdateWallet(tx *gorm.DB, userID uint, newBalance flo
 func (w *walletRepository) GetCartItem(tx *gorm.DB, cartID uint) (*model.CartItem, error) {
 	var cartItem *model.CartItem
 
-	result := tx.Preload("ProductVariantDetail.Product.ProductDetail").Where("id = ?", cartID).First(&cartItem)
+	result := tx.Preload("ProductVariantDetail.Product.Promotion", "start_date <= ? AND end_date >= ?", time.Now(), time.Now()).Preload("ProductVariantDetail.Product.ProductDetail").Where("id = ?", cartID).First(&cartItem)
 	if result.Error != nil {
 		return nil, apperror.InternalServerError("cannot find cart item")
 	}
