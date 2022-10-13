@@ -140,9 +140,22 @@ func (c *cartItemService) GetCartItems(query *repository.Query, userID uint) ([]
 		if len(item.ProductVariantDetail.Product.ProductPhotos) > 0 {
 			imageURL = item.ProductVariantDetail.Product.ProductPhotos[0].PhotoURL
 		}
+
+		var variantDetail string
+		if item.ProductVariantDetail.ProductVariant1 != nil {
+			variantDetail += *item.ProductVariantDetail.Variant1Value
+		}
+		if item.ProductVariantDetail.ProductVariant2 != nil {
+			variantDetail += ", " + *item.ProductVariantDetail.Variant2Value
+		}
 		cartItem := &dto.CartItemRes{
 			ID:                  item.ID,
 			Quantity:            item.Quantity,
+			ProductVariant:      variantDetail,
+			MinQuantity:         item.ProductVariantDetail.Product.MinQuantity,
+			MaxQuantity:         item.ProductVariantDetail.Product.MaxQuantity,
+			Stock:               item.ProductVariantDetail.Stock,
+			ProductSlug:         item.ProductVariantDetail.Product.Slug,
 			DiscountPercent:     discountPercent,
 			DiscountNominal:     discountNominal,
 			PriceBeforeDiscount: fullPrice,
