@@ -130,7 +130,6 @@ func (h *Handler) RegisterAsSeller(ctx *gin.Context) {
 }
 
 func (h *Handler) UserDetails(ctx *gin.Context) {
-
 	userPayload, _ := ctx.Get("user")
 	user, _ := userPayload.(dto.UserJWT)
 	userID := user.UserID

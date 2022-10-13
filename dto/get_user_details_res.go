@@ -7,7 +7,6 @@ type UserDetailsRes struct {
 	FullName  string    `json:"full_name"`
 	Email     string    `json:"email"`
 	Phone     string    `json:"phone"`
-	Password  string    `json:"password"`
 	AvatarURL string    `json:"avatar_url"`
 	Gender    string    `json:"gender"`
 	BirthDate time.Time `json:"birth_date"`

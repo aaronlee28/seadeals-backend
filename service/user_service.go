@@ -230,7 +230,6 @@ func (u *userService) UserDetails(userID uint) (*dto.UserDetailsRes, error) {
 		FullName:  userDetails.FullName,
 		Email:     userDetails.FullName,
 		Phone:     userDetails.Phone,
-		Password:  userDetails.Password,
 		Gender:    userDetails.Gender,
 		BirthDate: userDetails.BirthDate,
 	}
