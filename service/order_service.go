@@ -720,7 +720,7 @@ func (o *orderService) GetTotalPredictedPrice(req *dto.TotalPredictedPriceReq, u
 				return nil, err
 			}
 
-			if cartItem.ProductVariantDetail.Product.Promotion != nil {
+			if cartItem.ProductVariantDetail.Product.Promotion != nil && cartItem.ProductVariantDetail.Product.Promotion.MaxOrder >= cartItem.Quantity {
 				totalOrderItem = (cartItem.ProductVariantDetail.Price - cartItem.ProductVariantDetail.Product.Promotion.Amount) * float64(cartItem.Quantity)
 			} else {
 				totalOrderItem = cartItem.ProductVariantDetail.Price * float64(cartItem.Quantity)
