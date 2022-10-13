@@ -97,7 +97,7 @@ func (a *authService) SignInWithGoogle(user *model.User) (string, string, error)
 		Email:     user.Email,
 		Username:  user.Username,
 		WalletID:  wallet.ID,
-		AvatarURL: *user.AvatarURL,
+		AvatarURL: user.AvatarURL,
 	}
 
 	userRoles, err := a.userRoleRepo.GetRolesByUserID(tx, user.ID)
@@ -144,7 +144,7 @@ func (a *authService) SignIn(req *dto.SignInReq) (string, string, error) {
 		Email:     user.Email,
 		Username:  user.Username,
 		WalletID:  wallet.ID,
-		AvatarURL: *user.AvatarURL,
+		AvatarURL: user.AvatarURL,
 	}
 
 	userRoles, err := a.userRoleRepo.GetRolesByUserID(tx, user.ID)
