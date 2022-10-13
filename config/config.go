@@ -34,6 +34,7 @@ type AppConfig struct {
 	AWSMail                  string
 	ShippingKey              string
 	ShippingURL              string
+	RedirectPaymentBase      string
 }
 
 var Config = AppConfig{}
@@ -64,6 +65,7 @@ func Reset() {
 		AWSMail:                  getEnv("AWS_MAIL", ""),
 		ShippingKey:              getEnv("SHIPPING_API_KEY", ""),
 		ShippingURL:              getEnv("SHIPPING_API_URL", ""),
+		RedirectPaymentBase:      getEnv("REDIRECT_PAY_BASE", "http://localhost:3000"),
 	}
 }
 

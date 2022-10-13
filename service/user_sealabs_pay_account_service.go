@@ -81,7 +81,7 @@ func (u *userSeaPayAccountServ) CheckSeaLabsAccountExists(req *dto.CheckSeaLabsP
 	combinedString := req.AccountNumber + ":" + strconv.Itoa(1) + ":" + merchantCode
 
 	sign := helper.GenerateHMACSHA256(combinedString, apiKey)
-	_, _, err = helper.TransactionToSeaLabsPay(req.AccountNumber, strconv.Itoa(1), sign, "/order/pay/sea-labs-pay/callback")
+	_, _, err = helper.TransactionToSeaLabsPay(req.AccountNumber, strconv.Itoa(1), sign, "/order/pay/sea-labs-pay/callback", "trx")
 	if err != nil {
 		if err.Error() == "user not found" {
 			return nil, apperror.BadRequestError("Invalid Sea Labs Pay Account")
@@ -109,7 +109,7 @@ func (u *userSeaPayAccountServ) RegisterSeaLabsPayAccount(req *dto.RegisterSeaLa
 	combinedString := req.AccountNumber + ":" + strconv.Itoa(1) + ":" + merchantCode
 
 	sign := helper.GenerateHMACSHA256(combinedString, apiKey)
-	_, _, err = helper.TransactionToSeaLabsPay(req.AccountNumber, strconv.Itoa(1), sign, "/order/pay/sea-labs-pay/callback")
+	_, _, err = helper.TransactionToSeaLabsPay(req.AccountNumber, strconv.Itoa(1), sign, "/order/pay/sea-labs-pay/callback", "trx")
 	if err != nil {
 		if err.Error() == "user not found" {
 			return nil, apperror.BadRequestError("Invalid Sea Labs Pay Account")
@@ -376,7 +376,7 @@ func (u *userSeaPayAccountServ) PayWithSeaLabsPay(userID uint, req *dto.Checkout
 	combinedString := req.AccountNumber + ":" + strconv.Itoa(int(totalTransaction)) + ":" + merchantCode
 
 	sign := helper.GenerateHMACSHA256(combinedString, apiKey)
-	redirectURL, txnID, err := helper.TransactionToSeaLabsPay(req.AccountNumber, strconv.Itoa(int(totalTransaction)), sign, "/order/pay/sea-labs-pay/callback")
+	redirectURL, txnID, err := helper.TransactionToSeaLabsPay(req.AccountNumber, strconv.Itoa(int(totalTransaction)), sign, "/order/pay/sea-labs-pay/callback", "trx")
 	if err != nil {
 		return "", nil, err
 	}
@@ -461,7 +461,7 @@ func (u *userSeaPayAccountServ) TopUpWithSeaLabsPay(amount float64, userID uint,
 	combinedString := accountNumber + ":" + amountString + ":" + merchantCode
 
 	sign := helper.GenerateHMACSHA256(combinedString, apiKey)
-	redirectURL, txnId, err := helper.TransactionToSeaLabsPay(accountNumber, amountString, sign, "/user/wallet/top-up/sea-labs-pay/callback")
+	redirectURL, txnId, err := helper.TransactionToSeaLabsPay(accountNumber, amountString, sign, "/user/wallet/top-up/sea-labs-pay/callback", "topup")
 	if err != nil {
 		return nil, "", err
 	}
