@@ -640,6 +640,23 @@ func (p *productService) DeleteProductVariantDetails(userID uint, variantDetails
 		err = apperror.BadRequestError("default price is required")
 		return err
 	}
+	if len(pvds) == 1 && defaultPrice != nil {
+		createPVD := &model.ProductVariantDetail{
+			ProductID:     checkPID.ID,
+			Price:         *defaultPrice,
+			Variant1Value: nil,
+			Variant2Value: nil,
+			Variant1ID:    nil,
+			Variant2ID:    nil,
+			VariantCode:   nil,
+			PictureURL:    nil,
+			Stock:         0,
+		}
+		_, err = p.productRepo.CreateProductVariantDetailWithModel(tx, createPVD)
+		if err != nil {
+			return err
+		}
+	}
 	err = p.productRepo.DeleteProductVariantDetailsByID(tx, variantDetailsID)
 	if err != nil {
 		return err
