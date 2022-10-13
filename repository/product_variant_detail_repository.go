@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"fmt"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"seadeals-backend/apperror"
@@ -12,6 +13,7 @@ import (
 )
 
 type ProductVariantDetailRepository interface {
+	GetProductsBySellerIDUnscoped(tx *gorm.DB, query *dto.SellerProductSearchQuery, sellerID uint) ([]*model.Product, int64, error)
 	GetProductsBySellerID(tx *gorm.DB, query *dto.SellerProductSearchQuery, sellerID uint) ([]*dto.SellerProductsCustomTable, int64, int64, error)
 	GetProductsByCategoryID(tx *gorm.DB, query *dto.SellerProductSearchQuery, sellerID uint) ([]*dto.SellerProductsCustomTable, int64, int64, error)
 	SearchProducts(tx *gorm.DB, query *SearchQuery) ([]*dto.SellerProductsCustomTable, int64, int64, error)
@@ -108,6 +110,49 @@ func (p *productVariantDetailRepository) GetProductsBySellerID(tx *gorm.DB, quer
 		totalPage += 1
 	}
 	return products, totalPage, totalData, nil
+}
+
+func (p *productVariantDetailRepository) GetProductsBySellerIDUnscoped(tx *gorm.DB, query *dto.SellerProductSearchQuery, sellerID uint) ([]*model.Product, int64, error) {
+	var products []*model.Product
+	orderByString := query.SortBy
+	if query.SortBy == "price" {
+		orderByString = "min"
+	} else {
+		if query.SortBy == "" {
+			orderByString = "sold_count"
+		} else {
+			orderByString = "sold_count"
+			if query.SortBy == "date" {
+				orderByString = "products.created_at"
+			}
+		}
+	}
+
+	if query.SortBy == "" {
+		if query.Sort != "asc" {
+			orderByString += " desc"
+		}
+	} else {
+		if query.Sort == "desc" {
+			orderByString += " desc"
+		}
+	}
+
+	result := tx.Where("seller_id = ?", sellerID).Order(orderByString)
+	result = result.Where("products.name ILIKE ?", "%"+query.Search+"%")
+
+	var totalProduct int64
+	resCount := result.Model(&model.Product{}).Count(&totalProduct)
+	if resCount.Error != nil {
+		fmt.Println(resCount.Error)
+		return products, 0, apperror.InternalServerError("cannot fetch products count")
+	}
+
+	offset := (query.Page - 1) * query.Limit
+	result = result.Limit(query.Limit).Offset(offset)
+
+	result = result.Preload("ProductPhotos").Preload("Category").Preload("ProductVariantDetail").Unscoped().Find(&products)
+	return products, totalProduct, result.Error
 }
 
 func (p *productVariantDetailRepository) GetProductsByCategoryID(tx *gorm.DB, query *dto.SellerProductSearchQuery, categoryID uint) ([]*dto.SellerProductsCustomTable, int64, int64, error) {
