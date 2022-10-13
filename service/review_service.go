@@ -48,9 +48,9 @@ func validateReviewQueryParam(qp *model.ReviewQueryParam) {
 	if qp.Page == 0 {
 		qp.Page = model.PageReviewDefault
 	}
-	if qp.Limit == 0 {
-		qp.Limit = model.LimitReviewDefault
-	}
+	//if qp.Limit == 0 {
+	//	qp.Limit = ""
+	//}
 	if qp.Rating < 0 && qp.Rating > 5 {
 		qp.Rating = 0
 	}
@@ -69,7 +69,9 @@ func (s *reviewService) FindReviewByProductID(productID uint, qp *model.ReviewQu
 		return nil, err
 	}
 
-	totalReviews := uint(len(reviewsRaw))
+	totalReviews := uint(len(reviews))
+	totalRawReviews := uint(len(reviewsRaw))
+
 	totalPages := (totalReviews + qp.Limit - 1) / qp.Limit
 
 	var reviewsRes = make([]*dto.GetReviewRes, 0)
@@ -81,8 +83,8 @@ func (s *reviewService) FindReviewByProductID(productID uint, qp *model.ReviewQu
 	for _, rev := range reviewsRaw {
 		avgRating += float64(rev.Rating)
 	}
-	if totalReviews > 0 {
-		avgRating = avgRating / float64(totalReviews)
+	if totalRawReviews > 0 {
+		avgRating = avgRating / float64(totalRawReviews)
 	}
 
 	ratio := math.Pow(10, float64(1))
