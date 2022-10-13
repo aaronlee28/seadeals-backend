@@ -18,6 +18,7 @@ type ReviewRepository interface {
 	UpdateReview(tx *gorm.DB, reviewID uint, req *model.Review) (*model.Review, error)
 	UserReviewHistory(tx *gorm.DB, userID uint) ([]*model.Review, error)
 	FindReviewByProductIDNoQuery(tx *gorm.DB, productID uint) ([]*model.Review, error)
+	FindReviewByProductIDNoLimit(tx *gorm.DB, productID uint, qp *model.ReviewQueryParam) ([]*model.Review, error)
 }
 
 type reviewRepository struct{}
@@ -131,4 +132,25 @@ func (r *reviewRepository) FindReviewByProductIDNoQuery(tx *gorm.DB, productID u
 		return nil, apperror.InternalServerError("Cannot find reviews")
 	}
 	return reviews, nil
+}
+
+func (r *reviewRepository) FindReviewByProductIDNoLimit(tx *gorm.DB, productID uint, qp *model.ReviewQueryParam) ([]*model.Review, error) {
+	var reviews []*model.Review
+
+	orderStmt := fmt.Sprintf("%s %s", qp.SortBy, qp.Sort)
+
+	queryDB := tx
+	if qp.Rating != 0 {
+		queryDB = queryDB.Where("rating = ?", qp.Rating)
+	}
+	if qp.WithImageOnly == true {
+		queryDB = queryDB.Where("image_url IS NOT NULL")
+	}
+	if qp.WithDescriptionOnly == true {
+		queryDB = queryDB.Where("description IS NOT NULL")
+	}
+
+	result := queryDB.Where("product_id = ?", productID).Order(orderStmt).Preload("User").Find(&reviews)
+
+	return reviews, result.Error
 }
