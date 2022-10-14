@@ -358,7 +358,11 @@ func (p *productService) CreateSellerProduct(userID uint, req *dto.PostCreatePro
 	}
 
 	//get seller id
-	seller, _ := p.sellerRepo.FindSellerByUserID(tx, userID)
+	var seller *model.Seller
+	seller, err = p.sellerRepo.FindSellerByUserID(tx, userID)
+	if err != nil {
+		return nil, err
+	}
 	//create product
 	var product *model.Product
 	product, err = p.productRepo.CreateProduct(tx, req.Name, req.CategoryID, seller.ID, req.IsBulkEnabled, req.MinQuantity, req.MaxQuantity)
