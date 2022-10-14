@@ -104,7 +104,7 @@ func (p *promotionService) CreatePromotion(id uint, req *dto.CreatePromotionReq)
 		ProductID: createPromo.ProductID,
 		Name:      createPromo.Name,
 	}
-	var userArray []*model.Favorite
+	var userArray []*model.SocialGraph
 	userArray, err = p.socialGraphRepo.GetFollowerUserID(tx, seller.ID)
 	for _, user := range userArray {
 		newNotification := &model.Notification{

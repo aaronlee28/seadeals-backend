@@ -12,7 +12,7 @@ type SocialGraphRepository interface {
 	GetFollowingCountByUserID(tx *gorm.DB, userID uint) (int64, error)
 	FollowToSeller(tx *gorm.DB, userID uint, sellerID uint) (*model.SocialGraph, error)
 	GetFavoriteUserID(tx *gorm.DB, productID uint) ([]*model.Favorite, error)
-	GetFollowerUserID(tx *gorm.DB, sellerID uint) ([]*model.Favorite, error)
+	GetFollowerUserID(tx *gorm.DB, sellerID uint) ([]*model.SocialGraph, error)
 }
 
 type socialGraphRepository struct{}
@@ -77,8 +77,8 @@ func (s *socialGraphRepository) GetFavoriteUserID(tx *gorm.DB, productID uint) (
 	return userArray, nil
 }
 
-func (s *socialGraphRepository) GetFollowerUserID(tx *gorm.DB, sellerID uint) ([]*model.Favorite, error) {
-	var userArray []*model.Favorite
+func (s *socialGraphRepository) GetFollowerUserID(tx *gorm.DB, sellerID uint) ([]*model.SocialGraph, error) {
+	var userArray []*model.SocialGraph
 	result := tx.Clauses(clause.Returning{}).Where("seller_id = ?", sellerID).Where("is_follow = true").Find(&userArray)
 	if result.Error != nil {
 		return nil, apperror.InternalServerError("Cannot get users")

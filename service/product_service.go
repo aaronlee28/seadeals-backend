@@ -433,7 +433,7 @@ func (p *productService) CreateSellerProduct(userID uint, req *dto.PostCreatePro
 		ProductPhoto:         productPhotos,
 		ProductVariantDetail: productVariantDetails,
 	}
-	var userArray []*model.Favorite
+	var userArray []*model.SocialGraph
 	userArray, err = p.socialGraphRepo.GetFollowerUserID(tx, seller.ID)
 	for _, user := range userArray {
 		newNotification := &model.Notification{
