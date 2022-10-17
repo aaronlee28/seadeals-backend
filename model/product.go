@@ -2,6 +2,7 @@ package model
 
 import (
 	"gorm.io/gorm"
+	"seadeals-backend/helper/formatter"
 	"strconv"
 )
 
@@ -36,6 +37,7 @@ type SellerProductQuery struct {
 }
 
 func (u *Product) AfterCreate(tx *gorm.DB) (err error) {
-	tx.Model(u).Update("slug", u.Name+"."+strconv.FormatUint(uint64(u.ID), 10))
+	slug := formatter.GenerateSlug(u.Name)
+	tx.Model(u).Update("slug", slug+"."+strconv.FormatUint(uint64(u.ID), 10))
 	return
 }
