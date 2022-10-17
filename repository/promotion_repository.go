@@ -22,7 +22,7 @@ func NewPromotionRepository() PromotionRepository {
 
 func (p *promotionRepository) GetPromotionBySellerID(tx *gorm.DB, sellerID uint) ([]*model.Promotion, error) {
 	var promotion []*model.Promotion
-	result := tx.Where("seller_id = ?", sellerID).Find(&promotion)
+	result := tx.Model(&promotion).Where("seller_id = ?", sellerID).Preload("Product").Find(&promotion)
 	return promotion, result.Error
 }
 
