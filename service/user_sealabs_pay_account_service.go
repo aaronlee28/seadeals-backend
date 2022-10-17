@@ -376,7 +376,7 @@ func (u *userSeaPayAccountServ) PayWithSeaLabsPay(userID uint, req *dto.Checkout
 			Total:    orderSubtotal + delivery.Total,
 			HasTaken: false,
 		}
-		_, err = u.accountHolderRepo.CreateAccountHolder(tx, accountHolder)
+		_, err = u.accountHolderRepo.SendToAccountHolder(tx, accountHolder)
 		if err != nil {
 			return "", nil, err
 		}

@@ -8,7 +8,7 @@ import (
 )
 
 type AccountHolderRepository interface {
-	CreateAccountHolder(tx *gorm.DB, model *model.AccountHolder) (*model.AccountHolder, error)
+	SendToAccountHolder(tx *gorm.DB, model *model.AccountHolder) (*model.AccountHolder, error)
 	TakeMoneyFromAccountHolderByOrderID(tx *gorm.DB, orderID uint) (*model.AccountHolder, error)
 }
 
@@ -18,7 +18,7 @@ func NewAccountHolderRepository() AccountHolderRepository {
 	return &accountHolderRepository{}
 }
 
-func (a *accountHolderRepository) CreateAccountHolder(tx *gorm.DB, model *model.AccountHolder) (*model.AccountHolder, error) {
+func (a *accountHolderRepository) SendToAccountHolder(tx *gorm.DB, model *model.AccountHolder) (*model.AccountHolder, error) {
 	result := tx.Create(&model)
 	if result.Error != nil {
 		return nil, apperror.InternalServerError("Tidak bisa membuat account holding")

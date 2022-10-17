@@ -601,7 +601,7 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 			Total:    totalOrder + delivery.Total,
 			HasTaken: false,
 		}
-		_, err = w.accountHolderRepo.CreateAccountHolder(tx, accountHolder)
+		_, err = w.accountHolderRepo.SendToAccountHolder(tx, accountHolder)
 		if err != nil {
 			return nil, err
 		}
