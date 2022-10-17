@@ -24,7 +24,11 @@ func (r *productCategoryRepository) FindAllProductCategories(tx *gorm.DB, query 
 	result := tx.Model(&model.ProductCategory{})
 	result = result.Distinct().Select("product_categories.id, product_categories.name, product_categories.slug, product_categories.icon_url, product_categories.parent_id")
 	result = result.Joins("LEFT JOIN product_categories as c2 ON product_categories.id = c2.parent_id")
-	result = result.Joins("INNER JOIN products as p ON p.category_id = product_categories.id OR p.category_id = c2.id")
+	stringJoin := "INNER JOIN products as p ON p.category_id = product_categories.id OR p.category_id = c2.id"
+	if query.FindAll {
+		stringJoin = "LEFT JOIN products as p ON p.category_id = product_categories.id OR p.category_id = c2.id"
+	}
+	result = result.Joins(stringJoin)
 
 	if query.ParentID == 0 {
 		result = result.Where("product_categories.parent_id IS NULL")
@@ -58,7 +62,11 @@ func (r *productCategoryRepository) FindAllProductCategories(tx *gorm.DB, query 
 		table = table.Offset((page - 1) * limit)
 	}
 
-	table = table.Unscoped().Find(&categories)
+	table = table.Unscoped()
+	if query.FindAll {
+		table = table.Preload("Children")
+	}
+	table = table.Find(&categories)
 	if table.Error != nil {
 		return nil, 0, 0, apperror.InternalServerError("Cannot fetch categories")
 	}

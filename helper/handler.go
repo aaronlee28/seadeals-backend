@@ -44,3 +44,13 @@ func GetQueryToFloat64(c *gin.Context, key string, defaultVal float64) float64 {
 	}
 	return defaultVal
 }
+
+func GetQueryToBool(c *gin.Context, key string, defaultVal bool) bool {
+	if s, ok := c.GetQuery(key); ok {
+		if s == "true" {
+			return true
+		}
+		return false
+	}
+	return defaultVal
+}

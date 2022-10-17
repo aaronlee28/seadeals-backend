@@ -16,6 +16,7 @@ func (h *Handler) FindAllProductCategories(ctx *gin.Context) {
 		Page:     helper.GetQuery(ctx, "page", "1"),
 		SellerID: helper.GetQueryToUint(ctx, "sellerID", 0),
 		ParentID: helper.GetQueryToUint(ctx, "parentID", 0),
+		FindAll:  helper.GetQueryToBool(ctx, "findAll", false),
 	}
 	categories, totalPage, totalData, err := h.productCategoryService.FindAllProductCategories(query)
 	if err != nil {

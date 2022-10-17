@@ -33,6 +33,7 @@ type OrderService interface {
 
 type orderService struct {
 	db                        *gorm.DB
+	accountHolderRepo         repository.AccountHolderRepository
 	addressRepository         repository.AddressRepository
 	orderRepository           repository.OrderRepository
 	courierRepository         repository.CourierRepository
@@ -51,6 +52,7 @@ type orderService struct {
 
 type OrderServiceConfig struct {
 	DB                        *gorm.DB
+	AccountHolderRepo         repository.AccountHolderRepository
 	AddressRepository         repository.AddressRepository
 	OrderRepository           repository.OrderRepository
 	CourierRepository         repository.CourierRepository
@@ -70,6 +72,7 @@ type OrderServiceConfig struct {
 func NewOrderService(c *OrderServiceConfig) OrderService {
 	return &orderService{
 		db:                        c.DB,
+		accountHolderRepo:         c.AccountHolderRepo,
 		addressRepository:         c.AddressRepository,
 		orderRepository:           c.OrderRepository,
 		courierRepository:         c.CourierRepository,
@@ -269,6 +272,11 @@ func (o *orderService) CancelOrderBySeller(orderID uint, userID uint) (*model.Or
 		}
 	}
 
+	_, err = o.accountHolderRepo.TakeMoneyFromAccountHolderByOrderID(tx, order.ID)
+	if err != nil {
+		return nil, err
+	}
+
 	refundedOrder, err := o.orderRepository.UpdateOrderStatus(tx, orderID, dto.OrderRefunded)
 	if err != nil {
 		return nil, err
@@ -432,6 +440,11 @@ func (o *orderService) AcceptRefundRequest(req *dto.RejectAcceptRefundReq, userI
 		}
 	}
 
+	_, err = o.accountHolderRepo.TakeMoneyFromAccountHolderByOrderID(tx, order.ID)
+	if err != nil {
+		return nil, err
+	}
+
 	refundedOrder, err := o.orderRepository.UpdateOrderStatus(tx, req.OrderID, dto.OrderRefunded)
 	if err != nil {
 		return nil, err
@@ -483,6 +496,18 @@ func (o *orderService) RejectRefundRequest(req *dto.RejectAcceptRefundReq, userI
 	}
 
 	// ADD GET HOLDING ACCOUNT MONEY HERE
+	accountHolder, err := o.accountHolderRepo.TakeMoneyFromAccountHolderByOrderID(tx, order.ID)
+	if err != nil {
+		return nil, err
+	}
+	wallet, err := o.walletRepository.GetWalletByUserID(tx, seller.UserID)
+	if err != nil {
+		return nil, err
+	}
+	_, err = o.walletRepository.TopUp(tx, wallet, accountHolder.Total)
+	if err != nil {
+		return nil, err
+	}
 
 	doneOrder, err := o.orderRepository.UpdateOrderStatus(tx, req.OrderID, dto.OrderDone)
 	if err != nil {
@@ -522,18 +547,45 @@ func (o *orderService) FinishOrder(req *dto.FinishOrderReq, userID uint) (*model
 		return nil, err
 	}
 
+	accountHolder, err := o.accountHolderRepo.TakeMoneyFromAccountHolderByOrderID(tx, order.ID)
+	if err != nil {
+		return nil, err
+	}
+	seller, err := o.sellerRepository.FindSellerByID(tx, order.SellerID)
+	if err != nil {
+		return nil, err
+	}
+	wallet, err := o.walletRepository.GetWalletByUserID(tx, seller.UserID)
+	if err != nil {
+		return nil, err
+	}
+	_, err = o.walletRepository.TopUp(tx, wallet, accountHolder.Total)
+	if err != nil {
+		return nil, err
+	}
+	transWalletRepo := &model.WalletTransaction{
+		WalletID:      wallet.ID,
+		TransactionID: &order.TransactionID,
+		Total:         accountHolder.Total,
+		PaymentMethod: "wallet",
+		PaymentType:   "CREDIT",
+		Description:   "Pembayaran dari order ID " + strconv.FormatUint(uint64(order.ID), 10),
+	}
+	_, err = o.walletTransRepo.CreateTransaction(tx, transWalletRepo)
+	if err != nil {
+		return nil, err
+	}
+
 	doneOrder, err := o.orderRepository.UpdateOrderStatus(tx, req.OrderID, dto.OrderDone)
 	if err != nil {
 		return nil, err
 	}
 
-	// ADD GET HOLDING ACCOUNT MONEY HERE
-
 	newNotification := &model.Notification{
 		UserID:   order.UserID,
 		SellerID: order.SellerID,
-		Title:    dto.NotificationSellerMenolakRefund,
-		Detail:   "Seller menolak refund request",
+		Title:    dto.NotificationPesananSelesai,
+		Detail:   "Order produk telah diselesaikan",
 	}
 	o.notificationRepo.AddToNotificationFromModel(tx, newNotification)
 
@@ -561,6 +613,24 @@ func (o *orderService) RunCronJobs() {
 	_, _ = c.AddFunc("@daily", func() {
 		orders := o.orderRepository.CheckAndUpdateOnOrderDelivered()
 		for _, order := range orders {
+			tx := o.db.Begin()
+			accountHolder, _ := o.accountHolderRepo.TakeMoneyFromAccountHolderByOrderID(tx, order.ID)
+
+			seller, _ := o.sellerRepository.FindSellerByID(tx, order.SellerID)
+			wallet, _ := o.walletRepository.GetWalletByUserID(tx, seller.UserID)
+			_, _ = o.walletRepository.TopUp(tx, wallet, accountHolder.Total)
+			transWalletRepo := &model.WalletTransaction{
+				WalletID:      wallet.ID,
+				TransactionID: &order.TransactionID,
+				Total:         accountHolder.Total,
+				PaymentMethod: "wallet",
+				PaymentType:   "CREDIT",
+				Description:   "Pembayaran dari order ID " + strconv.FormatUint(uint64(order.ID), 10),
+			}
+			_, _ = o.walletTransRepo.CreateTransaction(tx, transWalletRepo)
+
+			tx.Commit()
+
 			newNotification := &model.Notification{
 				UserID:   order.UserID,
 				SellerID: order.SellerID,

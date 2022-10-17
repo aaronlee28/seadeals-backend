@@ -47,6 +47,7 @@ type walletService struct {
 	walletTransRepo   repository.WalletTransactionRepository
 	userRoleRepo      repository.UserRoleRepository
 	sellerRepository  repository.SellerRepository
+	accountHolderRepo repository.AccountHolderRepository
 }
 
 type WalletServiceConfig struct {
@@ -60,6 +61,7 @@ type WalletServiceConfig struct {
 	WalletTransRepo   repository.WalletTransactionRepository
 	UserRoleRepo      repository.UserRoleRepository
 	SellerRepository  repository.SellerRepository
+	AccountHolderRepo repository.AccountHolderRepository
 }
 
 func NewWalletService(c *WalletServiceConfig) WalletService {
@@ -74,6 +76,7 @@ func NewWalletService(c *WalletServiceConfig) WalletService {
 		walletTransRepo:   c.WalletTransRepo,
 		userRoleRepo:      c.UserRoleRepo,
 		sellerRepository:  c.SellerRepository,
+		accountHolderRepo: c.AccountHolderRepo,
 	}
 }
 
@@ -156,8 +159,8 @@ func (w *walletService) PaginatedTransactions(q *repository.Query, userID uint) 
 		return nil, err
 	}
 
-	for _, transaction := range *t {
-		tr := new(dto.TransactionsRes).FromTransaction(&transaction)
+	for _, transaction := range t {
+		tr := new(dto.TransactionsRes).FromTransaction(transaction)
 		ts = append(ts, *tr)
 	}
 	limit, _ := strconv.Atoi(q.Limit)
@@ -590,6 +593,18 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 		totalOrderPrice += totalOrder
 		totalDelivery += delivery.Total
 		sellerIDs = append(sellerIDs, item.SellerID)
+
+		accountHolder := &model.AccountHolder{
+			UserID:   userID,
+			OrderID:  order.ID,
+			SellerID: seller.ID,
+			Total:    totalOrder + delivery.Total,
+			HasTaken: false,
+		}
+		_, err = w.accountHolderRepo.SendToAccountHolder(tx, accountHolder)
+		if err != nil {
+			return nil, err
+		}
 	}
 	//total transaction - voucher
 	//4. check user wallet balance is sufficient
