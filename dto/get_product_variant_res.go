@@ -1,6 +1,8 @@
 package dto
 
-import "seadeals-backend/model"
+import (
+	"seadeals-backend/model"
+)
 
 type ProductVariantRes struct {
 	MinPrice        float64                 `json:"min_price"`
@@ -14,10 +16,10 @@ type GetProductVariantRes struct {
 	Price         float64 `json:"price"`
 	Variant1Name  string  `json:"variant1_name"`
 	Variant2Name  string  `json:"variant2_name"`
-	Variant1Value string  `json:"variant1_value"`
-	Variant2Value string  `json:"variant2_value"`
-	VariantCode   string  `json:"variant_code"`
-	PictureURL    string  `json:"picture_url"`
+	Variant1Value *string `json:"variant1_value"`
+	Variant2Value *string `json:"variant2_value"`
+	VariantCode   *string `json:"variant_code"`
+	PictureURL    *string `json:"picture_url"`
 	Stock         uint    `json:"stock"`
 }
 
@@ -30,15 +32,15 @@ func (_ *GetProductVariantRes) From(pv *model.ProductVariantDetail) *GetProductV
 		name2 = pv.ProductVariant2.Name
 	}
 
-	var variant1Value, variant2Value, pictureURL string
+	var variant1Value, variant2Value, pictureURL *string
 	if pv.Variant1Value != nil {
-		variant1Value = *pv.Variant1Value
+		variant1Value = pv.Variant1Value
 	}
 	if pv.Variant2Value != nil {
-		variant2Value = *pv.Variant2Value
+		variant2Value = pv.Variant2Value
 	}
 	if pv.PictureURL != nil {
-		pictureURL = *pv.PictureURL
+		pictureURL = pv.PictureURL
 	}
 
 	return &GetProductVariantRes{
@@ -49,8 +51,8 @@ func (_ *GetProductVariantRes) From(pv *model.ProductVariantDetail) *GetProductV
 		Variant2Name:  name2,
 		Variant1Value: variant1Value,
 		Variant2Value: variant2Value,
-		VariantCode:   *pv.VariantCode,
+		VariantCode:   pv.VariantCode,
 		PictureURL:    pictureURL,
-		Stock:         uint(pv.Stock),
+		Stock:         pv.Stock,
 	}
 }

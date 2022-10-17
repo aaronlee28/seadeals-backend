@@ -12,15 +12,15 @@ type GetSellerSummaryProductRes struct {
 	SoldCount            int                     `json:"sold_count"`
 	FavoriteCount        uint                    `json:"favorite_count"`
 	IsArchived           bool                    `json:"is_archived"`
-	ProductVariantDetail []*ProductVariantDetail `json:"product_variant_detail"`
+	ProductVariantDetail []*GetProductVariantRes `json:"product_variant_detail"`
 	Photo                string                  `json:"photo"`
 	IsDeleted            bool                    `json:"is_deleted"`
 }
 
 func (_ *GetSellerSummaryProductRes) From(p *model.Product) *GetSellerSummaryProductRes {
-	var pvd []*ProductVariantDetail
+	var pvd []*GetProductVariantRes
 	for _, detail := range p.ProductVariantDetail {
-		pvd = append(pvd, new(ProductVariantDetail).From(detail))
+		pvd = append(pvd, new(GetProductVariantRes).From(detail))
 	}
 
 	var photoURL string
