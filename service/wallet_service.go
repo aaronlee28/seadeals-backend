@@ -434,8 +434,17 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 		return nil, err
 	}
 
-	var totalTransaction float64
+	var totalOrderPrice float64
+	var totalDelivery float64
+	var sellerIDs []uint
 	for _, item := range req.Cart {
+		for _, id := range sellerIDs {
+			if id == item.SellerID {
+				err = apperror.BadRequestError("Tidak bisa membuat 2 order dengan seller yang sama dalam satu transaksi")
+				return nil, err
+			}
+		}
+
 		//check voucher if voucher still valid
 		var voucher *model.Voucher
 		voucher, err = w.walletRepository.GetVoucher(tx, item.VoucherCode)
@@ -578,7 +587,9 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 			return nil, err
 		}
 
-		totalTransaction += totalOrder + delivery.Total
+		totalOrderPrice += totalOrder
+		totalDelivery += delivery.Total
+		sellerIDs = append(sellerIDs, item.SellerID)
 	}
 	//total transaction - voucher
 	//4. check user wallet balance is sufficient
@@ -586,13 +597,16 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 	if err != nil {
 		return nil, err
 	}
-	if globalVoucher != nil && globalVoucher.SellerID == nil && globalVoucher.MinSpending <= totalTransaction {
+	if globalVoucher != nil && globalVoucher.SellerID == nil && globalVoucher.MinSpending <= totalOrderPrice {
 		if globalVoucher.AmountType == "percentage" {
-			totalTransaction -= (globalVoucher.Amount / 100) * totalTransaction
+			totalOrderPrice -= (globalVoucher.Amount / 100) * totalOrderPrice
 		} else {
-			totalTransaction -= globalVoucher.Amount
+			totalOrderPrice -= globalVoucher.Amount
 		}
 	}
+
+	var totalTransaction float64
+	totalTransaction = totalOrderPrice + totalDelivery
 
 	if wallet.Balance-totalTransaction < 0 {
 		err = apperror.InternalServerError("Insufficient Balance")
