@@ -12,4 +12,5 @@ type CreatePromotionReq struct {
 	MaxOrder    uint      `json:"max_order" binding:"required,numeric,gte=1"`
 	AmountType  string    `json:"amount_type" binding:"required"`
 	Amount      float64   `json:"amount" binding:"required,numeric,gte=1"`
+	BannerURL   string    `json:"banner_url" binding:"required"`
 }

@@ -94,6 +94,15 @@ func (p *promotionService) CreatePromotion(id uint, req *dto.CreatePromotionReq)
 		req.AmountType = "nominal"
 	}
 
+	product, err := p.productRepo.GetProductDetail(tx, req.ProductID)
+	if err != nil {
+		return nil, err
+	}
+	if product.SellerID != sellerID {
+		err = apperror.BadRequestError("Tidak bisa membuat promosi produk seller lain")
+		return nil, err
+	}
+
 	createPromo, err := p.promotionRepository.CreatePromotion(tx, req, sellerID)
 	if err != nil {
 		return nil, err
@@ -142,7 +151,7 @@ func (p *promotionService) UpdatePromotion(req *dto.PatchPromotionReq, promoID u
 
 	promo, err := p.promotionRepository.ViewDetailPromotionByID(tx, promoID)
 	if promo.Product.Seller.UserID != userID {
-		err = apperror.UnauthorizedError("cannot update other shop promotion")
+		err = apperror.UnauthorizedError("tidak bisa mengupdate promotion seller lain")
 		return nil, err
 	}
 
