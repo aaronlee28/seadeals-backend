@@ -277,6 +277,9 @@ func (p *productVariantDetailRepository) SearchProducts(tx *gorm.DB, query *Sear
 		citiesSplit := strings.Split(query.City, ",")
 		result = result.Where("city IN ?", citiesSplit)
 	}
+	if query.ExcludedID != 0 {
+		result = result.Where("products.id != ?", query.ExcludedID)
+	}
 
 	orderByString := query.SortBy
 	if query.SortBy == "" {
