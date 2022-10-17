@@ -151,7 +151,7 @@ func (p *productVariantDetailRepository) GetProductsBySellerIDUnscoped(tx *gorm.
 	offset := (query.Page - 1) * query.Limit
 	result = result.Limit(query.Limit).Offset(offset)
 
-	result = result.Preload("ProductPhotos").Preload("Category").Preload("ProductVariantDetail").Unscoped().Find(&products)
+	result = result.Preload("ProductPhotos").Preload("Category").Preload("ProductVariantDetail.ProductVariant1").Preload("ProductVariantDetail.ProductVariant2").Unscoped().Find(&products)
 	return products, totalProduct, result.Error
 }
 
