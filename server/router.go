@@ -274,6 +274,9 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		return &dto.DeleteFromCartReq{}
 	}), h.DeleteCartItem)
 
+	// FAVORITES
+	r.GET("/user/favorite-counts", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetUserFavoriteCount)
+
 	// PAYMENT
 	r.POST("/checkout-cart", middleware.RequestValidator(func() any { return &dto.CheckoutCartReq{} }), middleware.AuthorizeJWTFor(model.Level1RoleName), h.CheckoutCart)
 	r.GET("/predicted-price", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any { return &dto.TotalPredictedPriceReq{} }), h.GetTotalPredictedPrice)

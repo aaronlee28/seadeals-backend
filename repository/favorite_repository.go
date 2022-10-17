@@ -9,6 +9,7 @@ import (
 
 type FavoriteRepository interface {
 	FavoriteToProduct(tx *gorm.DB, userID uint, productID uint) (*model.Favorite, error)
+	GetUserFavoriteCount(tx *gorm.DB, userID uint) (uint, error)
 }
 
 type favoriteRepository struct{}
@@ -41,4 +42,19 @@ func (f *favoriteRepository) FavoriteToProduct(tx *gorm.DB, userID uint, product
 	}
 
 	return favorite, nil
+}
+
+func (f *favoriteRepository) GetUserFavoriteCount(tx *gorm.DB, userID uint) (uint, error) {
+	var countInt64 int64
+	result := tx.Model(&model.Favorite{}).
+		Where("is_favorite = true AND user_id = ?", userID).
+		Count(&countInt64)
+
+	if result.Error != nil {
+		return 0, apperror.InternalServerError("Cannot get favorite count")
+	}
+
+	count := uint(countInt64)
+
+	return count, nil
 }
