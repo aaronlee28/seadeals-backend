@@ -674,9 +674,18 @@ func (o *orderService) GetTotalPredictedPrice(req *dto.TotalPredictedPriceReq, u
 	}
 	var ordersPrices []*dto.PredictedPriceRes
 	res.GlobalVoucherID = voucherID
-	var totalAllPrices float64
+	var totalAllOrderPrices float64
+	var totalDelivery float64
+	var sellerIDs []uint
 
 	for _, item := range req.Cart {
+		for _, id := range sellerIDs {
+			if id == item.SellerID {
+				err = apperror.BadRequestError("Tidak bisa membuat 2 order dengan seller yang sama dalam satu transaksi")
+				return nil, err
+			}
+		}
+
 		var predictedPrice = &dto.PredictedPriceRes{}
 		var voucher *model.Voucher
 		voucher, err = o.walletRepository.GetVoucher(tx, item.VoucherCode)
@@ -750,7 +759,7 @@ func (o *orderService) GetTotalPredictedPrice(req *dto.TotalPredictedPriceReq, u
 			return nil, err
 		}
 
-		// Create delivery
+		// Check delivery
 		var courier *model.Courier
 		courier, err = o.courierRepository.GetCourierDetailByID(tx, item.CourierID)
 		if err != nil {
@@ -780,18 +789,20 @@ func (o *orderService) GetTotalPredictedPrice(req *dto.TotalPredictedPriceReq, u
 		predictedPrice.PredictedPrice = totalOrder + float64(deliveryCalcResult.Total)
 
 		ordersPrices = append(ordersPrices, predictedPrice)
-		totalAllPrices += predictedPrice.PredictedPrice
+		totalAllOrderPrices += predictedPrice.TotalOrder
+		totalDelivery += float64(deliveryCalcResult.Total)
+		sellerIDs = append(sellerIDs, item.SellerID)
 	}
 
 	res.PredictedPrices = ordersPrices
 
-	if globalVoucher != nil && globalVoucher.SellerID == nil && globalVoucher.MinSpending <= totalAllPrices {
+	if globalVoucher != nil && globalVoucher.SellerID == nil && globalVoucher.MinSpending <= totalAllOrderPrices {
 		if globalVoucher.AmountType == "percentage" {
-			totalAllPrices -= (globalVoucher.Amount / 100) * totalAllPrices
+			totalAllOrderPrices -= (globalVoucher.Amount / 100) * totalAllOrderPrices
 		} else {
-			totalAllPrices -= globalVoucher.Amount
+			totalAllOrderPrices -= globalVoucher.Amount
 		}
 	}
-	res.TotalPredictedPrice = totalAllPrices
+	res.TotalPredictedPrice = totalAllOrderPrices + totalDelivery
 	return res, nil
 }

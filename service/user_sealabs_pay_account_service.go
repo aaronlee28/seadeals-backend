@@ -213,9 +213,17 @@ func (u *userSeaPayAccountServ) PayWithSeaLabsPay(userID uint, req *dto.Checkout
 		return "", nil, err
 	}
 
-	var totalTransaction float64
+	var totalOrderPrice float64
+	var totalDelivery float64
+	var sellerIDs []uint
 	for _, item := range req.Cart {
 		//check voucher if voucher still valid
+		for _, id := range sellerIDs {
+			if id == item.SellerID {
+				err = apperror.BadRequestError("Tidak bisa membuat 2 order dengan seller yang sama dalam satu transaksi")
+				return "", nil, err
+			}
+		}
 		var voucher *model.Voucher
 		voucher, err = u.walletRepository.GetVoucher(tx, item.VoucherCode)
 		if err != nil {
@@ -239,7 +247,7 @@ func (u *userSeaPayAccountServ) PayWithSeaLabsPay(userID uint, req *dto.Checkout
 				return "", nil, err
 			}
 		}
-		var totalOrder float64
+		var orderSubtotal float64
 		var totalWeight int
 
 		for _, id := range item.CartItemID {
@@ -266,7 +274,7 @@ func (u *userSeaPayAccountServ) PayWithSeaLabsPay(userID uint, req *dto.Checkout
 			} else {
 				totalOrderItem = cartItem.ProductVariantDetail.Price * float64(cartItem.Quantity)
 			}
-			totalOrder += totalOrderItem
+			orderSubtotal += totalOrderItem
 
 			// Get weight
 			totalWeight += int(cartItem.Quantity) * cartItem.ProductVariantDetail.Product.ProductDetail.Weight
@@ -289,11 +297,11 @@ func (u *userSeaPayAccountServ) PayWithSeaLabsPay(userID uint, req *dto.Checkout
 		}
 
 		//order - voucher
-		if voucher != nil && voucher.MinSpending <= totalOrder {
+		if voucher != nil && voucher.MinSpending <= orderSubtotal {
 			if voucher.AmountType == "percentage" {
-				totalOrder -= (voucher.Amount / 100) * totalOrder
+				orderSubtotal -= (voucher.Amount / 100) * orderSubtotal
 			} else {
-				totalOrder -= voucher.Amount
+				orderSubtotal -= voucher.Amount
 			}
 		}
 
@@ -348,22 +356,27 @@ func (u *userSeaPayAccountServ) PayWithSeaLabsPay(userID uint, req *dto.Checkout
 		}
 
 		// Update order price with map - voucher id
-		order.Total = totalOrder
+		order.Total = orderSubtotal
 		order.Status = dto.OrderWaitingPayment
 		err = u.walletRepository.UpdateOrder(tx, order)
 		if err != nil {
 			return "", nil, err
 		}
-		totalTransaction += totalOrder + delivery.Total
+		totalOrderPrice += orderSubtotal
+		totalDelivery += delivery.Total
+		sellerIDs = append(sellerIDs, item.SellerID)
 	}
 
-	if globalVoucher != nil && globalVoucher.SellerID == nil && globalVoucher.MinSpending <= totalTransaction {
+	if globalVoucher != nil && globalVoucher.SellerID == nil && globalVoucher.MinSpending <= totalOrderPrice {
 		if globalVoucher.AmountType == "percentage" {
-			totalTransaction -= (globalVoucher.Amount / 100) * totalTransaction
+			totalOrderPrice -= (globalVoucher.Amount / 100) * totalOrderPrice
 		} else {
-			totalTransaction -= globalVoucher.Amount
+			totalOrderPrice -= globalVoucher.Amount
 		}
 	}
+
+	var totalTransaction float64
+	totalTransaction = totalOrderPrice + totalDelivery
 
 	transaction.Total = totalTransaction
 	err = u.walletRepository.UpdateTransaction(tx, transaction)
