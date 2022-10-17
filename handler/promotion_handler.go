@@ -32,7 +32,7 @@ func (h *Handler) CreatePromotion(ctx *gin.Context) {
 
 	result, err := h.promotionService.CreatePromotion(userID, json)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, err)
+		_ = ctx.Error(err)
 		return
 	}
 	successResponse := dto.StatusOKResponse(result)

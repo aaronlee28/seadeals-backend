@@ -9,7 +9,7 @@ type GetPromotionRes struct {
 	ID              uint      `json:"id"`
 	ProductID       uint      `json:"product_id"`
 	Name            string    `json:"name"`
-	Description     string    `json:"Description"`
+	Description     string    `json:"description"`
 	StartDate       time.Time `json:"start_date"`
 	EndDate         time.Time `json:"end_date"`
 	AmountType      string    `json:"amount_type"`

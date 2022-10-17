@@ -19,4 +19,5 @@ type Promotion struct {
 	MaxOrder    uint      `json:"max_order"`
 	AmountType  string    `json:"amount_type"`
 	Amount      float64   `json:"amount"`
+	BannerURL   string    `json:"banner_url"`
 }
