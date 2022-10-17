@@ -18,9 +18,9 @@ type WalletRepository interface {
 	CreateWallet(*gorm.DB, *model.Wallet) (*model.Wallet, error)
 	UpdateWallet(tx *gorm.DB, userID uint, newBalance float64) error
 	GetWalletByUserID(*gorm.DB, uint) (*model.Wallet, error)
-	GetTransactionsByUserID(tx *gorm.DB, userID uint) (*[]model.Transaction, error)
+	GetTransactionsByUserID(tx *gorm.DB, userID uint) ([]*model.Transaction, error)
 	TransactionDetails(tx *gorm.DB, transactionID uint) (*model.Transaction, error)
-	PaginatedTransactions(tx *gorm.DB, q *Query, userID uint) (int, *[]model.Transaction, error)
+	PaginatedTransactions(tx *gorm.DB, q *Query, userID uint) (int, []*model.Transaction, error)
 	TopUp(tx *gorm.DB, wallet *model.Wallet, amount float64) (*model.Wallet, error)
 
 	WalletPin(tx *gorm.DB, userID uint, pin string) error
@@ -70,7 +70,7 @@ func (w *walletRepository) CreateWallet(tx *gorm.DB, wallet *model.Wallet) (*mod
 }
 
 func (w *walletRepository) GetWalletByUserID(tx *gorm.DB, userID uint) (*model.Wallet, error) {
-	var wallet *model.Wallet
+	var wallet = &model.Wallet{}
 	result := tx.Model(&wallet).Where("user_id = ?", userID).First(&wallet)
 	if result.Error != nil {
 		return nil, apperror.InternalServerError("cannot find wallet")
@@ -79,8 +79,8 @@ func (w *walletRepository) GetWalletByUserID(tx *gorm.DB, userID uint) (*model.W
 	return wallet, nil
 }
 
-func (w *walletRepository) GetTransactionsByUserID(tx *gorm.DB, userID uint) (*[]model.Transaction, error) {
-	var transactions *[]model.Transaction
+func (w *walletRepository) GetTransactionsByUserID(tx *gorm.DB, userID uint) ([]*model.Transaction, error) {
+	var transactions []*model.Transaction
 	result := tx.Where("user_id = ?", userID).Find(&transactions)
 	if result.Error != nil {
 		return nil, apperror.InternalServerError("cannot find transactions")
@@ -89,7 +89,7 @@ func (w *walletRepository) GetTransactionsByUserID(tx *gorm.DB, userID uint) (*[
 }
 
 func (w *walletRepository) TransactionDetails(tx *gorm.DB, transactionID uint) (*model.Transaction, error) {
-	var transaction *model.Transaction
+	var transaction = &model.Transaction{}
 	result := tx.Where("id = ?", transactionID).First(&transaction)
 	if result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
@@ -100,8 +100,8 @@ func (w *walletRepository) TransactionDetails(tx *gorm.DB, transactionID uint) (
 	return transaction, nil
 }
 
-func (w *walletRepository) PaginatedTransactions(tx *gorm.DB, q *Query, userID uint) (int, *[]model.Transaction, error) {
-	var trans *[]model.Transaction
+func (w *walletRepository) PaginatedTransactions(tx *gorm.DB, q *Query, userID uint) (int, []*model.Transaction, error) {
+	var trans []*model.Transaction
 	limit, _ := strconv.Atoi(q.Limit)
 	page, _ := strconv.Atoi(q.Page)
 	offset := (limit * page) - limit
@@ -115,7 +115,7 @@ func (w *walletRepository) PaginatedTransactions(tx *gorm.DB, q *Query, userID u
 	if result2.Error != nil {
 		return 0, nil, apperror.InternalServerError("cannot find transactions")
 	}
-	totalLength := len(*trans)
+	totalLength := len(trans)
 	return totalLength, trans, nil
 }
 
@@ -317,7 +317,7 @@ func (w *walletRepository) GetWalletStatus(tx *gorm.DB, userID uint) (string, er
 	}
 
 	if err == redis.Nil {
-		var wallet *model.Wallet
+		var wallet = &model.Wallet{}
 		result1 := tx.Model(&wallet).Where("user_id = ?", userID).First(&wallet)
 		if result1.Error != nil {
 			return "", apperror.InternalServerError("cannot find wallet")
@@ -330,7 +330,7 @@ func (w *walletRepository) GetWalletStatus(tx *gorm.DB, userID uint) (string, er
 }
 
 func (w *walletRepository) StepUpPassword(tx *gorm.DB, userID uint, password string) error {
-	var user *model.User
+	var user = &model.User{}
 	result1 := tx.Model(&user).Where("id = ?", userID).First(&user)
 	if result1.Error != nil {
 		return apperror.InternalServerError("cannot find wallet")
@@ -345,7 +345,7 @@ func (w *walletRepository) StepUpPassword(tx *gorm.DB, userID uint, password str
 }
 
 func (w *walletRepository) UpdateWallet(tx *gorm.DB, userID uint, newBalance float64) error {
-	var wallet *model.Wallet
+	var wallet = &model.Wallet{}
 
 	result := tx.Model(&wallet).Where("user_id = ?", userID).First(&wallet)
 	if result.Error != nil {
@@ -359,7 +359,7 @@ func (w *walletRepository) UpdateWallet(tx *gorm.DB, userID uint, newBalance flo
 }
 
 func (w *walletRepository) GetCartItem(tx *gorm.DB, cartID uint) (*model.CartItem, error) {
-	var cartItem *model.CartItem
+	var cartItem = &model.CartItem{}
 
 	result := tx.Preload("ProductVariantDetail.Product.Promotion", "start_date <= ? AND end_date >= ?", time.Now(), time.Now()).Preload("ProductVariantDetail.Product.ProductDetail").Where("id = ?", cartID).First(&cartItem)
 	if result.Error != nil {
@@ -370,7 +370,7 @@ func (w *walletRepository) GetCartItem(tx *gorm.DB, cartID uint) (*model.CartIte
 }
 
 func (w *walletRepository) GetVoucher(tx *gorm.DB, voucherCode string) (*model.Voucher, error) {
-	var voucher *model.Voucher
+	var voucher = &model.Voucher{}
 	if voucherCode == "" {
 		return nil, nil
 	}

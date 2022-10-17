@@ -26,6 +26,7 @@ type UserSeaPayAccountServ interface {
 
 type userSeaPayAccountServ struct {
 	db                          *gorm.DB
+	accountHolderRepo           repository.AccountHolderRepository
 	addressRepository           repository.AddressRepository
 	userSeaPayAccountRepo       repository.UserSeaPayAccountRepo
 	courierRepository           repository.CourierRepository
@@ -41,6 +42,7 @@ type userSeaPayAccountServ struct {
 
 type UserSeaPayAccountServConfig struct {
 	DB                          *gorm.DB
+	AccountHolderRepo           repository.AccountHolderRepository
 	AddressRepository           repository.AddressRepository
 	UserSeaPayAccountRepo       repository.UserSeaPayAccountRepo
 	CourierRepository           repository.CourierRepository
@@ -57,6 +59,7 @@ type UserSeaPayAccountServConfig struct {
 func NewUserSeaPayAccountServ(c *UserSeaPayAccountServConfig) UserSeaPayAccountServ {
 	return &userSeaPayAccountServ{
 		db:                          c.DB,
+		accountHolderRepo:           c.AccountHolderRepo,
 		addressRepository:           c.AddressRepository,
 		userSeaPayAccountRepo:       c.UserSeaPayAccountRepo,
 		courierRepository:           c.CourierRepository,
@@ -365,6 +368,18 @@ func (u *userSeaPayAccountServ) PayWithSeaLabsPay(userID uint, req *dto.Checkout
 		totalOrderPrice += orderSubtotal
 		totalDelivery += delivery.Total
 		sellerIDs = append(sellerIDs, item.SellerID)
+
+		accountHolder := &model.AccountHolder{
+			UserID:   userID,
+			OrderID:  order.ID,
+			SellerID: seller.ID,
+			Total:    orderSubtotal + delivery.Total,
+			HasTaken: false,
+		}
+		_, err = u.accountHolderRepo.CreateAccountHolder(tx, accountHolder)
+		if err != nil {
+			return "", nil, err
+		}
 	}
 
 	if globalVoucher != nil && globalVoucher.SellerID == nil && globalVoucher.MinSpending <= totalOrderPrice {
