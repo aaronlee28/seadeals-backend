@@ -74,12 +74,12 @@ func (c *cartItemService) AddToCart(userID uint, req *dto.AddToCartReq) (*model.
 		return nil, err
 	}
 
-	if productVarDet.Stock < cartItem.Quantity || productVarDet.Product.MaxQuantity < cartItem.Quantity {
+	if productVarDet.Stock < addedItem.Quantity || (productVarDet.Product.MaxQuantity < addedItem.Quantity && productVarDet.Product.MaxQuantity != 0) {
 		err = apperror.BadRequestError("Kuantitas pembelian melebih stock atau maximum pembelian")
 		return nil, err
 	}
 
-	if productVarDet.Product.MinQuantity > cartItem.Quantity {
+	if productVarDet.Product.MinQuantity > addedItem.Quantity && productVarDet.Product.MinQuantity != 0 {
 		err = apperror.BadRequestError("Kuantitas pembelian Kurang dari minimum pembelian")
 		return nil, err
 	}
@@ -103,12 +103,12 @@ func (c *cartItemService) UpdateCart(userID uint, req *dto.UpdateCartItemReq) (*
 		return nil, err
 	}
 
-	if productVarDet.Stock < cartItem.Quantity || productVarDet.Product.MaxQuantity < cartItem.Quantity {
+	if productVarDet.Stock < cartItem.Quantity || (productVarDet.Product.MaxQuantity < cartItem.Quantity && productVarDet.Product.MaxQuantity != 0) {
 		err = apperror.BadRequestError("Kuantitas pembelian melebih stock atau maximum pembelian")
 		return nil, err
 	}
 
-	if productVarDet.Product.MinQuantity > cartItem.Quantity {
+	if productVarDet.Product.MinQuantity > cartItem.Quantity && productVarDet.Product.MinQuantity != 0 {
 		err = apperror.BadRequestError("Kuantitas pembelian Kurang dari minimum pembelian")
 		return nil, err
 	}

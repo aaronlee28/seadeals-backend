@@ -43,7 +43,7 @@ func (c *cartItemRepository) AddToCart(tx *gorm.DB, cartItem *model.CartItem) (*
 
 func (c *cartItemRepository) DeleteCartItem(tx *gorm.DB, cartItemID uint, userID uint) (*model.CartItem, error) {
 	var existingCartItem = &model.CartItem{ID: cartItemID}
-	result := tx.First(&existingCartItem)
+	result := tx.Where("quantity != ?", 0).First(&existingCartItem)
 	if result.Error != nil {
 		return nil, apperror.NotFoundError("Cannot find cart item")
 	}
