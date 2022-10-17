@@ -37,3 +37,46 @@ func (h *Handler) FindReviewByProductID(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, dto.StatusOKResponse(res))
 }
+
+func (h *Handler) CreateUpdateReview(ctx *gin.Context) {
+	userPayload, _ := ctx.Get("user")
+	user, isValid := userPayload.(dto.UserJWT)
+	userID := uint(0)
+	if isValid {
+		userID = user.UserID
+	} else {
+		_ = ctx.Error(apperror.BadRequestError("User is invalid"))
+		return
+	}
+
+	value, _ := ctx.Get("payload")
+	json, _ := value.(*dto.CreateUpdateReview)
+
+	res, err := h.reviewService.CreateUpdateReview(userID, json)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(res))
+}
+
+func (h *Handler) UserReviewHistory(ctx *gin.Context) {
+	userPayload, _ := ctx.Get("user")
+	user, isValid := userPayload.(dto.UserJWT)
+	userID := uint(0)
+	if isValid {
+		userID = user.UserID
+	} else {
+		_ = ctx.Error(apperror.BadRequestError("User is invalid"))
+		return
+	}
+
+	res, err := h.reviewService.UserReviewHistory(userID)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(res))
+}

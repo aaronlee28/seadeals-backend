@@ -2,10 +2,12 @@ package repository
 
 import (
 	"errors"
+	"fmt"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"seadeals-backend/apperror"
+	"seadeals-backend/dto"
 	"seadeals-backend/model"
 )
 
@@ -16,6 +18,9 @@ type UserRepository interface {
 	GetUserByID(tx *gorm.DB, userID uint) (*model.User, error)
 	MatchingCredential(*gorm.DB, string, string) (*model.User, error)
 	RegisterAsSeller(db *gorm.DB, model *model.Seller) (*model.Seller, error)
+	GetUserDetailsByID(tx *gorm.DB, userID uint) (*model.User, error)
+	ChangeUserDetailsLessPassword(tx *gorm.DB, userID uint, details *dto.ChangeUserDetails) (*model.User, error)
+	ChangeUserPassword(tx *gorm.DB, userID uint, newPassword string) error
 }
 
 type userRepository struct{}
@@ -136,4 +141,43 @@ func (u *userRepository) RegisterAsSeller(tx *gorm.DB, seller *model.Seller) (*m
 		return nil, apperror.InternalServerError("Cannot register user as seller")
 	}
 	return seller, nil
+}
+
+func (u *userRepository) GetUserDetailsByID(tx *gorm.DB, userID uint) (*model.User, error) {
+	var userDetails *model.User
+	result := tx.First(&userDetails, userID)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return userDetails, nil
+
+}
+
+func (u *userRepository) ChangeUserDetailsLessPassword(tx *gorm.DB, userID uint, details *dto.ChangeUserDetails) (*model.User, error) {
+	var userDetails *model.User
+
+	result := tx.Model(&userDetails).Where("id = ?", userID).Updates(&details)
+	result = tx.First(&userDetails, userID)
+	fmt.Println("detailssss", details)
+	if result.Error != nil {
+		return nil, apperror.InternalServerError("Cannot update user profile")
+	}
+	return userDetails, nil
+}
+
+func (u *userRepository) ChangeUserPassword(tx *gorm.DB, userID uint, newPassword string) error {
+	var userDetails *model.User
+
+	hashedPassword, err := hashPassword(newPassword)
+
+	if err != nil {
+		return apperror.InternalServerError("Failed to hash password")
+	}
+
+	result := tx.Model(&userDetails).Where("id = ?", userID).Update("password", hashedPassword)
+	if result.Error != nil {
+		return apperror.InternalServerError("Cannot change user's password")
+	}
+
+	return nil
 }

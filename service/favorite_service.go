@@ -9,6 +9,7 @@ import (
 
 type FavoriteService interface {
 	FavoriteToProduct(userID uint, productID uint) (*model.Favorite, uint, error)
+	GetUserFavoriteCount(userID uint) (uint, error)
 }
 
 type favoriteService struct {
@@ -47,4 +48,17 @@ func (f *favoriteService) FavoriteToProduct(userID uint, productID uint) (*model
 	}
 
 	return favorite, product.FavoriteCount, nil
+}
+
+func (f *favoriteService) GetUserFavoriteCount(userID uint) (uint, error) {
+	tx := f.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
+
+	userFavCount, err := f.favoriteRepository.GetUserFavoriteCount(tx, userID)
+	if err != nil {
+		return 0, err
+	}
+
+	return userFavCount, nil
 }

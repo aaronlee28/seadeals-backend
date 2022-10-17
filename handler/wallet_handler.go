@@ -237,6 +237,6 @@ func (h *Handler) CheckoutCart(ctx *gin.Context) {
 		return
 	}
 
-	successResponse := dto.StatusOKResponse(gin.H{"status": result})
+	successResponse := dto.StatusOKResponse(gin.H{"transaction": result})
 	ctx.JSON(http.StatusOK, successResponse)
 }

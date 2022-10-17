@@ -3,6 +3,7 @@ package server
 import (
 	"log"
 	"seadeals-backend/config"
+	"seadeals-backend/cronjob"
 	"seadeals-backend/db"
 	"seadeals-backend/repository"
 	"seadeals-backend/service"
@@ -32,6 +33,13 @@ func Init() {
 	courierRepository := repository.NewCourierRepository()
 	orderRepository := repository.NewOrderRepo()
 	sellerAvailableCourRepo := repository.NewSellerAvailableCourierRepository()
+	transactionRepo := repository.NewTransactionRepository()
+	adminRepository := repository.NewAdminRepository()
+	complaintRepo := repository.NewComplaintRepository()
+	complaintPhotoRepo := repository.NewComplaintPhotoRepository()
+	notificationRepo := repository.NewNotificationRepository()
+	deliveryRepository := repository.NewDeliveryRepository()
+	deliveryActivityRepo := repository.NewDeliveryActivityRepository()
 
 	userService := service.NewUserService(&service.UserServiceConfig{
 		DB:               db.Get(),
@@ -67,6 +75,8 @@ func Init() {
 		ReviewRepo:        reviewRepository,
 		ProductVarDetRepo: productVarDetRepo,
 		SellerRepo:        sellerRepository,
+		SocialGraphRepo:   socialGraphRepo,
+		NotificationRepo:  notificationRepo,
 	})
 
 	productVariantService := service.NewProductVariantService(&service.ProductVariantServiceConfig{
@@ -77,8 +87,10 @@ func Init() {
 	})
 
 	reviewService := service.NewReviewService(&service.ReviewServiceConfig{
-		DB:         db.Get(),
-		ReviewRepo: reviewRepository,
+		DB:          db.Get(),
+		ReviewRepo:  reviewRepository,
+		SellerRepo:  sellerRepository,
+		ProductRepo: productRepository,
 	})
 
 	sellerService := service.NewSellerService(&service.SellerServiceConfig{
@@ -90,25 +102,37 @@ func Init() {
 	})
 
 	walletService := service.NewWalletService(&service.WalletServiceConfig{
-		DB:               db.Get(),
-		WalletRepository: walletRepository,
-		UserRepository:   userRepository,
-		WalletTransRepo:  walletTransactionRepo,
-		UserRoleRepo:     userRoleRepository,
+		DB:                db.Get(),
+		AddressRepository: addressRepository,
+		WalletRepository:  walletRepository,
+		CourierRepository: courierRepository,
+		DeliveryRepo:      deliveryRepository,
+		DeliveryActRepo:   deliveryActivityRepo,
+		UserRepository:    userRepository,
+		WalletTransRepo:   walletTransactionRepo,
+		UserRoleRepo:      userRoleRepository,
+		SellerRepository:  sellerRepository,
 	})
 
 	userSeaLabsPayAccountServ := service.NewUserSeaPayAccountServ(&service.UserSeaPayAccountServConfig{
 		DB:                          db.Get(),
+		AddressRepository:           addressRepository,
 		UserSeaPayAccountRepo:       userSeaLabsPayAccountRepo,
+		DeliveryRepo:                deliveryRepository,
+		DeliveryActRepo:             deliveryActivityRepo,
+		CourierRepository:           courierRepository,
+		OrderRepo:                   orderRepository,
 		SeaLabsPayTopUpHolderRepo:   seaLabsPayTopUpHolderRepo,
+		SeaLabsPayTransactionHolder: seaLabsPayTransactionHolderRepo,
+		SellerRepository:            sellerRepository,
 		WalletRepository:            walletRepository,
 		WalletTransactionRepo:       walletTransactionRepo,
-		SeaLabsPayTransactionHolder: seaLabsPayTransactionHolderRepo,
 	})
 
 	orderItemService := service.NewCartItemService(&service.CartItemServiceConfig{
 		DB:                 db.Get(),
 		CartItemRepository: orderItemRepository,
+		ProductVarDetRepo:  productVarDetRepo,
 	})
 
 	refreshTokenService := service.NewRefreshTokenService(&service.RefreshTokenServiceConfig{
@@ -142,6 +166,8 @@ func Init() {
 		PromotionRepository: promotionRepository,
 		SellerRepo:          sellerRepository,
 		ProductRepo:         productRepository,
+		SocialGraphRepo:     socialGraphRepo,
+		NotificationRepo:    notificationRepo,
 	})
 
 	courierService := service.NewCourierService(&service.CourierServiceConfig{
@@ -150,9 +176,31 @@ func Init() {
 	})
 
 	orderService := service.NewOrderService(&service.OrderServiceConfig{
-		DB:               db.Get(),
-		OrderRepository:  orderRepository,
-		SellerRepository: sellerRepository,
+		DB:                        db.Get(),
+		OrderRepository:           orderRepository,
+		AddressRepository:         addressRepository,
+		CourierRepository:         courierRepository,
+		SellerRepository:          sellerRepository,
+		VoucherRepo:               voucherRepo,
+		DeliveryRepo:              deliveryRepository,
+		TransactionRepo:           transactionRepo,
+		WalletRepository:          walletRepository,
+		WalletTransRepo:           walletTransactionRepo,
+		ProductVarDetRepo:         productVarDetRepo,
+		SeaLabsPayTransHolderRepo: seaLabsPayTransactionHolderRepo,
+		ComplainRepo:              complaintRepo,
+		ComplaintPhotoRepo:        complaintPhotoRepo,
+		NotificationRepo:          notificationRepo,
+	})
+
+	deliveryService := service.NewDeliveryService(&service.DeliveryServiceConfig{
+		DB:                     db.Get(),
+		DeliveryRepository:     deliveryRepository,
+		DeliverActivityRepo:    deliveryActivityRepo,
+		AddressRepository:      addressRepository,
+		OrderRepository:        orderRepository,
+		SellerRepository:       sellerRepository,
+		NotificationRepository: notificationRepo,
 	})
 
 	sellerAvailableCourServ := service.NewSellerAvailableCourService(&service.SellerAvailableCourServiceConfig{
@@ -160,6 +208,18 @@ func Init() {
 		SellerAvailCourRepo: sellerAvailableCourRepo,
 		SellerRepository:    sellerRepository,
 	})
+
+	adminService := service.NewAdminRService(&service.AdminConfig{
+		DB:        db.Get(),
+		AdminRepo: adminRepository,
+	})
+
+	runCronJobHelper := cronjob.NewCronJob(&cronjob.RunCronJobConfig{
+		DB:           db.Get(),
+		OrderService: orderService,
+	})
+
+	runCronJobHelper.RunCronJobs()
 
 	router := NewRouter(&RouterConfig{
 		UserService:             userService,
@@ -181,7 +241,10 @@ func Init() {
 		PromotionService:        promotionService,
 		CourierService:          courierService,
 		OrderService:            orderService,
+		DeliveryService:         deliveryService,
 		SellerAvailableCourServ: sellerAvailableCourServ,
+		AdminService:            adminService,
 	})
+
 	log.Fatalln(router.Run(":" + config.Config.Port))
 }

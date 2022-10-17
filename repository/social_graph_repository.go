@@ -11,6 +11,8 @@ type SocialGraphRepository interface {
 	GetFollowerCountBySellerID(tx *gorm.DB, sellerID uint) (int64, error)
 	GetFollowingCountByUserID(tx *gorm.DB, userID uint) (int64, error)
 	FollowToSeller(tx *gorm.DB, userID uint, sellerID uint) (*model.SocialGraph, error)
+	GetFavoriteUserID(tx *gorm.DB, productID uint) ([]*model.Favorite, error)
+	GetFollowerUserID(tx *gorm.DB, sellerID uint) ([]*model.SocialGraph, error)
 }
 
 type socialGraphRepository struct{}
@@ -62,4 +64,25 @@ func (s *socialGraphRepository) FollowToSeller(tx *gorm.DB, userID uint, sellerI
 	}
 
 	return socialGraph, nil
+
+}
+
+func (s *socialGraphRepository) GetFavoriteUserID(tx *gorm.DB, productID uint) ([]*model.Favorite, error) {
+	var userArray []*model.Favorite
+	result := tx.Clauses(clause.Returning{}).Where("product_id = ?", productID).Where("is_favorite = true").Find(&userArray)
+	if result.Error != nil {
+		return nil, apperror.InternalServerError("Cannot get users")
+	}
+
+	return userArray, nil
+}
+
+func (s *socialGraphRepository) GetFollowerUserID(tx *gorm.DB, sellerID uint) ([]*model.SocialGraph, error) {
+	var userArray []*model.SocialGraph
+	result := tx.Clauses(clause.Returning{}).Where("seller_id = ?", sellerID).Where("is_follow = true").Find(&userArray)
+	if result.Error != nil {
+		return nil, apperror.InternalServerError("Cannot get users")
+	}
+
+	return userArray, nil
 }

@@ -8,6 +8,6 @@ type WalletTransactionsQuery struct {
 }
 
 const (
-	SEA_LABS_PAY = "sea labs pay"
-	WALLET       = "wallet"
+	SeaLabsPay = "sealabs pay"
+	Wallet     = "wallet"
 )

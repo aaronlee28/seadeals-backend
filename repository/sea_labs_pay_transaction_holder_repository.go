@@ -8,7 +8,9 @@ import (
 )
 
 type SeaLabsPayTransactionHolderRepository interface {
-	CreateTransactionHolder(*gorm.DB, *model.SeaLabsPayTransactionHolder) (*model.SeaLabsPayTransactionHolder, error)
+	GetTransHolderFromTransactionID(tx *gorm.DB, transactionID uint) (*model.SeaLabsPayTransactionHolder, error)
+
+	CreateTransactionHolder(tx *gorm.DB, model *model.SeaLabsPayTransactionHolder) (*model.SeaLabsPayTransactionHolder, error)
 	UpdateTransactionHolder(tx *gorm.DB, txnID uint, status string) (*model.SeaLabsPayTransactionHolder, error)
 }
 
@@ -16,6 +18,18 @@ type seaLabsPayTransactionHolderRepository struct{}
 
 func NewSeaLabsPayTransactionHolderRepository() SeaLabsPayTransactionHolderRepository {
 	return &seaLabsPayTransactionHolderRepository{}
+}
+
+func (s *seaLabsPayTransactionHolderRepository) GetTransHolderFromTransactionID(tx *gorm.DB, transactionID uint) (*model.SeaLabsPayTransactionHolder, error) {
+	var transHolder = &model.SeaLabsPayTransactionHolder{}
+	result := tx.Model(&transHolder).Where("transaction_id = ?", transactionID).First(&transHolder)
+	if result.Error != nil {
+		if result.Error == gorm.ErrRecordNotFound {
+			return nil, apperror.BadRequestError("That Transactions Holder doesn't exists")
+		}
+		return nil, apperror.InternalServerError("Cannot find Transaction Holder")
+	}
+	return transHolder, nil
 }
 
 func (s *seaLabsPayTransactionHolderRepository) CreateTransactionHolder(tx *gorm.DB, model *model.SeaLabsPayTransactionHolder) (*model.SeaLabsPayTransactionHolder, error) {

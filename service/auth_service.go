@@ -3,7 +3,6 @@ package service
 import (
 	"gorm.io/gorm"
 	"os"
-	"seadeals-backend/apperror"
 	"seadeals-backend/config"
 	"seadeals-backend/dto"
 	"seadeals-backend/helper"
@@ -50,14 +49,25 @@ func NewAuthService(config *AuthSConfig) AuthService {
 }
 
 func (a *authService) AuthAfterRegister(user *model.User, wallet *model.Wallet, tx *gorm.DB) (string, string, error) {
+	userRoles, err := a.userRoleRepo.GetRolesByUserID(tx, user.ID)
+	if err != nil {
+		return "", "", err
+	}
+	var roles []string
+	for _, role := range userRoles {
+		roles = append(roles, role.Role.Name)
+	}
+	rolesString := strings.Join(roles[:], " ")
+
 	userJWT := &dto.UserJWT{
+		Name:     user.FullName,
 		UserID:   user.ID,
 		Email:    user.Email,
 		Username: user.Username,
 		WalletID: wallet.ID,
 	}
-	token, err := helper.GenerateJWTToken(userJWT, model.UserRoleName, config.Config.JWTExpiredInMinuteTime*60, dto.JWTAccessToken)
-	refreshToken, err := helper.GenerateJWTToken(userJWT, model.UserRoleName, 24*60*60, dto.JWTRefreshToken)
+	token, err := helper.GenerateJWTToken(userJWT, rolesString, config.Config.JWTExpiredInMinuteTime*60, dto.JWTAccessToken)
+	refreshToken, err := helper.GenerateJWTToken(userJWT, rolesString, 24*60*60, dto.JWTRefreshToken)
 	if os.Getenv("ENV") == "testing" {
 		token = "test"
 		refreshToken = "test"
@@ -65,8 +75,7 @@ func (a *authService) AuthAfterRegister(user *model.User, wallet *model.Wallet, 
 
 	err = a.refreshTokenRepo.CreateRefreshToken(tx, user.ID, refreshToken)
 	if err != nil {
-		tx.Rollback()
-		return "", "", apperror.InternalServerError("Cannot add refresh token")
+		return "", "", err
 	}
 
 	tx.Commit()
@@ -83,10 +92,12 @@ func (a *authService) SignInWithGoogle(user *model.User) (string, string, error)
 		return "", "", err
 	}
 	userJWT := &dto.UserJWT{
-		UserID:   user.ID,
-		Email:    user.Email,
-		Username: user.Username,
-		WalletID: wallet.ID,
+		Name:      user.FullName,
+		UserID:    user.ID,
+		Email:     user.Email,
+		Username:  user.Username,
+		WalletID:  wallet.ID,
+		AvatarURL: user.AvatarURL,
 	}
 
 	userRoles, err := a.userRoleRepo.GetRolesByUserID(tx, user.ID)
@@ -107,7 +118,6 @@ func (a *authService) SignInWithGoogle(user *model.User) (string, string, error)
 	}
 	err = a.refreshTokenRepo.CreateRefreshToken(tx, user.ID, refreshToken)
 	if err != nil {
-		err = apperror.InternalServerError("Cannot add refresh token")
 		return "", "", err
 	}
 
@@ -129,10 +139,12 @@ func (a *authService) SignIn(req *dto.SignInReq) (string, string, error) {
 	}
 
 	userJWT := &dto.UserJWT{
-		UserID:   user.ID,
-		Email:    user.Email,
-		Username: user.Username,
-		WalletID: wallet.ID,
+		Name:      user.FullName,
+		UserID:    user.ID,
+		Email:     user.Email,
+		Username:  user.Username,
+		WalletID:  wallet.ID,
+		AvatarURL: user.AvatarURL,
 	}
 
 	userRoles, err := a.userRoleRepo.GetRolesByUserID(tx, user.ID)

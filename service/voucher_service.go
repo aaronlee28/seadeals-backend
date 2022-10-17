@@ -86,7 +86,7 @@ func validateVoucher(voucher *model.Voucher, req *dto.PostValidateVoucherReq) er
 	if !(voucher.StartDate.Before(time.Now()) && voucher.EndDate.After(time.Now())) {
 		return apperror.BadRequestError(new(apperror.VoucherNotFoundError).Error())
 	}
-	if voucher.SellerID != req.SellerID {
+	if voucher.SellerID != &req.SellerID {
 		return apperror.BadRequestError("voucher cannot be used in this shop")
 	}
 	if (voucher.Quota - int(req.Quantity)) <= 0 {
@@ -109,7 +109,7 @@ func (s *voucherService) CreateVoucher(req *dto.PostVoucherReq, userID uint) (*d
 	}
 
 	voucher := &model.Voucher{
-		SellerID:    seller.ID,
+		SellerID:    &seller.ID,
 		Name:        req.Name,
 		Code:        req.Code,
 		StartDate:   req.StartDate,
@@ -269,7 +269,7 @@ func (s *voucherService) DeleteVoucherByID(id, userID uint) (bool, error) {
 		return false, err
 	}
 
-	if v.Seller.User.ID != userID {
+	if v.Seller.UserID != userID {
 		err = apperror.UnauthorizedError("cannot delete other shop voucher")
 		return false, err
 	}

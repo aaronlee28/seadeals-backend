@@ -29,8 +29,12 @@ type AppConfig struct {
 	SeaLabsPayMerchantCode   string
 	SeaLabsPayAPIKey         string
 	SeaLabsPayTransactionURL string
+	SeaLabsPayRefundURL      string
 	NgrokURL                 string
 	AWSMail                  string
+	ShippingKey              string
+	ShippingURL              string
+	RedirectPaymentBase      string
 }
 
 var Config = AppConfig{}
@@ -56,8 +60,12 @@ func Reset() {
 		SeaLabsPayMerchantCode:   getEnv("SEA_LABS_PAY_MERCHANT_CODE", ""),
 		SeaLabsPayAPIKey:         getEnv("SEA_LABS_PAY_API_KEY", ""),
 		SeaLabsPayTransactionURL: getEnv("SEA_LABS_PAY_TRANSACTION_URL", ""),
+		SeaLabsPayRefundURL:      getEnv("SEA_LABS_PAY_REFUND_URL", ""),
 		NgrokURL:                 getEnv("NGROK_URL", ""),
 		AWSMail:                  getEnv("AWS_MAIL", ""),
+		ShippingKey:              getEnv("SHIPPING_API_KEY", ""),
+		ShippingURL:              getEnv("SHIPPING_API_URL", ""),
+		RedirectPaymentBase:      getEnv("REDIRECT_PAY_BASE", "http://localhost:3000"),
 	}
 }
 

@@ -15,15 +15,16 @@ type GetReviewsRes struct {
 }
 
 type GetReviewRes struct {
-	ID            uint                 `json:"id" gorm:"primaryKey"`
-	UserID        uint                 `json:"user_id"`
-	ProductID     uint                 `json:"product_id"`
-	UserUsername  string               `json:"username"`
-	UserAvatarURL *string              `json:"avatar_url"`
-	Rating        int                  `json:"rating"`
-	Images        []*model.ReviewPhoto `json:"images"`
-	Description   *string              `json:"description"`
-	CreatedAt     time.Time            `json:"created_at"`
+	ID            uint      `json:"id" gorm:"primaryKey"`
+	UserID        uint      `json:"user_id"`
+	ProductID     uint      `json:"product_id"`
+	UserUsername  string    `json:"username"`
+	UserAvatarURL *string   `json:"avatar_url"`
+	Rating        int       `json:"rating"`
+	ImageURL      *string   `json:"image_url"`
+	ImageName     *string   `json:"image_name"`
+	Description   *string   `json:"description"`
+	CreatedAt     time.Time `json:"created_at"`
 }
 
 func (_ *GetReviewRes) From(r *model.Review) *GetReviewRes {
@@ -34,8 +35,9 @@ func (_ *GetReviewRes) From(r *model.Review) *GetReviewRes {
 		UserUsername:  r.User.Username,
 		UserAvatarURL: r.User.AvatarURL,
 		Rating:        r.Rating,
-		Images:        r.Images,
 		Description:   r.Description,
+		ImageURL:      r.ImageURL,
+		ImageName:     r.ImageName,
 		CreatedAt:     r.CreatedAt,
 	}
 }

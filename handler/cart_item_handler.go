@@ -3,7 +3,6 @@ package handler
 import (
 	"github.com/gin-gonic/gin"
 	"net/http"
-	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
 	"seadeals-backend/repository"
 )
@@ -15,12 +14,8 @@ func (h *Handler) DeleteCartItem(ctx *gin.Context) {
 
 	value, _ := ctx.Get("payload")
 	json, _ := value.(*dto.DeleteFromCartReq)
-	if json.UserID != userID {
-		ctx.JSON(http.StatusBadRequest, apperror.UnauthorizedError("Cannot delete other user order item"))
-		return
-	}
 
-	result, err := h.orderItemService.DeleteCartItem(json.CartItemID, json.UserID)
+	result, err := h.orderItemService.DeleteCartItem(json.CartItemID, userID)
 	if err != nil {
 		_ = ctx.Error(err)
 		return
@@ -39,6 +34,24 @@ func (h *Handler) AddToCart(ctx *gin.Context) {
 	json, _ := value.(*dto.AddToCartReq)
 
 	result, err := h.orderItemService.AddToCart(userID, json)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	successResponse := dto.StatusOKResponse(result)
+	ctx.JSON(http.StatusOK, successResponse)
+}
+
+func (h *Handler) UpdateCart(ctx *gin.Context) {
+	payload, _ := ctx.Get("user")
+	user, _ := payload.(dto.UserJWT)
+	userID := user.UserID
+
+	value, _ := ctx.Get("payload")
+	json, _ := value.(*dto.UpdateCartItemReq)
+
+	result, err := h.orderItemService.UpdateCart(userID, json)
 	if err != nil {
 		_ = ctx.Error(err)
 		return

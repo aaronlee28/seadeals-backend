@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"os"
@@ -8,6 +9,10 @@ import (
 	"seadeals-backend/dto"
 	"seadeals-backend/model"
 )
+
+func (h *Handler) Ping(ctx *gin.Context) {
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse("Pong"))
+}
 
 func (h *Handler) Register(ctx *gin.Context) {
 	value, _ := ctx.Get("payload")
@@ -23,6 +28,7 @@ func (h *Handler) Register(ctx *gin.Context) {
 		ID:       result.ID,
 		Email:    result.Email,
 		Username: result.Username,
+		FullName: result.FullName,
 	}
 	accessToken, refreshToken, err := h.authService.AuthAfterRegister(userJWT, &result.Wallet, tx)
 	if err != nil {
@@ -114,16 +120,65 @@ func (h *Handler) RegisterAsSeller(ctx *gin.Context) {
 	user, _ := userPayload.(dto.UserJWT)
 	userID := user.UserID
 
-	if userID != json.UserID {
-		ctx.JSON(http.StatusBadRequest, apperror.BadRequestError("Cannot register another user as seller"))
-		return
-	}
-
-	seller, accessToken, err := h.userService.RegisterAsSeller(json)
+	seller, accessToken, err := h.userService.RegisterAsSeller(json, userID)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, err)
 		return
 	}
 	successResponse := dto.StatusOKResponse(gin.H{"seller": seller, "id_token": accessToken})
 	ctx.JSON(http.StatusOK, successResponse)
+}
+
+func (h *Handler) UserDetails(ctx *gin.Context) {
+	userPayload, _ := ctx.Get("user")
+	user, _ := userPayload.(dto.UserJWT)
+	userID := user.UserID
+
+	res, err := h.userService.UserDetails(userID)
+	fmt.Println("userid", userID)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(res))
+}
+
+func (h *Handler) ChangeUserDetails(ctx *gin.Context) {
+
+	userPayload, _ := ctx.Get("user")
+	user, _ := userPayload.(dto.UserJWT)
+	userID := user.UserID
+
+	value, _ := ctx.Get("payload")
+	json, _ := value.(*dto.ChangeUserDetails)
+
+	res, err := h.userService.ChangeUserDetailsLessPassword(userID, json)
+	fmt.Println("userid", userID)
+
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(res))
+}
+
+func (h *Handler) ChangeUserPassword(ctx *gin.Context) {
+
+	userPayload, _ := ctx.Get("user")
+	user, _ := userPayload.(dto.UserJWT)
+	userID := user.UserID
+
+	value, _ := ctx.Get("payload")
+	json, _ := value.(*dto.ChangePasswordReq)
+
+	err := h.userService.ChangeUserPassword(userID, json)
+
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse("Ok"))
 }

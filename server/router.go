@@ -29,7 +29,9 @@ type RouterConfig struct {
 	PromotionService        service.PromotionService
 	CourierService          service.CourierService
 	OrderService            service.OrderService
+	DeliveryService         service.DeliveryService
 	SellerAvailableCourServ service.SellerAvailableCourService
+	AdminService            service.AdminService
 }
 
 func NewRouter(c *RouterConfig) *gin.Engine {
@@ -55,12 +57,16 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		PromotionService:        c.PromotionService,
 		CourierService:          c.CourierService,
 		OrderService:            c.OrderService,
+		DeliveryService:         c.DeliveryService,
 		SellerAvailableCourServ: c.SellerAvailableCourServ,
+		AdminService:            c.AdminService,
 	})
-
 	r.Use(middleware.ErrorHandler)
 	r.Use(middleware.AllowCrossOrigin)
 	r.NoRoute()
+
+	// PING
+	r.GET("/", h.Ping)
 
 	// AUTH
 	r.POST("/register", middleware.RequestValidator(func() any {
@@ -81,6 +87,14 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		return &dto.GoogleLogin{}
 	}), h.GoogleSignIn)
 
+	// USER
+	r.GET("/user/profiles", middleware.AuthorizeJWTFor(model.UserRoleName), h.UserDetails)
+	r.PATCH("/user/change-profiles", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
+		return &dto.ChangeUserDetails{}
+	}), h.ChangeUserDetails)
+	r.PATCH("/user/change-password", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
+		return &dto.ChangePasswordReq{}
+	}), h.ChangeUserPassword)
 	// ADDRESS
 	r.POST("/user/profiles/addresses", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.CreateAddressReq{}
@@ -107,10 +121,28 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.GET("/sellers/:id/products", h.GetProductsBySellerID)
 	r.GET("/categories/:id/products", h.GetProductsByCategoryID)
 	r.GET("/products", h.SearchProducts)
-	r.POST("/sellers/create-product", middleware.OptionalAuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
+	r.POST("/sellers/create-product", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.PostCreateProductReq{}
 	}), h.CreateSellerProduct)
-
+	r.PATCH("/sellers/:id/update-product-and-details", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
+		return &dto.PatchProductAndDetailsReq{}
+	}), h.UpdateProductAndDetails)
+	r.PATCH("/sellers/:id/update-variant-and-details", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
+		return &dto.PatchVariantAndDetails{}
+	}), h.UpdateVariantAndDetails)
+	r.DELETE("/sellers/:id/delete-variant-and-details", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
+		return &dto.DefaultPrice{}
+	}), h.DeleteVariantAndDetails)
+	r.POST("/sellers/:id/add-variant-and-details", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
+		return &dto.AddVariantAndDetails{}
+	}), h.AddVariantDetails)
+	r.POST("/sellers/:id/add-product-photo", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
+		return &dto.ProductPhotoReq{}
+	}), h.AddProductPhoto)
+	r.DELETE("/sellers/:id/delete-product-photo", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
+		return &dto.DeleteProductPhoto{}
+	}), h.DeleteProductPhoto)
+	r.DELETE("/sellers/:id/delete-product", middleware.AuthorizeJWTFor(model.UserRoleName), h.DeleteProduct)
 	// NOTIFICATION
 	r.POST("/products/favorites", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.FavoriteProductReq{}
@@ -118,9 +150,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.POST("/sellers/follow", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.FollowSellerReq{}
 	}), h.FollowToSeller)
-
-	// REVIEWS
-	r.GET("/products/:id/reviews", h.FindReviewByProductID)
+	r.GET("/sellers/products", middleware.AuthorizeJWTFor(model.SellerRoleName), h.GetProductsByUserIDUnscoped)
 
 	// SELLER
 	r.GET("/sellers/:id", middleware.OptionalAuthorizeJWTFor(model.UserRoleName), h.FindSellerByID)
@@ -134,6 +164,15 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 
 	// ORDER
 	r.GET("/sellers/orders", middleware.AuthorizeJWTFor(model.SellerRoleName), h.GetSellerOrders)
+	r.GET("/user/orders", middleware.AuthorizeJWTFor(model.SellerRoleName), h.GetBuyerOrders)
+	r.POST("/user/finish/orders", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
+		return &dto.FinishOrderReq{}
+	}), h.FinishOrder)
+
+	// DELIVERY
+	r.POST("/seller/deliver/order", middleware.AuthorizeJWTFor(model.SellerRoleName), middleware.RequestValidator(func() any {
+		return &dto.DeliverOrderReq{}
+	}), h.DeliverOrder)
 
 	// VOUCHER
 	r.POST("/vouchers", middleware.AuthorizeJWTFor(model.SellerRoleName), middleware.RequestValidator(func() any {
@@ -149,6 +188,20 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		return &dto.PatchVoucherReq{}
 	}), h.UpdateVoucher)
 	r.DELETE("/vouchers/:id", middleware.AuthorizeJWTFor(model.SellerRoleName), h.DeleteVoucherByID)
+
+	// REFUND
+	r.POST("/cancel/orders", middleware.AuthorizeJWTFor(model.SellerRoleName), middleware.RequestValidator(func() any {
+		return &dto.SellerCancelOrderReq{}
+	}), h.CancelOrderBySeller)
+	r.POST("/request-refund/orders", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
+		return &dto.CreateComplaintReq{}
+	}), h.RequestRefundByBuyer)
+	r.POST("/reject-refund/orders", middleware.AuthorizeJWTFor(model.SellerRoleName), middleware.RequestValidator(func() any {
+		return &dto.RejectAcceptRefundReq{}
+	}), h.RejectRefundRequest)
+	r.POST("/accept-refund/orders", middleware.AuthorizeJWTFor(model.SellerRoleName), middleware.RequestValidator(func() any {
+		return &dto.RejectAcceptRefundReq{}
+	}), h.AcceptRefundRequest)
 
 	// PROMOTION
 	r.GET("/promotions", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetPromotion)
@@ -214,11 +267,29 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.POST("/user/cart", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.AddToCartReq{}
 	}), h.AddToCart)
+	r.PATCH("/user/cart", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
+		return &dto.UpdateCartItemReq{}
+	}), h.UpdateCart)
 	r.DELETE("/user/cart", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.DeleteFromCartReq{}
 	}), h.DeleteCartItem)
 
+	// FAVORITES
+	r.GET("/user/favorite-counts", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetUserFavoriteCount)
+
 	// PAYMENT
 	r.POST("/checkout-cart", middleware.RequestValidator(func() any { return &dto.CheckoutCartReq{} }), middleware.AuthorizeJWTFor(model.Level1RoleName), h.CheckoutCart)
+	r.GET("/predicted-price", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any { return &dto.TotalPredictedPriceReq{} }), h.GetTotalPredictedPrice)
+
+	// ADMIN
+	r.POST("/create-global-voucher", middleware.RequestValidator(func() any { return &dto.CreateGlobalVoucher{} }), middleware.AuthorizeJWTFor(model.AdminRoleName), h.CreateGlobalVoucher)
+	r.POST("/create-category", middleware.RequestValidator(func() any { return &dto.CreateCategory{} }), middleware.AuthorizeJWTFor(model.AdminRoleName), h.CreateCategory)
+
+	// REVIEWS
+	r.GET("/products/:id/reviews", h.FindReviewByProductID)
+	r.POST("/product/review", middleware.RequestValidator(func() any { return &dto.CreateUpdateReview{} }), middleware.AuthorizeJWTFor(model.UserRoleName), h.CreateUpdateReview)
+	r.GET("/user/review-history", middleware.AuthorizeJWTFor(model.UserRoleName), h.UserReviewHistory)
+
 	return r
+
 }

@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-func TransactionToSeaLabsPay(accountNumber string, amount string, sign string, callback string) (string, uint, error) {
+func TransactionToSeaLabsPay(accountNumber string, amount string, sign string, callback string, trxType string) (string, uint, error) {
 	client := &http.Client{
 		Timeout: time.Second * 10,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
@@ -21,11 +21,13 @@ func TransactionToSeaLabsPay(accountNumber string, amount string, sign string, c
 		},
 	}
 
+	redirURL := config.Config.RedirectPaymentBase + "/transactions/post-slp-" + trxType
+
 	data := url.Values{}
 	data.Set("card_number", accountNumber)
 	data.Set("amount", amount)
 	data.Set("merchant_code", config.Config.SeaLabsPayMerchantCode)
-	data.Set("redirect_url", "https://www.google.com")
+	data.Set("redirect_url", redirURL)
 	data.Set("callback_url", config.Config.NgrokURL+callback)
 	data.Set("signature", sign)
 	encodeData := data.Encode()
@@ -71,7 +73,6 @@ func TransactionToSeaLabsPay(accountNumber string, amount string, sign string, c
 		if err != nil {
 			panic(err)
 		}
-		fmt.Println(j.Message)
 		return "", 0, apperror.BadRequestError(j.Message)
 	}
 }

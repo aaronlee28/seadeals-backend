@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"math"
 	"net/http"
@@ -27,13 +28,13 @@ func (h *Handler) FindProductDetailByID(ctx *gin.Context) {
 		userID = user.UserID
 	}
 
-	res, err := h.productService.FindProductDetailByID(uint(productID), userID)
+	resProduct, resSeller, err := h.productService.FindProductDetailByID(uint(productID), userID)
 	if err != nil {
 		_ = ctx.Error(err)
 		return
 	}
 
-	ctx.JSON(http.StatusOK, dto.StatusOKResponse(res))
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(gin.H{"product_detail": resProduct, "seller": resSeller}))
 }
 
 func (h *Handler) FindSimilarProduct(ctx *gin.Context) {
@@ -43,13 +44,28 @@ func (h *Handler) FindSimilarProduct(ctx *gin.Context) {
 		return
 	}
 
-	products, err := h.productService.FindSimilarProducts(uint(id))
+	query := &repository.SearchQuery{
+		Limit:      helper.GetQuery(ctx, "limit", "24"),
+		Page:       helper.GetQuery(ctx, "page", "1"),
+		ExcludedID: uint(id),
+	}
+	limit, _ := strconv.ParseUint(query.Limit, 10, 64)
+	if limit == 0 {
+		limit = 20
+	}
+	page, _ := strconv.ParseUint(query.Page, 10, 64)
+	if page == 0 {
+		page = 1
+	}
+
+	products, totalPage, totalData, err := h.productService.FindSimilarProducts(uint(id), query)
 	if err != nil {
 		_ = ctx.Error(err)
 		return
 	}
 
-	ctx.JSON(http.StatusOK, dto.StatusOKResponse(products))
+	fmt.Println(products[0].MaxPrice)
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(gin.H{"products": products, "total_page": totalPage, "total_data": totalData, "limit": limit, "current_page": page}))
 }
 
 func (h *Handler) GetProductsBySellerID(ctx *gin.Context) {
@@ -76,6 +92,34 @@ func (h *Handler) GetProductsBySellerID(ctx *gin.Context) {
 	}
 
 	res, totalPage, totalData, err := h.productService.GetProductsBySellerID(productQuery, uint(sellerID))
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(gin.H{"products": res, "total_data": totalData, "total_page": totalPage, "current_page": productQuery.Page, "limit": productQuery.Limit}))
+}
+
+func (h *Handler) GetProductsByUserIDUnscoped(ctx *gin.Context) {
+	query := map[string]string{
+		"page":      ctx.Query("page"),
+		"s":         ctx.Query("s"),
+		"sortBy":    ctx.Query("sortBy"),
+		"sort":      ctx.Query("sort"),
+		"limit":     ctx.Query("limit"),
+		"minAmount": ctx.Query("minAmount"),
+		"maxAmount": ctx.Query("maxAmount"),
+	}
+	productQuery, err := new(dto.SellerProductSearchQuery).FromQuery(query)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	userPayload, _ := ctx.Get("user")
+	user := userPayload.(dto.UserJWT)
+
+	res, totalPage, totalData, err := h.productService.GetProductsByUserIDUnscoped(productQuery, user.UserID)
 	if err != nil {
 		_ = ctx.Error(err)
 		return
@@ -130,6 +174,7 @@ func (h *Handler) SearchProducts(ctx *gin.Context) {
 		Category:   helper.GetQuery(ctx, "category", ""),
 		CategoryID: helper.GetQueryToUint(ctx, "categoryID", 0),
 		SellerID:   helper.GetQueryToUint(ctx, "sellerID", 0),
+		ExcludedID: helper.GetQueryToUint(ctx, "excludedID", 0),
 	}
 	limit, _ := strconv.ParseUint(query.Limit, 10, 64)
 	if limit == 0 {
@@ -162,6 +207,7 @@ func (h *Handler) SearchRecommendProduct(ctx *gin.Context) {
 		Category:   helper.GetQuery(ctx, "category", ""),
 		CategoryID: helper.GetQueryToUint(ctx, "categoryID", 0),
 		SellerID:   helper.GetQueryToUint(ctx, "sellerID", 0),
+		ExcludedID: helper.GetQueryToUint(ctx, "excludedID", 0),
 	}
 	limit, _ := strconv.ParseUint(query.Limit, 10, 64)
 	if limit == 0 {
@@ -192,6 +238,181 @@ func (h *Handler) CreateSellerProduct(ctx *gin.Context) {
 	value, _ := ctx.Get("payload")
 	json, _ := value.(*dto.PostCreateProductReq)
 	res, err := h.productService.CreateSellerProduct(userID, json)
+
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(res))
+}
+
+func (h *Handler) UpdateProductAndDetails(ctx *gin.Context) {
+
+	userPayload, _ := ctx.Get("user")
+	user, isValid := userPayload.(dto.UserJWT)
+	userID := uint(0)
+	if isValid {
+		userID = user.UserID
+	}
+	value, _ := ctx.Get("payload")
+	json, _ := value.(*dto.PatchProductAndDetailsReq)
+	idString := ctx.Param("id")
+	productIDInt, _ := strconv.Atoi(idString)
+	productID := uint(productIDInt)
+	res, err := h.productService.UpdateProductAndDetails(userID, productID, json)
+
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(res))
+}
+func (h *Handler) UpdateVariantAndDetails(ctx *gin.Context) {
+
+	userPayload, _ := ctx.Get("user")
+	user, isValid := userPayload.(dto.UserJWT)
+	userID := uint(0)
+	if isValid {
+		userID = user.UserID
+	}
+	value, _ := ctx.Get("payload")
+	json, _ := value.(*dto.PatchVariantAndDetails)
+	idString := ctx.Param("id")
+	productIDInt, _ := strconv.Atoi(idString)
+	productID := uint(productIDInt)
+	res, err := h.productService.UpdateVariantAndDetails(userID, productID, json)
+
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(res))
+}
+func (h *Handler) DeleteVariantAndDetails(ctx *gin.Context) {
+
+	userPayload, _ := ctx.Get("user")
+	user, isValid := userPayload.(dto.UserJWT)
+	userID := uint(0)
+	if isValid {
+		userID = user.UserID
+	}
+	value, _ := ctx.Get("payload")
+	json, _ := value.(*dto.DefaultPrice)
+	idString := ctx.Param("id")
+	variantdIDInt, _ := strconv.Atoi(idString)
+	variantdID := uint(variantdIDInt)
+	err := h.productService.DeleteProductVariantDetails(userID, variantdID, json.DefaultPrice)
+
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse("Ok"))
+}
+
+func (h *Handler) AddVariantDetails(ctx *gin.Context) {
+
+	userPayload, _ := ctx.Get("user")
+	user, isValid := userPayload.(dto.UserJWT)
+	userID := uint(0)
+	if isValid {
+		userID = user.UserID
+	}
+	value, _ := ctx.Get("payload")
+	json, _ := value.(*dto.AddVariantAndDetails)
+	idString := ctx.Param("id")
+	productIDInt, _ := strconv.Atoi(idString)
+	productID := uint(productIDInt)
+
+	res, err := h.productService.AddVariantDetails(userID, productID, json)
+
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(res))
+}
+
+func (h *Handler) AddProductPhoto(ctx *gin.Context) {
+
+	userPayload, _ := ctx.Get("user")
+	user, isValid := userPayload.(dto.UserJWT)
+	userID := uint(0)
+	if isValid {
+		userID = user.UserID
+	} else {
+		_ = ctx.Error(apperror.BadRequestError("User is invalid"))
+		return
+	}
+	value, _ := ctx.Get("payload")
+	json, ok := value.(*dto.ProductPhotoReq)
+	if ok != true {
+		ctx.JSON(http.StatusBadRequest, "salah")
+		return
+	}
+	idString := ctx.Param("id")
+	productIDInt, _ := strconv.Atoi(idString)
+	productID := uint(productIDInt)
+	res, err := h.productService.AddProductPhoto(userID, productID, json)
+
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(res))
+}
+
+func (h *Handler) DeleteProductPhoto(ctx *gin.Context) {
+
+	userPayload, _ := ctx.Get("user")
+	user, isValid := userPayload.(dto.UserJWT)
+	userID := uint(0)
+	if isValid {
+		userID = user.UserID
+	} else {
+		_ = ctx.Error(apperror.BadRequestError("User is invalid"))
+		return
+	}
+	value, _ := ctx.Get("payload")
+	json, ok := value.(*dto.DeleteProductPhoto)
+	if ok != true {
+		ctx.JSON(http.StatusBadRequest, "salah")
+		return
+	}
+	idString := ctx.Param("id")
+	productIDInt, _ := strconv.Atoi(idString)
+	productID := uint(productIDInt)
+	res, err := h.productService.DeleteProductPhoto(userID, productID, json)
+
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(res))
+}
+func (h *Handler) DeleteProduct(ctx *gin.Context) {
+
+	userPayload, _ := ctx.Get("user")
+	user, isValid := userPayload.(dto.UserJWT)
+	userID := uint(0)
+	if isValid {
+		userID = user.UserID
+	} else {
+		_ = ctx.Error(apperror.BadRequestError("User is invalid"))
+		return
+	}
+
+	idString := ctx.Param("id")
+	productIDInt, _ := strconv.Atoi(idString)
+	productID := uint(productIDInt)
+	res, err := h.productService.DeleteProduct(userID, productID)
 
 	if err != nil {
 		_ = ctx.Error(err)

@@ -17,7 +17,10 @@ import (
 type UserService interface {
 	Register(req *dto.RegisterRequest) (*dto.RegisterResponse, *gorm.DB, error)
 	CheckGoogleAccount(email string) (*model.User, error)
-	RegisterAsSeller(req *dto.RegisterAsSellerReq) (*model.Seller, string, error)
+	RegisterAsSeller(req *dto.RegisterAsSellerReq, userID uint) (*model.Seller, string, error)
+	UserDetails(userID uint) (*dto.UserDetailsRes, error)
+	ChangeUserDetailsLessPassword(userID uint, req *dto.ChangeUserDetails) (*model.User, error)
+	ChangeUserPassword(userID uint, req *dto.ChangePasswordReq) error
 }
 
 type userService struct {
@@ -146,12 +149,12 @@ func (u *userService) CheckGoogleAccount(email string) (*model.User, error) {
 	return user, nil
 }
 
-func (u *userService) RegisterAsSeller(req *dto.RegisterAsSellerReq) (*model.Seller, string, error) {
+func (u *userService) RegisterAsSeller(req *dto.RegisterAsSellerReq, userID uint) (*model.Seller, string, error) {
 	tx := u.db.Begin()
 	var err error
 	defer helper.CommitOrRollback(tx, &err)
 
-	user, err := u.userRepository.GetUserByID(tx, req.UserID)
+	user, err := u.userRepository.GetUserByID(tx, userID)
 	if err != nil {
 		return nil, "", err
 	}
@@ -209,4 +212,71 @@ func (u *userService) RegisterAsSeller(req *dto.RegisterAsSellerReq) (*model.Sel
 	accessToken, err := helper.GenerateJWTToken(userJWT, rolesString, config.Config.JWTExpiredInMinuteTime*60, dto.JWTAccessToken)
 
 	return createdSeller, accessToken, nil
+}
+
+func (u *userService) UserDetails(userID uint) (*dto.UserDetailsRes, error) {
+	tx := u.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
+
+	var userDetails *model.User
+	userDetails, err = u.userRepository.GetUserDetailsByID(tx, userID)
+
+	if err != nil {
+		return nil, err
+	}
+	res := &dto.UserDetailsRes{
+		Username:  userDetails.Username,
+		FullName:  userDetails.FullName,
+		Email:     userDetails.FullName,
+		Phone:     userDetails.Phone,
+		Gender:    userDetails.Gender,
+		BirthDate: userDetails.BirthDate,
+	}
+	if userDetails.AvatarURL != nil {
+		res.AvatarURL = *userDetails.AvatarURL
+	}
+	return res, nil
+}
+
+func (u *userService) ChangeUserDetailsLessPassword(userID uint, req *dto.ChangeUserDetails) (*model.User, error) {
+	tx := u.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
+
+	var userDetails *model.User
+	userDetails, err = u.userRepository.ChangeUserDetailsLessPassword(tx, userID, req)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return userDetails, nil
+}
+
+func (u *userService) ChangeUserPassword(userID uint, req *dto.ChangePasswordReq) error {
+	tx := u.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
+
+	var userDetails *model.User
+	userDetails, err = u.userRepository.GetUserDetailsByID(tx, userID)
+
+	isMatch, _ := regexp.MatchString(req.NewPassword, req.RepeatNewPassword)
+	if !isMatch {
+		return apperror.BadRequestError("Password does not match")
+	}
+
+	isMatchUsername, _ := regexp.MatchString(userDetails.Username, req.NewPassword)
+	if isMatchUsername {
+		return apperror.BadRequestError("Password cannot contain username")
+	}
+
+	err = u.userRepository.ChangeUserPassword(tx, userID, req.NewPassword)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
