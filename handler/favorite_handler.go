@@ -30,7 +30,7 @@ func (h *Handler) GetUserFavoriteCount(ctx *gin.Context) {
 
 	userFavCount, err := h.favoriteService.GetUserFavoriteCount(userID)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, err) //internal server instead? kan ga provide apa apa, selain userID atleast.
+		_ = ctx.Error(err)
 		return
 	}
 
