@@ -71,6 +71,7 @@ type SearchQuery struct {
 	Category   string
 	SellerID   uint
 	CategoryID uint
+	ExcludedID uint
 }
 
 func (r *productRepository) FindProductByID(tx *gorm.DB, productID uint) (*model.Product, error) {
@@ -136,6 +137,7 @@ func (r *productRepository) FindSimilarProduct(tx *gorm.DB, categoryID uint, que
 
 	result := tx.Model(&dto.SellerProductsCustomTable{})
 	result = result.Select("products.name, min, max, min_before_disc, max_before_disc, city, city_id, products.id, products.slug, p.amount as promotion_amount, p.id as promotion_id, products.category_id, products.favorite_count, products.seller_id, products.sold_count, avg, count, parent_id, products.created_at")
+	result = result.Where("products.id != ?", query.ExcludedID)
 	result = result.Joins("JOIN product_categories as c ON products.category_id = c.id")
 	result = result.Joins("LEFT JOIN promotions as p ON p.product_id = products.id")
 	result = result.Joins("JOIN (?) as seller ON products.seller_id = seller.id", seller)
@@ -260,6 +262,10 @@ func (r *productRepository) SearchRecommendProduct(tx *gorm.DB, query *SearchQue
 	result = result.Joins("JOIN (?) as s1 ON products.id = s1.product_id", s1)
 	result = result.Joins("LEFT JOIN (?) as s2 ON products.id = s2.product_id", s2)
 	orderByString := "favorite_count desc"
+
+	if query.ExcludedID != 0 {
+		result = result.Where("products.id != ?", query.ExcludedID)
+	}
 
 	var totalData int64
 	result = result.Order(orderByString).Order("products.id")

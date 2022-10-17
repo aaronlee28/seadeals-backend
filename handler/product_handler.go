@@ -45,8 +45,9 @@ func (h *Handler) FindSimilarProduct(ctx *gin.Context) {
 	}
 
 	query := &repository.SearchQuery{
-		Limit: helper.GetQuery(ctx, "limit", "24"),
-		Page:  helper.GetQuery(ctx, "page", "1"),
+		Limit:      helper.GetQuery(ctx, "limit", "24"),
+		Page:       helper.GetQuery(ctx, "page", "1"),
+		ExcludedID: uint(id),
 	}
 	limit, _ := strconv.ParseUint(query.Limit, 10, 64)
 	if limit == 0 {
@@ -173,6 +174,7 @@ func (h *Handler) SearchProducts(ctx *gin.Context) {
 		Category:   helper.GetQuery(ctx, "category", ""),
 		CategoryID: helper.GetQueryToUint(ctx, "categoryID", 0),
 		SellerID:   helper.GetQueryToUint(ctx, "sellerID", 0),
+		ExcludedID: helper.GetQueryToUint(ctx, "excludedID", 0),
 	}
 	limit, _ := strconv.ParseUint(query.Limit, 10, 64)
 	if limit == 0 {
@@ -205,6 +207,7 @@ func (h *Handler) SearchRecommendProduct(ctx *gin.Context) {
 		Category:   helper.GetQuery(ctx, "category", ""),
 		CategoryID: helper.GetQueryToUint(ctx, "categoryID", 0),
 		SellerID:   helper.GetQueryToUint(ctx, "sellerID", 0),
+		ExcludedID: helper.GetQueryToUint(ctx, "excludedID", 0),
 	}
 	limit, _ := strconv.ParseUint(query.Limit, 10, 64)
 	if limit == 0 {
