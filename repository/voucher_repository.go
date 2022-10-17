@@ -82,8 +82,7 @@ func (r *voucherRepository) FindVoucherBySellerID(tx *gorm.DB, sellerID uint, qp
 
 	var totalVouchers int64
 	var vouchers []*model.Voucher
-	fmt.Println("Here")
-	result := queryDB.Model(&model.Voucher{}).Count(&totalVouchers).Where("seller_id = ?", sellerID)
+	result := queryDB.Model(&model.Voucher{}).Where("seller_id = ?", sellerID).Count(&totalVouchers)
 	if result.Error != nil {
 		return nil, totalVouchers, result.Error
 	}
