@@ -9,7 +9,7 @@ import (
 	"strconv"
 )
 
-func (h *Handler) FindAllProductCategories(ctx *gin.Context) {
+func (h *Handler) FindCategories(ctx *gin.Context) {
 	query := &model.CategoryQuery{
 		Search:   helper.GetQuery(ctx, "s", ""),
 		Limit:    helper.GetQuery(ctx, "limit", "0"),
@@ -18,7 +18,7 @@ func (h *Handler) FindAllProductCategories(ctx *gin.Context) {
 		ParentID: helper.GetQueryToUint(ctx, "parentID", 0),
 		FindAll:  helper.GetQueryToBool(ctx, "findAll", false),
 	}
-	categories, totalPage, totalData, err := h.productCategoryService.FindAllProductCategories(query)
+	categories, totalPage, totalData, err := h.productCategoryService.FindCategories(query)
 	if err != nil {
 		_ = ctx.Error(err)
 		return
