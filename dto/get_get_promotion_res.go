@@ -16,10 +16,18 @@ type GetPromotionRes struct {
 	AmountType      string    `json:"amount_type"`
 	Amount          float64   `json:"amount"`
 	Quota           uint      `json:"quota"`
+	Status          string    `json:"status"`
 	ProductPhotoURL string    `json:"product_photo_url"`
 }
 
 func (_ *GetPromotionRes) FromPromotion(t *model.Promotion) *GetPromotionRes {
+	status := model.StatusOnGoing
+	if time.Now().After(t.EndDate) {
+		status = model.StatusEnded
+	} else if t.StartDate.After(time.Now()) {
+		status = model.StatusUpcoming
+	}
+
 	return &GetPromotionRes{
 		ID:          t.ID,
 		ProductID:   t.ProductID,
@@ -31,5 +39,6 @@ func (_ *GetPromotionRes) FromPromotion(t *model.Promotion) *GetPromotionRes {
 		AmountType:  t.AmountType,
 		Amount:      t.Amount,
 		Quota:       t.Quota,
+		Status:      status,
 	}
 }
