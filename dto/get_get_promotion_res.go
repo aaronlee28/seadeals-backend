@@ -15,6 +15,7 @@ type GetPromotionRes struct {
 	EndDate         time.Time `json:"end_date"`
 	AmountType      string    `json:"amount_type"`
 	Amount          float64   `json:"amount"`
+	Quota           uint      `json:"quota"`
 	ProductPhotoURL string    `json:"product_photo_url"`
 }
 
@@ -29,5 +30,6 @@ func (_ *GetPromotionRes) FromPromotion(t *model.Promotion) *GetPromotionRes {
 		EndDate:     t.EndDate,
 		AmountType:  t.AmountType,
 		Amount:      t.Amount,
+		Quota:       t.Quota,
 	}
 }
