@@ -110,7 +110,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.GET("/couriers", middleware.AuthorizeJWTFor(model.SellerRoleName), h.GetAllCouriers)
 
 	// CATEGORIES
-	r.GET("/categories", h.FindAllProductCategories)
+	r.GET("/categories", h.FindCategories)
 
 	// PRODUCTS
 	r.GET("/products/:id/variant", h.FindAllProductVariantByProductID)

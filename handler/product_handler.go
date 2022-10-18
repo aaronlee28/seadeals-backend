@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"math"
 	"net/http"
@@ -64,7 +63,6 @@ func (h *Handler) FindSimilarProduct(ctx *gin.Context) {
 		return
 	}
 
-	fmt.Println(products[0].MaxPrice)
 	ctx.JSON(http.StatusOK, dto.StatusOKResponse(gin.H{"products": products, "total_page": totalPage, "total_data": totalData, "limit": limit, "current_page": page}))
 }
 

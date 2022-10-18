@@ -9,7 +9,7 @@ import (
 )
 
 type ProductCategoryRepository interface {
-	FindAllProductCategories(tx *gorm.DB, query *model.CategoryQuery) ([]*model.ProductCategory, int64, int64, error)
+	FindCategories(tx *gorm.DB, query *model.CategoryQuery) ([]*model.ProductCategory, int64, int64, error)
 }
 
 type productCategoryRepository struct{}
@@ -18,15 +18,16 @@ func NewProductCategoryRepository() ProductCategoryRepository {
 	return &productCategoryRepository{}
 }
 
-func (r *productCategoryRepository) FindAllProductCategories(tx *gorm.DB, query *model.CategoryQuery) ([]*model.ProductCategory, int64, int64, error) {
+func (r *productCategoryRepository) FindCategories(tx *gorm.DB, query *model.CategoryQuery) ([]*model.ProductCategory, int64, int64, error) {
 	var categories []*model.ProductCategory
 
 	result := tx.Model(&model.ProductCategory{})
 	result = result.Distinct().Select("product_categories.id, product_categories.name, product_categories.slug, product_categories.icon_url, product_categories.parent_id")
 	result = result.Joins("LEFT JOIN product_categories as c2 ON product_categories.id = c2.parent_id")
-	stringJoin := "INNER JOIN products as p ON p.category_id = product_categories.id OR p.category_id = c2.id"
+	result = result.Joins("LEFT JOIN product_categories as c3 ON c2.id = c3.parent_id")
+	stringJoin := "INNER JOIN products as p ON p.category_id = product_categories.id OR p.category_id = c2.id OR p.category_id = c3.id"
 	if query.FindAll {
-		stringJoin = "LEFT JOIN products as p ON p.category_id = product_categories.id OR p.category_id = c2.id"
+		stringJoin = "LEFT JOIN products as p ON p.category_id = product_categories.id OR p.category_id = c2.id OR p.category_id = c3.id"
 	}
 	result = result.Joins(stringJoin)
 
@@ -64,7 +65,7 @@ func (r *productCategoryRepository) FindAllProductCategories(tx *gorm.DB, query 
 
 	table = table.Unscoped()
 	if query.FindAll {
-		table = table.Preload("Children")
+		table = table.Preload("Children.Children.Children")
 	}
 	table = table.Find(&categories)
 	if table.Error != nil {

@@ -175,15 +175,16 @@ func (p *productVariantDetailRepository) GetProductsByCategoryID(tx *gorm.DB, qu
 	seller = seller.Select("city, city_id, sellers.id, name")
 
 	result := tx.Model(&dto.SellerProductsCustomTable{})
-	result = result.Select("products.name, min, max, min_before_disc, max_before_disc, city, city_id, products.id, products.slug, p.amount as promotion_amount, p.id as promotion_id, products.category_id, products.favorite_count, products.seller_id, products.sold_count, avg, count, parent_id, products.created_at")
+	result = result.Select("products.name, min, max, min_before_disc, max_before_disc, city, city_id, products.id, products.slug, p.amount as promotion_amount, p.id as promotion_id, products.category_id, products.favorite_count, products.seller_id, products.sold_count, avg, count, c.parent_id, c2.parent_id,  products.created_at")
 	result = result.Joins("JOIN product_categories as c ON products.category_id = c.id")
+	result = result.Joins("LEFT JOIN product_categories as c2 ON c.parent_id = c2.id")
 	result = result.Joins("LEFT JOIN promotions as p ON p.product_id = products.id")
 	result = result.Joins("JOIN (?) as seller ON products.seller_id = seller.id", seller)
 	result = result.Joins("JOIN (?) as s1 ON products.id = s1.product_id", s1)
 	result = result.Joins("LEFT JOIN (?) as s2 ON products.id = s2.product_id", s2)
 
 	// CHANGE THIS CODE BELLOW TO CHANGE LIST OF PRODUCT BY...
-	result = result.Where("(category_id = ? OR parent_id = ?)", categoryID, categoryID)
+	result = result.Where("(category_id = ? OR c.parent_id = ? OR c2.parent_id = ?)", categoryID, categoryID, categoryID)
 
 	orderByString := query.SortBy
 	if query.SortBy == "price" {
@@ -259,8 +260,9 @@ func (p *productVariantDetailRepository) SearchProducts(tx *gorm.DB, query *Sear
 	seller = seller.Select("city, city_id, sellers.id, name")
 
 	result := tx.Model(&dto.SellerProductsCustomTable{})
-	result = result.Select("products.name, min, max, min_before_disc, max_before_disc, city, city_id, products.id, products.slug, p.amount as promotion_amount, p.id as promotion_id, products.category_id, products.favorite_count, products.seller_id, products.sold_count, avg, count, parent_id, products.created_at")
+	result = result.Select("products.name, min, max, min_before_disc, max_before_disc, city, city_id, products.id, products.slug, p.amount as promotion_amount, p.id as promotion_id, products.category_id, products.favorite_count, products.seller_id, products.sold_count, avg, count, c.parent_id, c2.parent_id, products.created_at")
 	result = result.Joins("JOIN product_categories as c ON products.category_id = c.id")
+	result = result.Joins("LEFT JOIN product_categories as c2 ON c.parent_id = c2.id")
 	result = result.Joins("LEFT JOIN promotions as p ON p.product_id = products.id")
 	result = result.Joins("JOIN (?) as seller ON products.seller_id = seller.id", seller)
 	result = result.Joins("JOIN (?) as s1 ON products.id = s1.product_id", s1)
@@ -268,7 +270,7 @@ func (p *productVariantDetailRepository) SearchProducts(tx *gorm.DB, query *Sear
 
 	// CHANGE THIS CODE BELLOW TO CHANGE LIST OF PRODUCT BY...
 	if query.CategoryID != 0 {
-		result = result.Where("(category_id = ? OR parent_id = ?)", query.CategoryID, query.CategoryID)
+		result = result.Where("(category_id = ? OR c.parent_id = ? OR c2.parent_id = ?)", query.CategoryID, query.CategoryID, query.CategoryID)
 	}
 	if query.SellerID != 0 {
 		result = result.Where("products.seller_id = ?", query.SellerID)

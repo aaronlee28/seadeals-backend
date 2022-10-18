@@ -8,7 +8,7 @@ import (
 )
 
 type ProductCategoryService interface {
-	FindAllProductCategories(query *model.CategoryQuery) ([]*model.ProductCategory, int64, int64, error)
+	FindCategories(query *model.CategoryQuery) ([]*model.ProductCategory, int64, int64, error)
 }
 
 type productCategoryService struct {
@@ -28,12 +28,12 @@ func NewProductCategoryService(c *ProductCategoryServiceConfig) ProductCategoryS
 	}
 }
 
-func (s *productCategoryService) FindAllProductCategories(query *model.CategoryQuery) ([]*model.ProductCategory, int64, int64, error) {
+func (s *productCategoryService) FindCategories(query *model.CategoryQuery) ([]*model.ProductCategory, int64, int64, error) {
 	tx := s.db.Begin()
 	var err error
 	defer helper.CommitOrRollback(tx, &err)
 
-	categories, totalPage, totalData, err := s.productCategoryRepository.FindAllProductCategories(tx, query)
+	categories, totalPage, totalData, err := s.productCategoryRepository.FindCategories(tx, query)
 	if err != nil {
 		return nil, 0, 0, err
 	}

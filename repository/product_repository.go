@@ -136,16 +136,17 @@ func (r *productRepository) FindSimilarProduct(tx *gorm.DB, categoryID uint, que
 	seller = seller.Select("city, city_id, sellers.id, name")
 
 	result := tx.Model(&dto.SellerProductsCustomTable{})
-	result = result.Select("products.name, min, max, min_before_disc, max_before_disc, city, city_id, products.id, products.slug, p.amount as promotion_amount, p.id as promotion_id, products.category_id, products.favorite_count, products.seller_id, products.sold_count, avg, count, parent_id, products.created_at")
+	result = result.Select("products.name, min, max, min_before_disc, max_before_disc, city, city_id, products.id, products.slug, p.amount as promotion_amount, p.id as promotion_id, products.category_id, products.favorite_count, products.seller_id, products.sold_count, avg, count, c.parent_id, c2.parent_id, products.created_at")
 	result = result.Where("products.id != ?", query.ExcludedID)
 	result = result.Joins("JOIN product_categories as c ON products.category_id = c.id")
+	result = result.Joins("LEFT JOIN product_categories as c2 ON c.parent_id = c2.id")
 	result = result.Joins("LEFT JOIN promotions as p ON p.product_id = products.id")
 	result = result.Joins("JOIN (?) as seller ON products.seller_id = seller.id", seller)
 	result = result.Joins("JOIN (?) as s1 ON products.id = s1.product_id", s1)
 	result = result.Joins("LEFT JOIN (?) as s2 ON products.id = s2.product_id", s2)
 
 	// CHANGE THIS CODE BELLOW TO CHANGE LIST OF PRODUCT BY...
-	result = result.Where("(category_id = ? OR parent_id = ?)", categoryID, categoryID)
+	result = result.Where("(category_id = ? OR c.parent_id = ? OR c2.parent_id = ?)", categoryID, categoryID, categoryID)
 
 	var totalData int64
 
