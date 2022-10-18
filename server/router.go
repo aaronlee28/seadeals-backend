@@ -108,6 +108,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 
 	// COURIER
 	r.GET("/couriers", middleware.AuthorizeJWTFor(model.SellerRoleName), h.GetAllCouriers)
+	r.GET("/sellers/:id/couriers", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetAvailableCourierForBuyer)
 
 	// CATEGORIES
 	r.GET("/categories", h.FindCategories)
@@ -143,6 +144,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		return &dto.DeleteProductPhoto{}
 	}), h.DeleteProductPhoto)
 	r.DELETE("/sellers/:id/delete-product", middleware.AuthorizeJWTFor(model.UserRoleName), h.DeleteProduct)
+
 	// NOTIFICATION
 	r.POST("/products/favorites", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.FavoriteProductReq{}
@@ -160,7 +162,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.POST("/sellers/couriers", middleware.AuthorizeJWTFor(model.SellerRoleName), middleware.RequestValidator(func() any {
 		return &dto.AddDeliveryReq{}
 	}), h.CreateOrUpdateSellerAvailableCour)
-	r.GET("/sellers/couriers", middleware.AuthorizeJWTFor(model.SellerRoleName), h.GetSellerAvailableCourier)
+	r.GET("/sellers/couriers", middleware.AuthorizeJWTFor(model.SellerRoleName), h.GetAvailableCourierForSeller)
 
 	// ORDER
 	r.GET("/sellers/orders", middleware.AuthorizeJWTFor(model.SellerRoleName), h.GetSellerOrders)
