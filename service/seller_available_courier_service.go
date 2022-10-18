@@ -10,7 +10,8 @@ import (
 
 type SellerAvailableCourService interface {
 	CreateOrUpdateCourier(req *dto.AddDeliveryReq, userID uint) (*model.SellerAvailableCourier, error)
-	GetSellerAvailableCourier(userID uint) ([]*model.SellerAvailableCourier, error)
+	GetAvailableCourierForSeller(userID uint) ([]*model.SellerAvailableCourier, error)
+	GetAvailableCourierForBuyer(sellerID uint) ([]*model.SellerAvailableCourier, error)
 }
 
 type sellerAvailableCourService struct {
@@ -51,7 +52,7 @@ func (s *sellerAvailableCourService) CreateOrUpdateCourier(req *dto.AddDeliveryR
 	return courier, nil
 }
 
-func (s *sellerAvailableCourService) GetSellerAvailableCourier(userID uint) ([]*model.SellerAvailableCourier, error) {
+func (s *sellerAvailableCourService) GetAvailableCourierForSeller(userID uint) ([]*model.SellerAvailableCourier, error) {
 	tx := s.db.Begin()
 	var err error
 	defer helper.CommitOrRollback(tx, &err)
@@ -62,6 +63,19 @@ func (s *sellerAvailableCourService) GetSellerAvailableCourier(userID uint) ([]*
 	}
 
 	couriers, err := s.sellerAvailCourRepo.GetAllSellerAvailableCourier(tx, seller.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return couriers, nil
+}
+
+func (s *sellerAvailableCourService) GetAvailableCourierForBuyer(sellerID uint) ([]*model.SellerAvailableCourier, error) {
+	tx := s.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
+
+	couriers, err := s.sellerAvailCourRepo.GetAllSellerAvailableCourier(tx, sellerID)
 	if err != nil {
 		return nil, err
 	}

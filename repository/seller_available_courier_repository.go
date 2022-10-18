@@ -52,7 +52,7 @@ func (s *sellerAvailableCourierRepository) AddSellerAvailableDeliveryMethod(tx *
 
 func (s *sellerAvailableCourierRepository) GetAllSellerAvailableCourier(tx *gorm.DB, sellerID uint) ([]*model.SellerAvailableCourier, error) {
 	var couriers []*model.SellerAvailableCourier
-	result := tx.Model(&couriers).Where("seller_id = ?", sellerID).Where("is_selected IS TRUE").Find(&couriers)
+	result := tx.Model(&couriers).Where("seller_id = ?", sellerID).Where("is_selected IS TRUE").Preload("Courier").Find(&couriers)
 	if result.Error != nil {
 		return nil, apperror.InternalServerError("Cannot find seller available method")
 	}
