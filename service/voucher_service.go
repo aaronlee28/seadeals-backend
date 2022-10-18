@@ -86,14 +86,11 @@ func validateVoucher(voucher *model.Voucher, req *dto.PostValidateVoucherReq) er
 	if !(voucher.StartDate.Before(time.Now()) && voucher.EndDate.After(time.Now())) {
 		return apperror.BadRequestError(new(apperror.VoucherNotFoundError).Error())
 	}
-	if voucher.SellerID != &req.SellerID {
+	if *voucher.SellerID != req.SellerID {
 		return apperror.BadRequestError("voucher cannot be used in this shop")
 	}
-	if (voucher.Quota - int(req.Quantity)) <= 0 {
-		return apperror.BadRequestError(fmt.Sprintf("the number of purchases exceeds the voucher quota (quota: %d)", voucher.Quota))
-	}
-	if voucher.MinSpending > req.Price {
-		return apperror.BadRequestError(fmt.Sprintf("need %.2f more spending", voucher.MinSpending-req.Price))
+	if voucher.MinSpending > req.Spend {
+		return apperror.BadRequestError(fmt.Sprintf("need Rp%.2f more spending", voucher.MinSpending-req.Spend))
 	}
 	return nil
 }
