@@ -13,6 +13,7 @@ type ReviewService interface {
 	FindReviewByProductID(productID uint, qp *model.ReviewQueryParam) (*dto.GetReviewsRes, error)
 	CreateUpdateReview(userID uint, req *dto.CreateUpdateReview) (*model.Review, error)
 	UserReviewHistory(userID uint) ([]*model.Review, error)
+	FindReviewByProductIDAndSellerID(userID uint, productID uint) (*model.Review, error)
 }
 
 type reviewService struct {
@@ -95,10 +96,7 @@ func (s *reviewService) FindReviewByProductID(productID uint, qp *model.ReviewQu
 		AverageRating: RoundedAvgRating,
 		Reviews:       reviewsRes,
 	}
-	//if qp.Rating == 0 && qp.WithDescriptionOnly == false && qp.WithImageOnly == false {
-	//	res.TotalReviews = totalRawReviews
-	//	res.TotalPages = totalRawPages
-	//}
+
 	return res, nil
 }
 
@@ -139,6 +137,25 @@ func (s *reviewService) CreateUpdateReview(userID uint, req *dto.CreateUpdateRev
 		}
 	}
 	return createdReview, nil
+}
+
+func (s *reviewService) FindReviewByProductIDAndSellerID(userID uint, productID uint) (*model.Review, error) {
+	tx := s.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
+
+	_, err = s.reviewRepo.ValidateUserOrderItem(tx, userID, productID)
+	if err != nil {
+		return nil, err
+	}
+
+	var existingReview *model.Review
+	existingReview, err = s.reviewRepo.FindReviewByProductIDAndSellerID(tx, userID, productID)
+	if err != nil {
+		return nil, err
+	}
+
+	return existingReview, err
 }
 
 func (s *reviewService) UserReviewHistory(userID uint) ([]*model.Review, error) {
