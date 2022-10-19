@@ -928,12 +928,8 @@ func (o *orderService) GetTotalPredictedPrice(req *dto.TotalPredictedPriceReq, u
 	var err error
 	defer helper.CommitOrRollback(tx, &err)
 
-	status, err := o.walletRepository.GetWalletStatus(tx, userID)
-	if err != nil {
-		return nil, err
-	}
-	if status == repository.WalletBlocked {
-		err = apperror.BadRequestError("Wallet is currently blocked")
+	if len(req.Cart) <= 0 {
+		err = apperror.BadRequestError("Checkout setidaknya harus terdapat satu barang")
 		return nil, err
 	}
 
