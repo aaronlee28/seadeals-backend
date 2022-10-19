@@ -51,6 +51,7 @@ type OrderItemOrderList struct {
 }
 
 type ProductDetailOrderList struct {
+	Name       string  `json:"name"`
 	CategoryID uint    `json:"category_id"`
 	Category   string  `json:"category"`
 	Slug       string  `json:"slug"`
