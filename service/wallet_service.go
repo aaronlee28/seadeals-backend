@@ -406,6 +406,11 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 		return nil, err
 	}
 
+	if len(req.Cart) <= 0 {
+		err = apperror.BadRequestError("Checkout setidaknya harus terdapat satu barang")
+		return nil, err
+	}
+
 	globalVoucher, err := w.walletRepository.GetVoucher(tx, req.GlobalVoucherCode)
 	if err != nil {
 		return nil, err

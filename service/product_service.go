@@ -105,6 +105,7 @@ func (p *productService) FindProductDetailByID(productID uint, userID uint) (*dt
 		return nil, nil, err
 	}
 	sellerRes.TotalProduct = totalProduct
+	product.ID = productID
 
 	return product, sellerRes, nil
 }
@@ -132,7 +133,7 @@ func (p *productService) GetProductsBySellerID(query *dto.SellerProductSearchQue
 			MinPrice:           variantDetail.Min,
 			MaxPrice:           variantDetail.Max,
 			Product: &dto.GetProductRes{
-				ID:              variantDetail.ProductID,
+				ID:              variantDetail.ID,
 				Price:           variantDetail.Min,
 				Name:            variantDetail.Product.Name,
 				Slug:            variantDetail.Product.Slug,

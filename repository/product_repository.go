@@ -121,6 +121,9 @@ func (r *productRepository) FindSimilarProduct(tx *gorm.DB, categoryID uint, que
 
 	promotions := tx.Model(&model.Promotion{})
 	promotions = promotions.Where("start_date <= ? AND end_date >= ?", time.Now(), time.Now())
+	promotions = promotions.Distinct("product_id")
+	promotions = promotions.Order("id")
+	promotions = promotions.Select("*")
 
 	s1 := tx.Model(&model.ProductVariantDetail{})
 	s1 = s1.Select("min(price - COALESCE(promotions.amount, 0)) as min, max(price - COALESCE(promotions.amount, 0)) as max, min(price) as min_before_disc, max(price) as max_before_disc, product_variant_details.product_id")
@@ -140,7 +143,7 @@ func (r *productRepository) FindSimilarProduct(tx *gorm.DB, categoryID uint, que
 	result = result.Where("products.id != ?", query.ExcludedID)
 	result = result.Joins("JOIN product_categories as c ON products.category_id = c.id")
 	result = result.Joins("LEFT JOIN product_categories as c2 ON c.parent_id = c2.id")
-	result = result.Joins("LEFT JOIN promotions as p ON p.product_id = products.id")
+	result = result.Joins("LEFT JOIN (?) as p ON p.product_id = products.id", promotions)
 	result = result.Joins("JOIN (?) as seller ON products.seller_id = seller.id", seller)
 	result = result.Joins("JOIN (?) as s1 ON products.id = s1.product_id", s1)
 	result = result.Joins("LEFT JOIN (?) as s2 ON products.id = s2.product_id", s2)
@@ -241,6 +244,9 @@ func (r *productRepository) SearchRecommendProduct(tx *gorm.DB, query *SearchQue
 
 	promotions := tx.Model(&model.Promotion{})
 	promotions = promotions.Where("start_date <= ? AND end_date >= ?", time.Now(), time.Now())
+	promotions = promotions.Distinct("product_id")
+	promotions = promotions.Order("id")
+	promotions = promotions.Select("*")
 
 	s1 := tx.Model(&model.ProductVariantDetail{})
 	s1 = s1.Select("min(price - COALESCE(promotions.amount, 0)) as min, max(price - COALESCE(promotions.amount, 0)) as max, min(price) as min_before_disc, max(price) as max_before_disc, product_variant_details.product_id")
@@ -258,7 +264,7 @@ func (r *productRepository) SearchRecommendProduct(tx *gorm.DB, query *SearchQue
 	result := tx.Model(&dto.SellerProductsCustomTable{})
 	result = result.Select("products.name, min, max, min_before_disc, max_before_disc, city, city_id, products.id, products.slug, p.amount as promotion_amount, p.id as promotion_id, products.category_id, products.favorite_count, products.seller_id, products.sold_count, avg, count, parent_id, products.created_at")
 	result = result.Joins("JOIN product_categories as c ON products.category_id = c.id")
-	result = result.Joins("LEFT JOIN promotions as p ON p.product_id = products.id")
+	result = result.Joins("LEFT JOIN (?) as p ON p.product_id = products.id", promotions)
 	result = result.Joins("JOIN (?) as seller ON products.seller_id = seller.id", seller)
 	result = result.Joins("JOIN (?) as s1 ON products.id = s1.product_id", s1)
 	result = result.Joins("LEFT JOIN (?) as s2 ON products.id = s2.product_id", s2)

@@ -184,6 +184,11 @@ func (u *userSeaPayAccountServ) PayWithSeaLabsPay(userID uint, req *dto.Checkout
 		return "", nil, err
 	}
 
+	if len(req.Cart) <= 0 {
+		err = apperror.BadRequestError("Checkout setidaknya harus terdapat satu barang")
+		return "", nil, err
+	}
+
 	var globalVoucher = &model.Voucher{}
 	globalVoucher, err = u.walletRepository.GetVoucher(tx, req.GlobalVoucherCode)
 	if err != nil {
