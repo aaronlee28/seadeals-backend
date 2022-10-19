@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"gorm.io/gorm"
 	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
@@ -11,9 +12,9 @@ import (
 
 type PromotionService interface {
 	GetPromotionByUserID(id uint) ([]*dto.GetPromotionRes, error)
-	CreatePromotion(id uint, req *dto.CreatePromotionReq) (*dto.CreatePromotionRes, error)
+	CreatePromotion(id uint, req *dto.CreatePromotionArrayReq) ([]*dto.CreatePromotionRes, error)
 	ViewDetailPromotionByID(id uint) (*dto.GetPromotionRes, error)
-	UpdatePromotion(req *dto.PatchPromotionReq, promoID uint, userID uint) (*dto.PatchPromotionRes, error)
+	UpdatePromotion(req *dto.PatchPromotionArrayReq, userID uint) ([]*dto.PatchPromotionRes, error)
 }
 
 type promotionService struct {
@@ -75,7 +76,7 @@ func (p *promotionService) GetPromotionByUserID(id uint) ([]*dto.GetPromotionRes
 	return promoRes, nil
 }
 
-func (p *promotionService) CreatePromotion(id uint, req *dto.CreatePromotionReq) (*dto.CreatePromotionRes, error) {
+func (p *promotionService) CreatePromotion(id uint, req *dto.CreatePromotionArrayReq) ([]*dto.CreatePromotionRes, error) {
 	tx := p.db.Begin()
 	var err error
 	defer helper.CommitOrRollback(tx, &err)
@@ -86,45 +87,60 @@ func (p *promotionService) CreatePromotion(id uint, req *dto.CreatePromotionReq)
 	}
 
 	sellerID := seller.ID
-	if req.AmountType == "percentage" && req.Amount > 100 {
-		err = apperror.BadRequestError("percentage amount exceeds 100%")
-		return nil, apperror.BadRequestError("percentage amount exceeds 100%")
-	}
-	if !(req.AmountType == "percentage" || req.AmountType == "nominal") {
-		req.AmountType = "nominal"
-	}
+	var retArray []*dto.CreatePromotionRes
 
-	product, err := p.productRepo.GetProductDetail(tx, req.ProductID)
-	if err != nil {
-		return nil, err
-	}
-	if product.SellerID != sellerID {
-		err = apperror.BadRequestError("Tidak bisa membuat promosi produk seller lain")
-		return nil, err
-	}
-
-	createPromo, err := p.promotionRepository.CreatePromotion(tx, req, sellerID)
-	if err != nil {
-		return nil, err
-	}
-
-	ret := dto.CreatePromotionRes{
-		ID:        createPromo.ID,
-		ProductID: createPromo.ProductID,
-		Name:      createPromo.Name,
-	}
-	var userArray []*model.SocialGraph
-	userArray, err = p.socialGraphRepo.GetFollowerUserID(tx, seller.ID)
-	for _, user := range userArray {
-		newNotification := &model.Notification{
-			UserID:   user.UserID,
-			SellerID: seller.ID,
-			Title:    dto.NotificationFollowPromosi,
-			Detail:   "Seller adds new promotion",
+	for _, promotionReq := range req.CreatePromotion {
+		if promotionReq.AmountType == "percentage" && promotionReq.Amount > 100 {
+			err = apperror.BadRequestError("percentage amount exceeds 100%")
+			return nil, apperror.BadRequestError("percentage amount exceeds 100%")
 		}
-		p.notificationRepo.AddToNotificationFromModel(tx, newNotification)
+		if !(promotionReq.AmountType == "percentage" || promotionReq.AmountType == "nominal") {
+			promotionReq.AmountType = "nominal"
+		}
+		var product *model.Product
+		product, err = p.productRepo.GetProductDetail(tx, promotionReq.ProductID)
+		if err != nil {
+			return nil, err
+		}
+		if product.SellerID != sellerID {
+			err = apperror.BadRequestError("Tidak bisa membuat promosi produk seller lain")
+			return nil, err
+		}
+
+		var createPromo *model.Promotion
+		createPromo, err = p.promotionRepository.CreatePromotion(tx, &promotionReq, sellerID)
+		if err != nil {
+			return nil, err
+		}
+
+		ret := dto.CreatePromotionRes{
+			ID:          createPromo.ID,
+			ProductID:   createPromo.ProductID,
+			Name:        createPromo.Name,
+			Description: createPromo.Description,
+			StartDate:   createPromo.StartDate,
+			EndDate:     createPromo.EndDate,
+			Quota:       createPromo.Quota,
+			MaxOrder:    createPromo.MaxOrder,
+			AmountType:  createPromo.AmountType,
+			Amount:      createPromo.Amount,
+			BannerURL:   createPromo.BannerURL,
+		}
+		var userArray []*model.SocialGraph
+		userArray, err = p.socialGraphRepo.GetFollowerUserID(tx, seller.ID)
+		for _, user := range userArray {
+			newNotification := &model.Notification{
+				UserID:   user.UserID,
+				SellerID: seller.ID,
+				Title:    dto.NotificationFollowPromosi,
+				Detail:   "Seller adds new promotion",
+			}
+			p.notificationRepo.AddToNotificationFromModel(tx, newNotification)
+		}
+		retArray = append(retArray, &ret)
 	}
-	return &ret, nil
+
+	return retArray, nil
 }
 
 func (p *promotionService) ViewDetailPromotionByID(id uint) (*dto.GetPromotionRes, error) {
@@ -144,32 +160,39 @@ func (p *promotionService) ViewDetailPromotionByID(id uint) (*dto.GetPromotionRe
 	return promoRes, nil
 }
 
-func (p *promotionService) UpdatePromotion(req *dto.PatchPromotionReq, promoID uint, userID uint) (*dto.PatchPromotionRes, error) {
+func (p *promotionService) UpdatePromotion(req *dto.PatchPromotionArrayReq, userID uint) ([]*dto.PatchPromotionRes, error) {
 	tx := p.db.Begin()
 	var err error
 	defer helper.CommitOrRollback(tx, &err)
 
-	promo, err := p.promotionRepository.ViewDetailPromotionByID(tx, promoID)
-	if promo.Product.Seller.UserID != userID {
-		err = apperror.UnauthorizedError("tidak bisa mengupdate promotion seller lain")
-		return nil, err
+	var reqArray []*dto.PatchPromotionRes
+	for _, promotion := range req.PatchPromotion {
+		var promo *model.Promotion
+		fmt.Println("hahahhaha", promotion.PromotionID)
+		promo, err = p.promotionRepository.ViewDetailPromotionByID(tx, promotion.PromotionID)
+		if promo.Product.Seller.UserID != userID {
+			err = apperror.UnauthorizedError("tidak bisa mengupdate promotion seller lain")
+			return nil, err
+		}
+
+		updatePromotion := &model.Promotion{
+			Name:        promotion.Name,
+			Description: promotion.Description,
+			StartDate:   promotion.StartDate,
+			EndDate:     promotion.EndDate,
+			Quota:       promotion.Quota,
+			MaxOrder:    promotion.MaxOrder,
+			AmountType:  promotion.AmountType,
+			Amount:      promotion.Amount,
+		}
+		var updatedPromotion *model.Promotion
+		updatedPromotion, err = p.promotionRepository.UpdatePromotion(tx, promotion.PromotionID, updatePromotion)
+		if err != nil {
+			return nil, err
+		}
+		updatePromoRes := new(dto.PatchPromotionRes).PatchFromPromotion(updatedPromotion)
+		reqArray = append(reqArray, updatePromoRes)
 	}
 
-	updatePromotion := &model.Promotion{
-		Name:        req.Name,
-		Description: req.Description,
-		StartDate:   req.StartDate,
-		EndDate:     req.EndDate,
-		Quota:       req.Quota,
-		MaxOrder:    req.MaxOrder,
-		AmountType:  req.AmountType,
-		Amount:      req.Amount,
-	}
-	var updatedPromotion *model.Promotion
-	updatedPromotion, err = p.promotionRepository.UpdatePromotion(tx, promoID, updatePromotion)
-	if err != nil {
-		return nil, err
-	}
-	updatePromoRes := new(dto.PatchPromotionRes).PatchFromPromotion(updatedPromotion)
-	return updatePromoRes, nil
+	return reqArray, nil
 }

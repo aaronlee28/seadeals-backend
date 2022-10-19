@@ -38,6 +38,7 @@ func (p *promotionRepository) CreatePromotion(tx *gorm.DB, req *dto.CreatePromot
 		MaxOrder:    req.MaxOrder,
 		AmountType:  req.AmountType,
 		Amount:      req.Amount,
+		BannerURL:   req.BannerURL,
 	}
 	result := tx.Create(&promotion)
 	if result.Error != nil {
