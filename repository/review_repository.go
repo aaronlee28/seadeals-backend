@@ -88,9 +88,11 @@ func (r *reviewRepository) FindReviewByProductID(tx *gorm.DB, productID uint, qp
 func (r *reviewRepository) FindReviewByProductIDAndSellerID(tx *gorm.DB, userID uint, productID uint) (*model.Review, error) {
 	var review *model.Review
 	result := tx.Clauses(clause.Returning{}).Where("user_id = ?", userID).Where("product_id = ?", productID).First(&review)
-	if result.Error != gorm.ErrRecordNotFound {
+	if result.Error != gorm.ErrRecordNotFound && result.Error != nil {
+
 		return nil, result.Error
 	}
+
 	return review, nil
 }
 

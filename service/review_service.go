@@ -154,8 +154,7 @@ func (s *reviewService) FindReviewByProductIDAndSellerID(userID uint, productID 
 	if err != nil {
 		return nil, err
 	}
-
-	return existingReview, err
+	return existingReview, nil
 }
 
 func (s *reviewService) UserReviewHistory(userID uint) ([]*model.Review, error) {
