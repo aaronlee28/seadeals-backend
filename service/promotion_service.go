@@ -1,13 +1,13 @@
 package service
 
 import (
-	"fmt"
 	"gorm.io/gorm"
 	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
 	"seadeals-backend/helper"
 	"seadeals-backend/model"
 	"seadeals-backend/repository"
+	"time"
 )
 
 type PromotionService interface {
@@ -97,6 +97,14 @@ func (p *promotionService) CreatePromotion(id uint, req *dto.CreatePromotionArra
 		if !(promotionReq.AmountType == "percentage" || promotionReq.AmountType == "nominal") {
 			promotionReq.AmountType = "nominal"
 		}
+
+		if promotionReq.StartDate.Before(time.Now()) {
+			return nil, apperror.BadRequestError("date before today")
+		}
+		if promotionReq.StartDate.Before(promotionReq.EndDate) {
+			return nil, apperror.BadRequestError("start date before end date")
+		}
+
 		var product *model.Product
 		product, err = p.productRepo.GetProductDetail(tx, promotionReq.ProductID)
 		if err != nil {
@@ -168,7 +176,6 @@ func (p *promotionService) UpdatePromotion(req *dto.PatchPromotionArrayReq, user
 	var reqArray []*dto.PatchPromotionRes
 	for _, promotion := range req.PatchPromotion {
 		var promo *model.Promotion
-		fmt.Println("hahahhaha", promotion.PromotionID)
 		promo, err = p.promotionRepository.ViewDetailPromotionByID(tx, promotion.PromotionID)
 		if promo.Product.Seller.UserID != userID {
 			err = apperror.UnauthorizedError("tidak bisa mengupdate promotion seller lain")
