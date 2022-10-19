@@ -21,6 +21,7 @@ type VoucherService interface {
 	ValidateVoucher(req *dto.PostValidateVoucherReq) (*dto.GetVoucherRes, error)
 	UpdateVoucher(req *dto.PatchVoucherReq, id, userID uint) (*dto.GetVoucherRes, error)
 	DeleteVoucherByID(id, userID uint) (bool, error)
+	GetVouchersBySellerID(sellerID uint) ([]*dto.GetVoucherRes, error)
 }
 
 type voucherService struct {
@@ -286,4 +287,22 @@ func (s *voucherService) DeleteVoucherByID(id, userID uint) (bool, error) {
 	}
 
 	return isDeleted, nil
+}
+
+func (s *voucherService) GetVouchersBySellerID(sellerID uint) ([]*dto.GetVoucherRes, error) {
+	tx := s.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
+
+	vouchers, err := s.voucherRepo.GetVouchersBySellerID(tx, sellerID)
+	if err != nil {
+		return nil, err
+	}
+
+	var voucherRes = make([]*dto.GetVoucherRes, 0)
+	for _, voucher := range vouchers {
+		voucherRes = append(voucherRes, new(dto.GetVoucherRes).From(voucher))
+	}
+
+	return voucherRes, nil
 }

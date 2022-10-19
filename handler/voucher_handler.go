@@ -136,3 +136,19 @@ func (h *Handler) DeleteVoucherByID(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, dto.StatusOKResponse(gin.H{"is_deleted": isDeleted}))
 }
+
+func (h *Handler) GetVouchersBySellerID(ctx *gin.Context) {
+	sellerID, err := strconv.Atoi(ctx.Param("id"))
+	if err != nil {
+		_ = ctx.Error(apperror.BadRequestError("Invalid id format"))
+		return
+	}
+
+	vouchers, err := h.voucherService.GetVouchersBySellerID(uint(sellerID))
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(vouchers))
+}
