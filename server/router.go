@@ -292,7 +292,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.GET("/products/:id/reviews", h.FindReviewByProductID)
 	r.POST("/product/review", middleware.RequestValidator(func() any { return &dto.CreateUpdateReview{} }), middleware.AuthorizeJWTFor(model.UserRoleName), h.CreateUpdateReview)
 	r.GET("/user/review-history", middleware.AuthorizeJWTFor(model.UserRoleName), h.UserReviewHistory)
-	r.GET("/user/existing-review", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any { return &dto.GetExistingReview{} }), h.FindReviewByProductIDAndSellerID)
+	r.POST("/user/existing-review", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any { return &dto.GetExistingReview{} }), h.FindReviewByProductIDAndSellerID)
 
 	return r
 
