@@ -163,6 +163,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		return &dto.AddDeliveryReq{}
 	}), h.CreateOrUpdateSellerAvailableCour)
 	r.GET("/sellers/couriers", middleware.AuthorizeJWTFor(model.SellerRoleName), h.GetAvailableCourierForSeller)
+	r.GET("/sellers/:id/vouchers", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetVouchersBySellerID)
 
 	// ORDER
 	r.GET("/sellers/orders", middleware.AuthorizeJWTFor(model.SellerRoleName), h.GetSellerOrders)
