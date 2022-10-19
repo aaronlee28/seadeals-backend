@@ -18,8 +18,8 @@ import (
 )
 
 type OrderService interface {
-	GetOrderBySellerID(userID uint, query *repository.OrderQuery) ([]*model.Order, int64, int64, error)
-	GetOrderByUserID(userID uint, query *repository.OrderQuery) ([]*model.Order, int64, int64, error)
+	GetOrderBySellerID(userID uint, query *repository.OrderQuery) ([]*dto.OrderListRes, int64, int64, error)
+	GetOrderByUserID(userID uint, query *repository.OrderQuery) ([]*dto.OrderListRes, int64, int64, error)
 
 	CancelOrderBySeller(orderID uint, userID uint) (*model.Order, error)
 	RequestRefundByBuyer(req *dto.CreateComplaintReq, userID uint) (*dto.CreateComplaintRes, error)
@@ -120,7 +120,7 @@ func refundMoneyToSeaLabsPay(URL string, jsonStr []byte) error {
 	return nil
 }
 
-func (o *orderService) GetOrderBySellerID(userID uint, query *repository.OrderQuery) ([]*model.Order, int64, int64, error) {
+func (o *orderService) GetOrderBySellerID(userID uint, query *repository.OrderQuery) ([]*dto.OrderListRes, int64, int64, error) {
 	tx := o.db.Begin()
 	var err error
 	defer helper.CommitOrRollback(tx, &err)
@@ -134,11 +134,118 @@ func (o *orderService) GetOrderBySellerID(userID uint, query *repository.OrderQu
 	if err != nil {
 		return nil, 0, 0, err
 	}
+	var orderRes []*dto.OrderListRes
+	for _, order := range orders {
+		var voucher *dto.VoucherOrderList
+		var voucherID uint
 
-	return orders, totalPage, totalData, nil
+		var payedAt *time.Time
+		if order.Transaction.Status == dto.TransactionPayed {
+			payedAt = &order.Transaction.UpdatedAt
+		}
+
+		var orderItems []*dto.OrderItemOrderList
+		var priceBeforeDisc float64
+		for _, item := range order.OrderItems {
+			var variantDetail string
+			if item.ProductVariantDetail.ProductVariant1 != nil {
+				variantDetail += *item.ProductVariantDetail.Variant1Value
+			}
+			if item.ProductVariantDetail.ProductVariant2 != nil {
+				variantDetail += ", " + *item.ProductVariantDetail.Variant2Value
+			}
+
+			var imageURL string
+			if len(item.ProductVariantDetail.Product.ProductPhotos) > 0 {
+				imageURL = item.ProductVariantDetail.Product.ProductPhotos[0].PhotoURL
+			}
+
+			var orderItemRes = &dto.OrderItemOrderList{
+				ID:                     item.ID,
+				ProductVariantDetailID: item.ProductVariantDetailID,
+				ProductDetail: dto.ProductDetailOrderList{
+					CategoryID: item.ProductVariantDetail.Product.CategoryID,
+					Category:   item.ProductVariantDetail.Product.Category.Name,
+					Slug:       item.ProductVariantDetail.Product.Slug,
+					PhotoURL:   imageURL,
+					Variant:    variantDetail,
+					Price:      item.ProductVariantDetail.Price,
+				},
+				Quantity: item.Quantity,
+				Subtotal: item.Subtotal,
+			}
+			priceBeforeDisc += item.Subtotal
+			orderItems = append(orderItems, orderItemRes)
+		}
+
+		if order.VoucherID != nil && *order.VoucherID != 0 {
+			voucherID = *order.VoucherID
+			voucher = &dto.VoucherOrderList{
+				Code:          order.Voucher.Code,
+				VoucherType:   order.Voucher.AmountType,
+				Amount:        order.Voucher.Amount,
+				AmountReduced: priceBeforeDisc - order.Total,
+			}
+		}
+
+		var orderDelivery *dto.DeliveryOrderList
+		var deliveryTotal float64
+		var deliveryID uint
+		if order.Delivery != nil {
+			var orderDeliveryActivity []*dto.DeliveryActivityOrderList
+			for _, activity := range order.Delivery.DeliveryActivity {
+				var deliveryActivity = &dto.DeliveryActivityOrderList{
+					Description: activity.Description,
+					CreatedAt:   activity.CreatedAt,
+				}
+				orderDeliveryActivity = append(orderDeliveryActivity, deliveryActivity)
+			}
+
+			orderDelivery = &dto.DeliveryOrderList{
+				DestinationAddress: order.Delivery.Address,
+				Status:             order.Delivery.Status,
+				DeliveryNumber:     order.Delivery.DeliveryNumber,
+				ETA:                order.Delivery.Eta,
+				CourierID:          order.Delivery.CourierID,
+				Courier:            order.Delivery.Courier.Name,
+				Activity:           orderDeliveryActivity,
+			}
+			deliveryTotal = order.Delivery.Total
+			deliveryID = order.Delivery.ID
+		}
+
+		var res = &dto.OrderListRes{
+			ID:       order.ID,
+			SellerID: order.SellerID,
+			Seller: dto.SellerOrderList{
+				Name: order.Seller.Name,
+			},
+			VoucherID:     voucherID,
+			Voucher:       voucher,
+			TransactionID: order.TransactionID,
+			Transaction: dto.TransactionOrderList{
+				PaymentMethod: order.Transaction.PaymentMethod,
+				Total:         order.Transaction.Total,
+				Status:        order.Transaction.Status,
+				PayedAt:       payedAt,
+			},
+			TotalOrderPrice:          priceBeforeDisc,
+			TotalOrderPriceAfterDisc: order.Total,
+			TotalDelivery:            deliveryTotal,
+			Status:                   order.Status,
+			OrderItems:               orderItems,
+			DeliveryID:               deliveryID,
+			Delivery:                 orderDelivery,
+			Complaint:                order.Complaint,
+			UpdatedAt:                order.UpdatedAt,
+		}
+		orderRes = append(orderRes, res)
+	}
+
+	return orderRes, totalPage, totalData, nil
 }
 
-func (o *orderService) GetOrderByUserID(userID uint, query *repository.OrderQuery) ([]*model.Order, int64, int64, error) {
+func (o *orderService) GetOrderByUserID(userID uint, query *repository.OrderQuery) ([]*dto.OrderListRes, int64, int64, error) {
 	tx := o.db.Begin()
 	var err error
 	defer helper.CommitOrRollback(tx, &err)
@@ -147,8 +254,115 @@ func (o *orderService) GetOrderByUserID(userID uint, query *repository.OrderQuer
 	if err != nil {
 		return nil, 0, 0, err
 	}
+	var orderRes []*dto.OrderListRes
+	for _, order := range orders {
+		var voucher *dto.VoucherOrderList
+		var voucherID uint
 
-	return orders, totalPage, totalData, nil
+		var payedAt *time.Time
+		if order.Transaction.Status == dto.TransactionPayed {
+			payedAt = &order.Transaction.UpdatedAt
+		}
+
+		var orderItems []*dto.OrderItemOrderList
+		var priceBeforeDisc float64
+		for _, item := range order.OrderItems {
+			var variantDetail string
+			if item.ProductVariantDetail.ProductVariant1 != nil {
+				variantDetail += *item.ProductVariantDetail.Variant1Value
+			}
+			if item.ProductVariantDetail.ProductVariant2 != nil {
+				variantDetail += ", " + *item.ProductVariantDetail.Variant2Value
+			}
+
+			var imageURL string
+			if len(item.ProductVariantDetail.Product.ProductPhotos) > 0 {
+				imageURL = item.ProductVariantDetail.Product.ProductPhotos[0].PhotoURL
+			}
+
+			var orderItemRes = &dto.OrderItemOrderList{
+				ID:                     item.ID,
+				ProductVariantDetailID: item.ProductVariantDetailID,
+				ProductDetail: dto.ProductDetailOrderList{
+					CategoryID: item.ProductVariantDetail.Product.CategoryID,
+					Category:   item.ProductVariantDetail.Product.Category.Name,
+					Slug:       item.ProductVariantDetail.Product.Slug,
+					PhotoURL:   imageURL,
+					Variant:    variantDetail,
+					Price:      item.ProductVariantDetail.Price,
+				},
+				Quantity: item.Quantity,
+				Subtotal: item.Subtotal,
+			}
+			priceBeforeDisc += item.Subtotal
+			orderItems = append(orderItems, orderItemRes)
+		}
+
+		if order.VoucherID != nil && *order.VoucherID != 0 {
+			voucherID = *order.VoucherID
+			voucher = &dto.VoucherOrderList{
+				Code:          order.Voucher.Code,
+				VoucherType:   order.Voucher.AmountType,
+				Amount:        order.Voucher.Amount,
+				AmountReduced: priceBeforeDisc - order.Total,
+			}
+		}
+
+		var orderDelivery *dto.DeliveryOrderList
+		var deliveryTotal float64
+		var deliveryID uint
+		if order.Delivery != nil {
+			var orderDeliveryActivity []*dto.DeliveryActivityOrderList
+			for _, activity := range order.Delivery.DeliveryActivity {
+				var deliveryActivity = &dto.DeliveryActivityOrderList{
+					Description: activity.Description,
+					CreatedAt:   activity.CreatedAt,
+				}
+				orderDeliveryActivity = append(orderDeliveryActivity, deliveryActivity)
+			}
+
+			orderDelivery = &dto.DeliveryOrderList{
+				DestinationAddress: order.Delivery.Address,
+				Status:             order.Delivery.Status,
+				DeliveryNumber:     order.Delivery.DeliveryNumber,
+				ETA:                order.Delivery.Eta,
+				CourierID:          order.Delivery.CourierID,
+				Courier:            order.Delivery.Courier.Name,
+				Activity:           orderDeliveryActivity,
+			}
+			deliveryTotal = order.Delivery.Total
+			deliveryID = order.Delivery.ID
+		}
+
+		var res = &dto.OrderListRes{
+			ID:       order.ID,
+			SellerID: order.SellerID,
+			Seller: dto.SellerOrderList{
+				Name: order.Seller.Name,
+			},
+			VoucherID:     voucherID,
+			Voucher:       voucher,
+			TransactionID: order.TransactionID,
+			Transaction: dto.TransactionOrderList{
+				PaymentMethod: order.Transaction.PaymentMethod,
+				Total:         order.Transaction.Total,
+				Status:        order.Transaction.Status,
+				PayedAt:       payedAt,
+			},
+			TotalOrderPrice:          priceBeforeDisc,
+			TotalOrderPriceAfterDisc: order.Total,
+			TotalDelivery:            deliveryTotal,
+			Status:                   order.Status,
+			OrderItems:               orderItems,
+			DeliveryID:               deliveryID,
+			Delivery:                 orderDelivery,
+			Complaint:                order.Complaint,
+			UpdatedAt:                order.UpdatedAt,
+		}
+		orderRes = append(orderRes, res)
+	}
+
+	return orderRes, totalPage, totalData, nil
 }
 
 func (o *orderService) CancelOrderBySeller(orderID uint, userID uint) (*model.Order, error) {

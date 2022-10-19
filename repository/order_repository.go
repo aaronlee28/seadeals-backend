@@ -63,7 +63,12 @@ func (o *orderRepository) GetOrderBySellerID(tx *gorm.DB, sellerID uint, query *
 	}
 
 	result = result.Preload("Delivery.DeliveryActivity")
-	result = result.Preload("OrderItems.ProductVariantDetail.Product")
+	result = result.Preload("Delivery.Courier")
+	result = result.Preload("Seller")
+	result = result.Preload("Complaint")
+	result = result.Preload("Voucher")
+	result = result.Preload("OrderItems.ProductVariantDetail.Product.Category")
+	result = result.Preload("OrderItems.ProductVariantDetail.Product.Promotion")
 	result = result.Preload("Transaction")
 	result = result.Order("created_at desc").Order("id").Find(&orders)
 	if result.Error != nil {
@@ -101,7 +106,12 @@ func (o *orderRepository) GetOrderByUserID(tx *gorm.DB, userID uint, query *Orde
 	}
 
 	result = result.Preload("Delivery.DeliveryActivity")
-	result = result.Preload("OrderItems.ProductVariantDetail.Product")
+	result = result.Preload("Delivery.Courier")
+	result = result.Preload("Seller")
+	result = result.Preload("Complaint")
+	result = result.Preload("Voucher")
+	result = result.Preload("OrderItems.ProductVariantDetail.Product.Category")
+	result = result.Preload("OrderItems.ProductVariantDetail.Product.Promotion")
 	result = result.Preload("Transaction")
 	result = result.Order("created_at desc").Order("id").Find(&orders)
 	if result.Error != nil {
