@@ -268,7 +268,6 @@ func (h *Handler) UpdateProductAndDetails(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, dto.StatusOKResponse(res))
 }
 func (h *Handler) UpdateVariantAndDetails(ctx *gin.Context) {
-
 	userPayload, _ := ctx.Get("user")
 	user, isValid := userPayload.(dto.UserJWT)
 	userID := uint(0)

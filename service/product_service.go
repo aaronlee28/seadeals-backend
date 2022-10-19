@@ -20,7 +20,7 @@ type ProductService interface {
 
 	CreateSellerProduct(userID uint, req *dto.PostCreateProductReq) (*dto.PostCreateProductRes, error)
 	UpdateProductAndDetails(userID uint, productID uint, req *dto.PatchProductAndDetailsReq) (*dto.PatchProductAndDetailsRes, error)
-	UpdateVariantAndDetails(userID uint, variantDetailsID uint, req *dto.PatchVariantAndDetails) (*dto.VariantAndDetails, error)
+	UpdateVariantAndDetails(userID uint, variantDetailsID uint, req *dto.PatchVariantAndDetails) (*dto.VariantAndDetailsUpdateRes, error)
 	DeleteProductVariantDetails(userID uint, variantDetailsID uint, defaultPrice *float64) error
 	AddVariantDetails(userID uint, productID uint, req *dto.AddVariantAndDetails) ([]*model.ProductVariantDetail, error)
 	AddProductPhoto(userID uint, productID uint, req *dto.ProductPhotoReq) ([]*model.ProductPhoto, error)
@@ -404,21 +404,21 @@ func (p *productService) CreateSellerProduct(userID uint, req *dto.PostCreatePro
 	}
 	//create product variant details
 	if len(req.VariantArray) > 0 {
-		for _, v := range req.VariantArray {
-			var productVariant1 *model.ProductVariant
-			var productVariant2 *model.ProductVariant
-			productVariant1, err = p.productRepo.CreateProductVariant(tx, *v.Variant1Name)
+		var productVariant1 *model.ProductVariant
+		var productVariant2 *model.ProductVariant
+		productVariant1, err = p.productRepo.CreateProductVariant(tx, *req.Variant1Name)
+		if err != nil {
+			return nil, err
+		}
+		if req.Variant2Name != nil {
+			productVariant2, err = p.productRepo.CreateProductVariant(tx, *req.Variant2Name)
 			if err != nil {
 				return nil, err
 			}
-			if v.Variant2Name != nil {
-				productVariant2, err = p.productRepo.CreateProductVariant(tx, *v.Variant1Name)
-				if err != nil {
-					return nil, err
-				}
-			} else {
-				productVariant2 = nil
-			}
+		} else {
+			productVariant2 = nil
+		}
+		for _, v := range req.VariantArray {
 			productVariantDetail, err = p.productRepo.CreateProductVariantDetail(tx, product.ID, productVariant1.ID, productVariant2, v.ProductVariantDetails)
 			if err != nil {
 				return nil, err
@@ -496,7 +496,7 @@ func (p *productService) UpdateProductAndDetails(userID uint, productID uint, re
 	return &res, nil
 }
 
-func (p *productService) UpdateVariantAndDetails(userID uint, variantDetailsID uint, req *dto.PatchVariantAndDetails) (*dto.VariantAndDetails, error) {
+func (p *productService) UpdateVariantAndDetails(userID uint, variantDetailsID uint, req *dto.PatchVariantAndDetails) (*dto.VariantAndDetailsUpdateRes, error) {
 	tx := p.db.Begin()
 	var err error
 
@@ -558,7 +558,7 @@ func (p *productService) UpdateVariantAndDetails(userID uint, variantDetailsID u
 		PictureURL:    updatedProductVariantDetails.PictureURL,
 		Stock:         updatedProductVariantDetails.Stock,
 	}
-	ret := &dto.VariantAndDetails{
+	ret := &dto.VariantAndDetailsUpdateRes{
 		Variant1Name:          &updatedProductVariant1.Name,
 		Variant2Name:          &updatedProductVariant2.Name,
 		ProductVariantDetails: pvdRet,

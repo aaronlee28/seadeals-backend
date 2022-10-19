@@ -15,5 +15,7 @@ type PostCreateProductReq struct {
 	//used to create product_variant
 	DefaultPrice *float64             `json:"default_price"`
 	DefaultStock *uint                `json:"default_stock"`
+	Variant1Name *string              `json:"variant_1_name"`
+	Variant2Name *string              `json:"variant_2_name"`
 	VariantArray []*VariantAndDetails `json:"variant_array"`
 }
