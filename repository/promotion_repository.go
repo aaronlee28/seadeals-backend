@@ -27,6 +27,7 @@ func (p *promotionRepository) GetPromotionBySellerID(tx *gorm.DB, sellerID uint)
 }
 
 func (p *promotionRepository) CreatePromotion(tx *gorm.DB, req *dto.CreatePromotionReq, sellerID uint) (*model.Promotion, error) {
+	var checkPromotion *model.Promotion
 	promotion := &model.Promotion{
 		ProductID:   req.ProductID,
 		SellerID:    sellerID,
@@ -39,6 +40,10 @@ func (p *promotionRepository) CreatePromotion(tx *gorm.DB, req *dto.CreatePromot
 		AmountType:  req.AmountType,
 		Amount:      req.Amount,
 		BannerURL:   req.BannerURL,
+	}
+	checkDate := tx.Where("? between start_date and end_date", req.StartDate).Where("? between start_date and end_date", req.EndDate).Where("start_date between ? and ?", req.StartDate, req.EndDate).Where("end_date between ? and ?", req.StartDate, req.EndDate).First(&checkPromotion)
+	if checkDate.Error == nil {
+		return nil, apperror.BadRequestError("overlapped dates")
 	}
 	result := tx.Create(&promotion)
 	if result.Error != nil {
