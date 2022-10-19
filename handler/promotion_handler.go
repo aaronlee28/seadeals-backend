@@ -28,7 +28,7 @@ func (h *Handler) CreatePromotion(ctx *gin.Context) {
 	userID := user.UserID
 
 	value, _ := ctx.Get("payload")
-	json, _ := value.(*dto.CreatePromotionReq)
+	json, _ := value.(*dto.CreatePromotionArrayReq)
 
 	result, err := h.promotionService.CreatePromotion(userID, json)
 	if err != nil {
@@ -61,16 +61,9 @@ func (h *Handler) UpdatePromotion(ctx *gin.Context) {
 	user := userJWT.(dto.UserJWT)
 	userID := user.UserID
 
-	id, err := strconv.Atoi(ctx.Param("id"))
-	if err != nil {
-		_ = ctx.Error(apperror.BadRequestError("Invalid id format"))
-		return
-	}
-	uintPromoID := uint(id)
-
 	payload, _ := ctx.Get("payload")
-	req := payload.(*dto.PatchPromotionReq)
-	result, err := h.promotionService.UpdatePromotion(req, uintPromoID, userID)
+	req := payload.(*dto.PatchPromotionArrayReq)
+	result, err := h.promotionService.UpdatePromotion(req, userID)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, err)
 		return

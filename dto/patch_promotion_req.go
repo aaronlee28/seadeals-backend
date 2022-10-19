@@ -3,6 +3,7 @@ package dto
 import "time"
 
 type PatchPromotionReq struct {
+	PromotionID uint      `json:"promotion_id"`
 	Name        string    `json:"name"`
 	Description string    `json:"Description"`
 	StartDate   time.Time `json:"start_date"`
