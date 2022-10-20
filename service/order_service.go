@@ -18,6 +18,7 @@ import (
 )
 
 type OrderService interface {
+	GetDetailOrderForReceipt(orderID uint, userID uint) (*dto.Receipt, error)
 	GetOrderBySellerID(userID uint, query *repository.OrderQuery) ([]*dto.OrderListRes, int64, int64, error)
 	GetOrderByUserID(userID uint, query *repository.OrderQuery) ([]*dto.OrderListRes, int64, int64, error)
 
@@ -121,6 +122,133 @@ func refundMoneyToSeaLabsPay(URL string, jsonStr []byte) error {
 		return apperror.BadRequestError(j.Message)
 	}
 	return nil
+}
+
+func (o *orderService) GetDetailOrderForReceipt(orderID uint, userID uint) (*dto.Receipt, error) {
+	tx := o.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
+
+	order, err := o.orderRepository.GetOrderDetailForReceipt(tx, orderID)
+	if err != nil {
+		return nil, err
+	}
+
+	if order.UserID != userID {
+		err = apperror.UnauthorizedError("Tidak bisa melihat invoice user lain")
+		return nil, err
+	}
+
+	var totalQuantity uint
+	var totalOrderBeforeDisc float64
+	var orderItems []*dto.OrderItemReceipt
+	for _, item := range order.OrderItems {
+		totalQuantity += item.Quantity
+		totalOrderBeforeDisc += item.Subtotal
+
+		var variantDetail string
+		if item.ProductVariantDetail.ProductVariant1 != nil {
+			variantDetail += *item.ProductVariantDetail.Variant1Value
+		}
+		if item.ProductVariantDetail.ProductVariant2 != nil {
+			variantDetail += ", " + *item.ProductVariantDetail.Variant2Value
+		}
+
+		orderItem := &dto.OrderItemReceipt{
+			Name:         item.ProductVariantDetail.Product.Name,
+			Weight:       uint(item.ProductVariantDetail.Product.ProductDetail.Weight),
+			Quantity:     item.Quantity,
+			PricePerItem: item.ProductVariantDetail.Price,
+			Subtotal:     item.Subtotal,
+			Variant:      variantDetail,
+		}
+		orderItems = append(orderItems, orderItem)
+	}
+
+	var voucher *dto.ShopVoucherReceipt
+	if order.Voucher != nil {
+		totalReduced := totalOrderBeforeDisc - order.Total
+		if totalReduced < 0 {
+			totalReduced = 0
+		}
+		voucher = &dto.ShopVoucherReceipt{
+			Type:        order.Voucher.AmountType,
+			Name:        order.Voucher.Name,
+			Amount:      order.Voucher.Amount,
+			TotalReduce: totalReduced,
+		}
+	}
+
+	var globalVouchers []*dto.GlobalDiscountReceipt
+	var orderPayments []*dto.OrderPaymentReceipt
+	var totalTransaction float64
+	var total float64
+	for _, o2 := range order.Transaction.Orders {
+		var totalReduced float64
+		if order.Transaction.VoucherID != nil && order.Transaction.Voucher.AmountType == "percentage" {
+			totalReduced = (order.Transaction.Voucher.Amount / 100) * o2.Total
+			globalVoucher := &dto.GlobalDiscountReceipt{
+				SellerName:   o2.Seller.Name,
+				Name:         order.Transaction.Voucher.Name,
+				Type:         order.Transaction.Voucher.AmountType,
+				Amount:       order.Transaction.Voucher.Amount,
+				TotalReduced: totalReduced,
+			}
+			globalVouchers = append(globalVouchers, globalVoucher)
+		}
+
+		orderPayment := &dto.OrderPaymentReceipt{
+			SellerName: o2.Seller.Name,
+			TotalOrder: o2.Total,
+		}
+		orderPayments = append(orderPayments, orderPayment)
+		totalTransaction += o2.Total
+		total += o2.Total - totalReduced
+	}
+
+	if order.Transaction.Voucher != nil && order.Transaction.Voucher.AmountType == "quantity" {
+		globalVoucher := &dto.GlobalDiscountReceipt{
+			SellerName:   "Sea Deals",
+			Name:         order.Transaction.Voucher.Name,
+			Type:         order.Transaction.Voucher.AmountType,
+			Amount:       order.Transaction.Voucher.Amount,
+			TotalReduced: order.Transaction.Voucher.Amount,
+		}
+		globalVouchers = append(globalVouchers, globalVoucher)
+		total -= order.Transaction.Voucher.Amount
+		if total < 0 {
+			total = 0
+		}
+	}
+
+	var orderRes = &dto.Receipt{
+		SellerName: order.Seller.Name,
+		Buyer: dto.BuyerReceipt{
+			Name:       order.User.FullName,
+			BoughtDate: order.CreatedAt,
+			Address:    order.Delivery.Address,
+		},
+		OrderDetail: dto.OrderDetailReceipt{
+			TotalQuantity: totalQuantity,
+			TotalOrder:    order.Total,
+			DeliveryPrice: order.Delivery.Total,
+			Total:         order.Total + order.Delivery.Total,
+			ShopVoucher:   voucher,
+			OrderItems:    orderItems,
+		},
+		Transaction: dto.TransactionReceipt{
+			TotalTransaction: totalTransaction,
+			GlobalDiscount:   globalVouchers,
+			OrderPayments:    orderPayments,
+			Total:            total,
+		},
+		Courier: dto.CourierReceipt{
+			Name:    order.Delivery.Courier.Name,
+			Service: "Regular",
+		},
+		PaymentMethod: order.Transaction.PaymentMethod,
+	}
+	return orderRes, nil
 }
 
 func (o *orderService) GetOrderBySellerID(userID uint, query *repository.OrderQuery) ([]*dto.OrderListRes, int64, int64, error) {
@@ -1114,6 +1242,9 @@ func (o *orderService) GetTotalPredictedPrice(req *dto.TotalPredictedPriceReq, u
 			totalAllOrderPrices -= (globalVoucher.Amount / 100) * totalAllOrderPrices
 		} else {
 			totalAllOrderPrices -= globalVoucher.Amount
+			if totalAllOrderPrices < 0 {
+				totalAllOrderPrices = 0
+			}
 		}
 	}
 	res.TotalPredictedPrice = totalAllOrderPrices + totalDelivery

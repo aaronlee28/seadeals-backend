@@ -172,6 +172,9 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		return &dto.FinishOrderReq{}
 	}), h.FinishOrder)
 
+	// RECEIPT
+	r.GET("/user/orders/receipt/:id", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetDetailOrderForReceipt)
+
 	// DELIVERY
 	r.POST("/seller/deliver/order", middleware.AuthorizeJWTFor(model.SellerRoleName), middleware.RequestValidator(func() any {
 		return &dto.DeliverOrderReq{}

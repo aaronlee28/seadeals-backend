@@ -22,6 +22,8 @@ type OrderRepository interface {
 	GetOrderBySellerID(tx *gorm.DB, sellerID uint, query *OrderQuery) ([]*model.Order, int64, int64, error)
 	GetOrderByUserID(tx *gorm.DB, userID uint, query *OrderQuery) ([]*model.Order, int64, int64, error)
 	GetOrderDetailByID(tx *gorm.DB, orderID uint) (*model.Order, error)
+	// GetOrderDetailForReceipt function below is just to prevent heavy loading when fetching data
+	GetOrderDetailForReceipt(tx *gorm.DB, orderID uint) (*model.Order, error)
 
 	UpdateOrderStatus(tx *gorm.DB, orderID uint, status string) (*model.Order, error)
 	CheckAndUpdateOnDelivery() []*model.Order
@@ -145,6 +147,32 @@ func (o *orderRepository) GetOrderDetailByID(tx *gorm.DB, orderID uint) (*model.
 	var order = &model.Order{}
 	order.ID = orderID
 	result := tx.Model(&order).Preload("OrderItems.ProductVariantDetail").Preload("Complaint.ComplaintPhotos").Preload("Transaction").First(&order)
+	if result.Error != nil {
+		if result.Error == gorm.ErrRecordNotFound {
+			return nil, apperror.BadRequestError("order doesn't exists")
+		}
+		return nil, apperror.InternalServerError("Cannot find order")
+	}
+	return order, nil
+}
+
+func (o *orderRepository) GetOrderDetailForReceipt(tx *gorm.DB, orderID uint) (*model.Order, error) {
+	var order = &model.Order{}
+	order.ID = orderID
+	result := tx.Model(&order).Preload("OrderItems.ProductVariantDetail.Product.ProductDetail")
+	result = result.Preload("Transaction.Orders.OrderItems.ProductVariantDetail.Product")
+	result = result.Preload("Transaction.Orders.Seller.Address")
+	result = result.Preload("Transaction.Orders.Delivery")
+	result = result.Preload("Transaction.Voucher")
+	result = result.Preload("Transaction.Orders.OrderItems.ProductVariantDetail.ProductVariant1")
+	result = result.Preload("Transaction.Orders.OrderItems.ProductVariantDetail.ProductVariant2")
+	result = result.Preload("Voucher")
+	result = result.Preload("Delivery.Courier")
+	result = result.Preload("Transaction.Voucher")
+	result = result.Preload("Seller.Address")
+	result = result.Preload("User")
+	result = result.Preload("Complaint.ComplaintPhotos").Preload("Transaction")
+	result = result.First(&order)
 	if result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
 			return nil, apperror.BadRequestError("order doesn't exists")
