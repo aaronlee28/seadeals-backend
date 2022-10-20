@@ -19,6 +19,7 @@ import (
 
 type OrderService interface {
 	GetDetailOrderForReceipt(orderID uint, userID uint) (*dto.Receipt, error)
+	GetDetailOrderForThermal(orderID uint, userID uint) (*dto.Thermal, error)
 	GetOrderBySellerID(userID uint, query *repository.OrderQuery) ([]*dto.OrderListRes, int64, int64, error)
 	GetOrderByUserID(userID uint, query *repository.OrderQuery) ([]*dto.OrderListRes, int64, int64, error)
 
@@ -248,6 +249,58 @@ func (o *orderService) GetDetailOrderForReceipt(orderID uint, userID uint) (*dto
 		},
 		PaymentMethod: order.Transaction.PaymentMethod,
 	}
+	return orderRes, nil
+}
+
+func (o *orderService) GetDetailOrderForThermal(orderID uint, userID uint) (*dto.Thermal, error) {
+	tx := o.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
+
+	seller, err := o.sellerRepository.FindSellerByUserID(tx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	order, err := o.orderRepository.GetOrderDetailForReceipt(tx, orderID)
+	if err != nil {
+		return nil, err
+	}
+	if seller.ID != order.SellerID {
+		err = apperror.UnauthorizedError("Tidak bisa melihat Thermal seller lain")
+		return nil, err
+	}
+
+	var products []*dto.ProductDetailThermal
+	for _, item := range order.OrderItems {
+		var variantDetail string
+		if item.ProductVariantDetail.ProductVariant1 != nil {
+			variantDetail += *item.ProductVariantDetail.Variant1Value
+		}
+		if item.ProductVariantDetail.ProductVariant2 != nil {
+			variantDetail += ", " + *item.ProductVariantDetail.Variant2Value
+		}
+		product := &dto.ProductDetailThermal{
+			Name:     item.ProductVariantDetail.Product.Name,
+			Variant:  variantDetail,
+			Quantity: item.Quantity,
+		}
+		products = append(products, product)
+	}
+
+	var orderRes = &dto.Thermal{
+		Buyer: dto.BuyerThermal{
+			Name:    order.User.FullName,
+			Address: order.Delivery.Address,
+			City:    order.Delivery.CityDestination,
+		},
+		SellerName:     order.Seller.Name,
+		TotalWeight:    order.Delivery.Weight,
+		DeliveryNumber: order.Delivery.DeliveryNumber,
+		OriginCity:     order.Seller.Address.City,
+		Products:       products,
+	}
+
 	return orderRes, nil
 }
 

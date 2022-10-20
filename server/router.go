@@ -180,6 +180,9 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		return &dto.DeliverOrderReq{}
 	}), h.DeliverOrder)
 
+	// THERMAL
+	r.GET("/seller/orders/thermal/:id", middleware.AuthorizeJWTFor(model.SellerRoleName), h.GetDetailOrderForThermal)
+
 	// VOUCHER
 	r.POST("/vouchers", middleware.AuthorizeJWTFor(model.SellerRoleName), middleware.RequestValidator(func() any {
 		return &dto.PostVoucherReq{}

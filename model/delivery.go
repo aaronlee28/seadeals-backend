@@ -10,6 +10,8 @@ type Delivery struct {
 	DeliveryNumber   string              `json:"delivery_number"`
 	Total            float64             `json:"total"`
 	Eta              int                 `json:"eta"`
+	Weight           uint                `json:"weight"`
+	CityDestination  string              `json:"city_destination"`
 	OrderID          uint                `json:"order_id"`
 	Order            *Order              `json:"order"`
 	CourierID        uint                `json:"courier_id"`

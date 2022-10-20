@@ -24,6 +24,8 @@ type OrderRepository interface {
 	GetOrderDetailByID(tx *gorm.DB, orderID uint) (*model.Order, error)
 	// GetOrderDetailForReceipt function below is just to prevent heavy loading when fetching data
 	GetOrderDetailForReceipt(tx *gorm.DB, orderID uint) (*model.Order, error)
+	// GetOrderDetailForThermal function below is just to prevent heavy loading when fetching data
+	GetOrderDetailForThermal(tx *gorm.DB, orderID uint) (*model.Order, error)
 
 	UpdateOrderStatus(tx *gorm.DB, orderID uint, status string) (*model.Order, error)
 	CheckAndUpdateOnDelivery() []*model.Order
@@ -172,6 +174,23 @@ func (o *orderRepository) GetOrderDetailForReceipt(tx *gorm.DB, orderID uint) (*
 	result = result.Preload("Seller.Address")
 	result = result.Preload("User")
 	result = result.Preload("Complaint.ComplaintPhotos").Preload("Transaction")
+	result = result.First(&order)
+	if result.Error != nil {
+		if result.Error == gorm.ErrRecordNotFound {
+			return nil, apperror.BadRequestError("order doesn't exists")
+		}
+		return nil, apperror.InternalServerError("Cannot find order")
+	}
+	return order, nil
+}
+
+func (o *orderRepository) GetOrderDetailForThermal(tx *gorm.DB, orderID uint) (*model.Order, error) {
+	var order = &model.Order{}
+	order.ID = orderID
+	result := tx.Model(&order).Preload("OrderItems.ProductVariantDetail.Product.ProductDetail")
+	result = result.Preload("Delivery.Courier")
+	result = result.Preload("Seller.Address")
+	result = result.Preload("User")
 	result = result.First(&order)
 	if result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {

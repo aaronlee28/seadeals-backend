@@ -154,6 +154,29 @@ func (h *Handler) GetBuyerOrders(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, dto.StatusOKResponse(gin.H{"orders": result, "total_data": totalData, "total_page": totalPage, "current_page": query.Page, "limit": query.Limit}))
 }
 
+func (h *Handler) GetDetailOrderForThermal(ctx *gin.Context) {
+	idParam := ctx.Param("id")
+	orderID, err := strconv.ParseUint(idParam, 10, 32)
+	if err != nil {
+		_ = ctx.Error(apperror.BadRequestError("Order id tidak valid"))
+		return
+	}
+
+	payload, _ := ctx.Get("user")
+	user, isValid := payload.(dto.UserJWT)
+	if !isValid {
+		_ = ctx.Error(apperror.BadRequestError("Invalid user"))
+		return
+	}
+
+	result, err := h.orderService.GetDetailOrderForThermal(uint(orderID), user.UserID)
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(result))
+}
+
 func (h *Handler) GetDetailOrderForReceipt(ctx *gin.Context) {
 	idParam := ctx.Param("id")
 	orderID, err := strconv.ParseUint(idParam, 10, 32)
