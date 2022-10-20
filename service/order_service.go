@@ -164,6 +164,7 @@ func (o *orderService) GetOrderBySellerID(userID uint, query *repository.OrderQu
 				ID:                     item.ID,
 				ProductVariantDetailID: item.ProductVariantDetailID,
 				ProductDetail: dto.ProductDetailOrderList{
+					Name:       item.ProductVariantDetail.Product.Name,
 					CategoryID: item.ProductVariantDetail.Product.CategoryID,
 					Category:   item.ProductVariantDetail.Product.Category.Name,
 					Slug:       item.ProductVariantDetail.Product.Slug,
