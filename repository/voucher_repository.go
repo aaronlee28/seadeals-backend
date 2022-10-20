@@ -20,6 +20,7 @@ type VoucherRepository interface {
 	FindVoucherByCode(tx *gorm.DB, code string) (*model.Voucher, error)
 	DeleteVoucherByID(tx *gorm.DB, id uint) (bool, error)
 	GetVouchersBySellerID(tx *gorm.DB, sellerID uint) ([]*model.Voucher, error)
+	GetAvailableGlobalVouchers(tx *gorm.DB) ([]*model.Voucher, error)
 }
 
 type voucherRepository struct{}
@@ -117,6 +118,17 @@ func (r *voucherRepository) GetVouchersBySellerID(tx *gorm.DB, sellerID uint) ([
 	var vouchers []*model.Voucher
 	result := tx.Where("start_date <= ? AND end_date >= ? AND seller_id = ?",
 		time.Now(), time.Now(), sellerID).Find(&vouchers)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return vouchers, result.Error
+}
+
+func (r *voucherRepository) GetAvailableGlobalVouchers(tx *gorm.DB) ([]*model.Voucher, error) {
+	var vouchers []*model.Voucher
+	result := tx.Where("start_date <= ? AND end_date >= ? AND seller_id IS NULL",
+		time.Now(), time.Now()).Find(&vouchers)
 	if result.Error != nil {
 		return nil, result.Error
 	}

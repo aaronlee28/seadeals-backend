@@ -152,3 +152,13 @@ func (h *Handler) GetVouchersBySellerID(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusOK, dto.StatusOKResponse(vouchers))
 }
+
+func (h *Handler) GetAvailableGlobalVouchers(ctx *gin.Context) {
+	globalVouchers, err := h.voucherService.GetAvailableGlobalVouchers()
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	ctx.JSON(http.StatusOK, dto.StatusOKResponse(globalVouchers))
+}
