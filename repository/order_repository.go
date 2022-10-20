@@ -8,6 +8,7 @@ import (
 	"seadeals-backend/db"
 	"seadeals-backend/dto"
 	"seadeals-backend/model"
+	"strings"
 	"time"
 )
 
@@ -44,7 +45,10 @@ func (o *orderRepository) GetOrderBySellerID(tx *gorm.DB, sellerID uint, query *
 	var orders []*model.Order
 	result := tx.Model(&orders).Where("seller_id = ?", sellerID)
 	if query.Filter != "" {
-		result = result.Where("status ILIKE ?", query.Filter)
+		var filters []string
+		filters = strings.Split(query.Filter, ",")
+		fmt.Println(filters)
+		result = result.Where("status IN (?)", filters)
 	}
 
 	var totalData int64
@@ -73,7 +77,7 @@ func (o *orderRepository) GetOrderBySellerID(tx *gorm.DB, sellerID uint, query *
 	result = result.Preload("OrderItems.ProductVariantDetail.Product.Category")
 	result = result.Preload("OrderItems.ProductVariantDetail.Product.Promotion")
 	result = result.Preload("Transaction")
-	result = result.Order("created_at desc").Order("id").Find(&orders)
+	result = result.Order("updated_at desc").Order("id").Find(&orders)
 	if result.Error != nil {
 		return nil, 0, 0, apperror.InternalServerError("Cannot find order")
 	}
@@ -89,8 +93,12 @@ func (o *orderRepository) GetOrderBySellerID(tx *gorm.DB, sellerID uint, query *
 func (o *orderRepository) GetOrderByUserID(tx *gorm.DB, userID uint, query *OrderQuery) ([]*model.Order, int64, int64, error) {
 	var orders []*model.Order
 	result := tx.Model(&orders).Where("user_id = ?", userID)
+	fmt.Println("FILTER", query.Filter)
 	if query.Filter != "" {
-		result = result.Where("status ILIKE ?", query.Filter)
+		var filters []string
+		filters = strings.Split(query.Filter, ",")
+		fmt.Println(filters)
+		result = result.Where("status IN (?)", filters)
 	}
 
 	var totalData int64
@@ -118,8 +126,9 @@ func (o *orderRepository) GetOrderByUserID(tx *gorm.DB, userID uint, query *Orde
 	result = result.Preload("OrderItems.ProductVariantDetail.Product.ProductPhotos")
 	result = result.Preload("OrderItems.ProductVariantDetail.Product.Category")
 	result = result.Preload("OrderItems.ProductVariantDetail.Product.Promotion")
+	result = result.Preload("OrderItems.ProductVariantDetail.Product.Review", "user_id = ?", userID)
 	result = result.Preload("Transaction")
-	result = result.Order("created_at desc").Order("id").Find(&orders)
+	result = result.Order("updated_at desc").Order("id").Find(&orders)
 	if result.Error != nil {
 		return nil, 0, 0, apperror.InternalServerError("Cannot find order")
 	}

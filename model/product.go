@@ -24,6 +24,7 @@ type Product struct {
 	ProductPhotos        []*ProductPhoto         `json:"product_photos"`
 	Promotion            *Promotion              `json:"promotion"`
 	Favorite             *Favorite               `json:"favorite"`
+	Review               *Review                 `json:"review"`
 	MinQuantity          uint                    `json:"min_quantity"`
 	MaxQuantity          uint                    `json:"max_quantity"`
 }
