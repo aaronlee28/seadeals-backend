@@ -158,20 +158,21 @@ func (o *orderService) GetOrderBySellerID(userID uint, query *repository.OrderQu
 				variantDetail += ", " + *item.ProductVariantDetail.Variant2Value
 			}
 
-			var imageURL string
+			var productImageURL string
 			if len(item.ProductVariantDetail.Product.ProductPhotos) > 0 {
-				imageURL = item.ProductVariantDetail.Product.ProductPhotos[0].PhotoURL
+				productImageURL = item.ProductVariantDetail.Product.ProductPhotos[0].PhotoURL
 			}
 
 			var orderItemRes = &dto.OrderItemOrderList{
 				ID:                     item.ID,
 				ProductVariantDetailID: item.ProductVariantDetailID,
 				ProductDetail: dto.ProductDetailOrderList{
+					ID:         item.ProductVariantDetail.Product.ID,
 					Name:       item.ProductVariantDetail.Product.Name,
 					CategoryID: item.ProductVariantDetail.Product.CategoryID,
 					Category:   item.ProductVariantDetail.Product.Category.Name,
 					Slug:       item.ProductVariantDetail.Product.Slug,
-					PhotoURL:   imageURL,
+					PhotoURL:   productImageURL,
 					Variant:    variantDetail,
 					Price:      item.ProductVariantDetail.Price,
 				},
@@ -260,6 +261,7 @@ func (o *orderService) GetOrderByUserID(userID uint, query *repository.OrderQuer
 	}
 	var orderRes []*dto.OrderListRes
 	for _, order := range orders {
+		var hasReviewEveryItem = true
 		var voucher *dto.VoucherOrderList
 		var voucherID uint
 
@@ -279,22 +281,36 @@ func (o *orderService) GetOrderByUserID(userID uint, query *repository.OrderQuer
 				variantDetail += ", " + *item.ProductVariantDetail.Variant2Value
 			}
 
-			var imageURL string
+			var productImageURL string
 			if len(item.ProductVariantDetail.Product.ProductPhotos) > 0 {
-				imageURL = item.ProductVariantDetail.Product.ProductPhotos[0].PhotoURL
+				productImageURL = item.ProductVariantDetail.Product.ProductPhotos[0].PhotoURL
+			}
+
+			var review *dto.ReviewOrderList
+			if item.ProductVariantDetail.Product.Review != nil {
+				review = &dto.ReviewOrderList{
+					ID:          item.ProductVariantDetail.Product.Review.ID,
+					Rating:      item.ProductVariantDetail.Product.Review.Rating,
+					Description: item.ProductVariantDetail.Product.Review.Description,
+					ImageUrl:    item.ProductVariantDetail.Product.Review.ImageURL,
+				}
+			} else {
+				hasReviewEveryItem = false
 			}
 
 			var orderItemRes = &dto.OrderItemOrderList{
 				ID:                     item.ID,
 				ProductVariantDetailID: item.ProductVariantDetailID,
 				ProductDetail: dto.ProductDetailOrderList{
-					Name:       item.ProductVariantDetail.Product.Name,
-					CategoryID: item.ProductVariantDetail.Product.CategoryID,
-					Category:   item.ProductVariantDetail.Product.Category.Name,
-					Slug:       item.ProductVariantDetail.Product.Slug,
-					PhotoURL:   imageURL,
-					Variant:    variantDetail,
-					Price:      item.ProductVariantDetail.Price,
+					ID:           item.ProductVariantDetail.Product.ID,
+					Name:         item.ProductVariantDetail.Product.Name,
+					CategoryID:   item.ProductVariantDetail.Product.CategoryID,
+					Category:     item.ProductVariantDetail.Product.Category.Name,
+					Slug:         item.ProductVariantDetail.Product.Slug,
+					PhotoURL:     productImageURL,
+					Variant:      variantDetail,
+					Price:        item.ProductVariantDetail.Price,
+					ReviewByUser: review,
 				},
 				Quantity: item.Quantity,
 				Subtotal: item.Subtotal,
@@ -358,6 +374,7 @@ func (o *orderService) GetOrderByUserID(userID uint, query *repository.OrderQuer
 			TotalOrderPriceAfterDisc: order.Total,
 			TotalDelivery:            deliveryTotal,
 			Status:                   order.Status,
+			HasReviewedAllItem:       hasReviewEveryItem,
 			OrderItems:               orderItems,
 			DeliveryID:               deliveryID,
 			Delivery:                 orderDelivery,

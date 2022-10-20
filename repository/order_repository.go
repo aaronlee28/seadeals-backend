@@ -118,6 +118,7 @@ func (o *orderRepository) GetOrderByUserID(tx *gorm.DB, userID uint, query *Orde
 	result = result.Preload("OrderItems.ProductVariantDetail.Product.ProductPhotos")
 	result = result.Preload("OrderItems.ProductVariantDetail.Product.Category")
 	result = result.Preload("OrderItems.ProductVariantDetail.Product.Promotion")
+	result = result.Preload("OrderItems.ProductVariantDetail.Product.Review", "user_id = ?", userID)
 	result = result.Preload("Transaction")
 	result = result.Order("updated_at desc").Order("id").Find(&orders)
 	if result.Error != nil {
