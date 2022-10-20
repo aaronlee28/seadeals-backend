@@ -73,7 +73,7 @@ func (o *orderRepository) GetOrderBySellerID(tx *gorm.DB, sellerID uint, query *
 	result = result.Preload("OrderItems.ProductVariantDetail.Product.Category")
 	result = result.Preload("OrderItems.ProductVariantDetail.Product.Promotion")
 	result = result.Preload("Transaction")
-	result = result.Order("created_at desc").Order("id").Find(&orders)
+	result = result.Order("updated_at desc").Order("id").Find(&orders)
 	if result.Error != nil {
 		return nil, 0, 0, apperror.InternalServerError("Cannot find order")
 	}
@@ -119,7 +119,7 @@ func (o *orderRepository) GetOrderByUserID(tx *gorm.DB, userID uint, query *Orde
 	result = result.Preload("OrderItems.ProductVariantDetail.Product.Category")
 	result = result.Preload("OrderItems.ProductVariantDetail.Product.Promotion")
 	result = result.Preload("Transaction")
-	result = result.Order("created_at desc").Order("id").Find(&orders)
+	result = result.Order("updated_at desc").Order("id").Find(&orders)
 	if result.Error != nil {
 		return nil, 0, 0, apperror.InternalServerError("Cannot find order")
 	}
