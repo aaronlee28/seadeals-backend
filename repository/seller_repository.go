@@ -2,6 +2,7 @@ package repository
 
 import (
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"seadeals-backend/apperror"
 	"seadeals-backend/model"
 )
@@ -10,6 +11,7 @@ type SellerRepository interface {
 	FindSellerDetailByID(tx *gorm.DB, sellerID uint, userID uint) (*model.Seller, error)
 	FindSellerByID(tx *gorm.DB, sellerID uint) (*model.Seller, error)
 	FindSellerByUserID(tx *gorm.DB, userID uint) (*model.Seller, error)
+	UpdateSellerPrintSettings(tx *gorm.DB, sellerID uint, allowPrint bool) (*model.Seller, error)
 }
 
 type sellerRepository struct{}
@@ -46,4 +48,14 @@ func (r *sellerRepository) FindSellerByUserID(tx *gorm.DB, userID uint) (*model.
 		return nil, apperror.NotFoundError("Seller doesn't exists")
 	}
 	return seller, result.Error
+}
+
+func (r *sellerRepository) UpdateSellerPrintSettings(tx *gorm.DB, userID uint, allowPrint bool) (*model.Seller, error) {
+	var seller model.Seller
+	result := tx.Model(&seller).Clauses(clause.Returning{}).Where("user_id = ?", userID).
+		Update("allow_print", allowPrint)
+	if result.Error == gorm.ErrRecordNotFound {
+		return nil, apperror.NotFoundError("Seller doesn't exist")
+	}
+	return &seller, result.Error
 }

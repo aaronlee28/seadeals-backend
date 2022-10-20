@@ -18,6 +18,7 @@ type Seller struct {
 	PictureURL  string       `json:"picture_url"`
 	BannerURL   string       `json:"banner_url"`
 	SocialGraph *SocialGraph `json:"following"`
+	AllowPrint  bool         `json:"allow_print"`
 }
 
 func (u *Seller) AfterCreate(tx *gorm.DB) (err error) {
