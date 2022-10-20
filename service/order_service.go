@@ -44,6 +44,7 @@ type orderService struct {
 	walletRepository          repository.WalletRepository
 	walletTransRepo           repository.WalletTransactionRepository
 	productVarDetRepo         repository.ProductVariantDetailRepository
+	productRepo               repository.ProductRepository
 	seaLabsPayTransHolderRepo repository.SeaLabsPayTransactionHolderRepository
 	complaintRepo             repository.ComplaintRepository
 	complaintPhotoRepo        repository.ComplaintPhotoRepository
@@ -63,6 +64,7 @@ type OrderServiceConfig struct {
 	WalletRepository          repository.WalletRepository
 	WalletTransRepo           repository.WalletTransactionRepository
 	ProductVarDetRepo         repository.ProductVariantDetailRepository
+	ProductRepo               repository.ProductRepository
 	SeaLabsPayTransHolderRepo repository.SeaLabsPayTransactionHolderRepository
 	ComplainRepo              repository.ComplaintRepository
 	ComplaintPhotoRepo        repository.ComplaintPhotoRepository
@@ -83,6 +85,7 @@ func NewOrderService(c *OrderServiceConfig) OrderService {
 		walletRepository:          c.WalletRepository,
 		walletTransRepo:           c.WalletTransRepo,
 		productVarDetRepo:         c.ProductVarDetRepo,
+		productRepo:               c.ProductRepo,
 		seaLabsPayTransHolderRepo: c.SeaLabsPayTransHolderRepo,
 		complaintRepo:             c.ComplainRepo,
 		complaintPhotoRepo:        c.ComplaintPhotoRepo,
@@ -796,6 +799,13 @@ func (o *orderService) FinishOrder(req *dto.FinishOrderReq, userID uint) (*model
 		return nil, err
 	}
 
+	for _, item := range order.OrderItems {
+		_, err = o.productRepo.AddProductSoldCount(tx, item.ProductVariantDetail.ProductID, int(item.Quantity))
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	newNotification := &model.Notification{
 		UserID:   order.UserID,
 		SellerID: order.SellerID,
@@ -830,10 +840,14 @@ func (o *orderService) RunCronJobs() {
 		for _, order := range orders {
 			tx := o.db.Begin()
 			accountHolder, _ := o.accountHolderRepo.TakeMoneyFromAccountHolderByOrderID(tx, order.ID)
+			orderDetail, _ := o.orderRepository.GetOrderDetailByID(tx, order.ID)
 
 			seller, _ := o.sellerRepository.FindSellerByID(tx, order.SellerID)
 			wallet, _ := o.walletRepository.GetWalletByUserID(tx, seller.UserID)
 			_, _ = o.walletRepository.TopUp(tx, wallet, accountHolder.Total)
+			for _, item := range orderDetail.OrderItems {
+				_, _ = o.productRepo.AddProductSoldCount(tx, item.ProductVariantDetail.ProductID, int(item.Quantity))
+			}
 			transWalletRepo := &model.WalletTransaction{
 				WalletID:      wallet.ID,
 				TransactionID: &order.TransactionID,
