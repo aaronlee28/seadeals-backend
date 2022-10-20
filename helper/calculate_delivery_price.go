@@ -69,7 +69,7 @@ func CalculateDeliveryPrice(r *dto.DeliveryCalculateReq) (*dto.DeliveryCalculate
 		if err != nil {
 			return nil, err
 		}
-		return nil, apperror.BadRequestError(j.Message)
+		return nil, apperror.BadRequestError(j.Message + ": Error dalam delivery API")
 	}
 
 	var dtoRes []dto.DeliveryCalculateRes

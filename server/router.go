@@ -289,7 +289,9 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 
 	// PAYMENT
 	r.POST("/checkout-cart", middleware.RequestValidator(func() any { return &dto.CheckoutCartReq{} }), middleware.AuthorizeJWTFor(model.Level1RoleName), h.CheckoutCart)
-	r.POST("/predicted-price", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any { return &dto.TotalPredictedPriceReq{} }), h.GetTotalPredictedPrice)
+	r.POST("/predicted-price", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
+		return &dto.PredictedPriceReq{}
+	}), h.GetTotalPredictedPrice)
 
 	// ADMIN
 	r.POST("/create-global-voucher", middleware.RequestValidator(func() any { return &dto.CreateGlobalVoucher{} }), middleware.AuthorizeJWTFor(model.AdminRoleName), h.CreateGlobalVoucher)

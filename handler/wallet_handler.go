@@ -231,7 +231,7 @@ func (h *Handler) CheckoutCart(ctx *gin.Context) {
 	}
 	userID := user.(dto.UserJWT).UserID
 
-	result, err := h.walletService.CheckoutCart(userID, json)
+	result, err := h.walletService.PayOrderWithWallet(userID, json)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, err)
 		return

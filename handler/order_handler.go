@@ -209,7 +209,7 @@ func (h *Handler) GetTotalPredictedPrice(ctx *gin.Context) {
 	}
 
 	value, _ := ctx.Get("payload")
-	json, _ := value.(*dto.TotalPredictedPriceReq)
+	json, _ := value.(*dto.PredictedPriceReq)
 
 	response, err := h.orderService.GetTotalPredictedPrice(json, user.UserID)
 	if err != nil {

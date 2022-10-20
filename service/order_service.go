@@ -30,7 +30,7 @@ type OrderService interface {
 	FinishOrder(req *dto.FinishOrderReq, userID uint) (*model.Order, error)
 
 	RunCronJobs()
-	GetTotalPredictedPrice(req *dto.TotalPredictedPriceReq, userID uint) (*dto.TotalPredictedPriceRes, error)
+	GetTotalPredictedPrice(req *dto.PredictedPriceReq, userID uint) (*dto.TotalPredictedPriceRes, error)
 }
 
 type orderService struct {
@@ -1137,7 +1137,7 @@ func (o *orderService) RunCronJobs() {
 
 }
 
-func (o *orderService) GetTotalPredictedPrice(req *dto.TotalPredictedPriceReq, userID uint) (*dto.TotalPredictedPriceRes, error) {
+func (o *orderService) GetTotalPredictedPrice(req *dto.PredictedPriceReq, userID uint) (*dto.TotalPredictedPriceRes, error) {
 	tx := o.db.Begin()
 	var err error
 	defer helper.CommitOrRollback(tx, &err)

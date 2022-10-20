@@ -311,6 +311,9 @@ func (u *userSeaPayAccountServ) PayWithSeaLabsPay(userID uint, req *dto.Checkout
 			} else {
 				orderSubtotal -= voucher.Amount
 			}
+		} else {
+			order.VoucherID = nil
+			order.Voucher = nil
 		}
 
 		var seller *model.Seller
@@ -345,13 +348,15 @@ func (u *userSeaPayAccountServ) PayWithSeaLabsPay(userID uint, req *dto.Checkout
 		}
 
 		delivery := &model.Delivery{
-			Address:        seller.Address.Address,
-			Status:         dto.DeliveryWaitingForPayment,
-			DeliveryNumber: helper.RandomString(10),
-			Eta:            deliveryResult.Eta,
-			Total:          float64(deliveryResult.Total),
-			OrderID:        order.ID,
-			CourierID:      courier.ID,
+			Address:         seller.Address.Address,
+			Status:          dto.DeliveryWaitingForPayment,
+			DeliveryNumber:  helper.RandomString(10),
+			Eta:             deliveryResult.Eta,
+			Total:           float64(deliveryResult.Total),
+			OrderID:         order.ID,
+			CourierID:       courier.ID,
+			CityDestination: buyerAddress.City,
+			Weight:          uint(totalWeight),
 		}
 		newDelivery := &model.Delivery{}
 		newDelivery, err = u.deliveryRepo.CreateDelivery(tx, delivery)
@@ -393,6 +398,9 @@ func (u *userSeaPayAccountServ) PayWithSeaLabsPay(userID uint, req *dto.Checkout
 		} else {
 			totalOrderPrice -= globalVoucher.Amount
 		}
+	} else {
+		transaction.VoucherID = nil
+		transaction.Voucher = nil
 	}
 
 	var totalTransaction float64
