@@ -1245,6 +1245,9 @@ func (o *orderService) GetTotalPredictedPrice(req *dto.PredictedPriceReq, userID
 			} else {
 				totalOrder -= voucher.Amount
 			}
+		} else if voucher != nil {
+			err = apperror.BadRequestError("Order tidak memenuhi kriteria voucher " + voucher.Name)
+			return nil, err
 		}
 
 		var seller *model.Seller
@@ -1299,7 +1302,11 @@ func (o *orderService) GetTotalPredictedPrice(req *dto.PredictedPriceReq, userID
 				totalAllOrderPrices = 0
 			}
 		}
+	} else if globalVoucher != nil {
+		err = apperror.BadRequestError("Order tidak memenuhi kriteria voucher global")
+		return nil, err
 	}
+
 	res.TotalPredictedPrice = totalAllOrderPrices + totalDelivery
 	return res, nil
 }

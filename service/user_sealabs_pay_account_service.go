@@ -311,9 +311,9 @@ func (u *userSeaPayAccountServ) PayWithSeaLabsPay(userID uint, req *dto.Checkout
 			} else {
 				orderSubtotal -= voucher.Amount
 			}
-		} else {
-			order.VoucherID = nil
-			order.Voucher = nil
+		} else if voucher != nil {
+			err = apperror.BadRequestError("Order tidak memenuhi kriteria voucher " + voucher.Name)
+			return "", nil, err
 		}
 
 		var seller *model.Seller
@@ -398,9 +398,9 @@ func (u *userSeaPayAccountServ) PayWithSeaLabsPay(userID uint, req *dto.Checkout
 		} else {
 			totalOrderPrice -= globalVoucher.Amount
 		}
-	} else {
-		transaction.VoucherID = nil
-		transaction.Voucher = nil
+	} else if globalVoucher != nil {
+		err = apperror.BadRequestError("Order tidak memenuhi kriteria voucher global")
+		return "", nil, err
 	}
 
 	var totalTransaction float64
