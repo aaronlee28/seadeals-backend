@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -33,7 +34,7 @@ type WalletService interface {
 	ValidateWalletPin(user *dto.UserJWT, pin string) (string, bool, error)
 
 	GetWalletStatus(userID uint) (string, error)
-	CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dto.CheckoutCartRes, error)
+	PayOrderWithWallet(userID uint, req *dto.CheckoutCartReq) (*dto.CheckoutCartRes, error)
 }
 
 type walletService struct {
@@ -392,7 +393,7 @@ func (w *walletService) GetWalletStatus(userID uint) (string, error) {
 	return status, nil
 }
 
-func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dto.CheckoutCartRes, error) {
+func (w *walletService) PayOrderWithWallet(userID uint, req *dto.CheckoutCartReq) (*dto.CheckoutCartRes, error) {
 	tx := w.db.Begin()
 	var err error
 	defer helper.CommitOrRollback(tx, &err)
@@ -535,6 +536,9 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 			} else {
 				totalOrder -= voucher.Amount
 			}
+		} else if voucher != nil {
+			err = apperror.BadRequestError("Order tidak memenuhi kriteria voucher " + voucher.Name)
+			return nil, err
 		}
 		var seller *model.Seller
 		seller, err = w.sellerRepository.FindSellerByID(tx, item.SellerID)
@@ -569,13 +573,15 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 		}
 
 		delivery := &model.Delivery{
-			Address:        seller.Address.Address,
-			Status:         dto.DeliveryWaitingForSeller,
-			DeliveryNumber: helper.RandomString(10),
-			Total:          float64(deliveryResult.Total),
-			Eta:            deliveryResult.Eta,
-			OrderID:        order.ID,
-			CourierID:      courier.ID,
+			Address:         seller.Address.Address,
+			Status:          dto.DeliveryWaitingForSeller,
+			DeliveryNumber:  helper.RandomString(10),
+			Total:           float64(deliveryResult.Total),
+			Eta:             deliveryResult.Eta,
+			OrderID:         order.ID,
+			CourierID:       courier.ID,
+			CityDestination: buyerAddress.City,
+			Weight:          uint(totalWeight),
 		}
 		newDelivery := &model.Delivery{}
 		newDelivery, err = w.deliveryRepo.CreateDelivery(tx, delivery)
@@ -623,6 +629,9 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 		} else {
 			totalOrderPrice -= globalVoucher.Amount
 		}
+	} else if globalVoucher != nil {
+		err = apperror.BadRequestError("Order tidak memenuhi kriteria voucher global")
+		return nil, err
 	}
 
 	var totalTransaction float64
@@ -634,6 +643,7 @@ func (w *walletService) CheckoutCart(userID uint, req *dto.CheckoutCartReq) (*dt
 	}
 	//5. update transaction
 	transaction.Total = totalTransaction
+	fmt.Println(transaction.VoucherID)
 	err = w.walletRepository.UpdateTransaction(tx, transaction)
 	if err != nil {
 		return nil, err
