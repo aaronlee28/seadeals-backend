@@ -191,6 +191,7 @@ func Init() {
 		WalletRepository:          walletRepository,
 		WalletTransRepo:           walletTransactionRepo,
 		ProductVarDetRepo:         productVarDetRepo,
+		ProductRepo:               productRepository,
 		SeaLabsPayTransHolderRepo: seaLabsPayTransactionHolderRepo,
 		ComplainRepo:              complaintRepo,
 		ComplaintPhotoRepo:        complaintPhotoRepo,

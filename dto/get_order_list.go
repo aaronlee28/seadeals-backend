@@ -17,6 +17,7 @@ type OrderListRes struct {
 	TotalOrderPriceAfterDisc float64               `json:"total_order_price_after_disc"`
 	TotalDelivery            float64               `json:"total_delivery"`
 	Status                   string                `json:"status"`
+	HasReviewedAllItem       bool                  `json:"has_reviewed_all_item"`
 	OrderItems               []*OrderItemOrderList `json:"order_items"`
 	DeliveryID               uint                  `json:"delivery_id"`
 	Delivery                 *DeliveryOrderList    `json:"delivery"`
@@ -51,13 +52,22 @@ type OrderItemOrderList struct {
 }
 
 type ProductDetailOrderList struct {
-	Name       string  `json:"name"`
-	CategoryID uint    `json:"category_id"`
-	Category   string  `json:"category"`
-	Slug       string  `json:"slug"`
-	PhotoURL   string  `json:"photo_url"`
-	Variant    string  `json:"variant"`
-	Price      float64 `json:"price"`
+	ID           uint             `json:"id"`
+	Name         string           `json:"name"`
+	CategoryID   uint             `json:"category_id"`
+	Category     string           `json:"category"`
+	Slug         string           `json:"slug"`
+	PhotoURL     string           `json:"photo_url"`
+	Variant      string           `json:"variant"`
+	Price        float64          `json:"price"`
+	ReviewByUser *ReviewOrderList `json:"review_by_user"`
+}
+
+type ReviewOrderList struct {
+	ID          uint    `json:"id"`
+	Rating      int     `json:"rating"`
+	Description *string `json:"description"`
+	ImageUrl    *string `json:"image_url"`
 }
 
 type DeliveryOrderList struct {

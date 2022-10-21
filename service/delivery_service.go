@@ -11,6 +11,8 @@ import (
 
 type DeliveryService interface {
 	DeliverOrder(req *dto.DeliverOrderReq, userID uint) (*model.Delivery, error)
+	UpdatePrintSettings(req *dto.DeliverSettingsPrint, sellerID uint) (*dto.DeliverSettingsPrintRes, error)
+	GetSellerPrintSettings(sellerID uint) (*dto.DeliverSettingsPrintRes, error)
 }
 
 type deliveryService struct {
@@ -95,4 +97,34 @@ func (d *deliveryService) DeliverOrder(req *dto.DeliverOrderReq, userID uint) (*
 	d.notificationRepository.AddToNotificationFromModel(tx, newNotification)
 
 	return updatedDelivery, nil
+}
+
+func (d *deliveryService) UpdatePrintSettings(req *dto.DeliverSettingsPrint, userID uint) (*dto.DeliverSettingsPrintRes, error) {
+	tx := d.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
+
+	seller, err := d.sellerRepository.UpdateSellerPrintSettings(tx, userID, *req.AllowPrint)
+	if err != nil {
+		return nil, err
+	}
+
+	sellerRes := new(dto.DeliverSettingsPrintRes).DeliverySettingsFromSeller(seller)
+
+	return sellerRes, nil
+}
+
+func (d *deliveryService) GetSellerPrintSettings(userID uint) (*dto.DeliverSettingsPrintRes, error) {
+	tx := d.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
+
+	seller, err := d.sellerRepository.GetSellerPrintSettings(tx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	sellerRes := new(dto.DeliverSettingsPrintRes).DeliverySettingsFromSeller(seller)
+
+	return sellerRes, nil
 }

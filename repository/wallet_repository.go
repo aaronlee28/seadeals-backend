@@ -435,7 +435,12 @@ func (w *walletRepository) CreateOrder(tx *gorm.DB, sellerID uint, voucherID *ui
 }
 func (w *walletRepository) UpdateOrder(tx *gorm.DB, order *model.Order) error {
 	result := tx.Model(&order).Updates(&order)
+	if result.Error != nil {
+		return apperror.InternalServerError("failed to update order")
+	}
 
+	// GORM cannot update null value
+	result = tx.Model(&order).Updates(map[string]interface{}{"voucher_id": order.VoucherID})
 	if result.Error != nil {
 		return apperror.InternalServerError("failed to update order")
 	}
@@ -443,7 +448,12 @@ func (w *walletRepository) UpdateOrder(tx *gorm.DB, order *model.Order) error {
 }
 func (w *walletRepository) UpdateTransaction(tx *gorm.DB, transaction *model.Transaction) error {
 	result := tx.Model(&transaction).Updates(&transaction)
+	if result.Error != nil {
+		return apperror.InternalServerError("failed to update transaction")
+	}
 
+	// GORM cannot update null value
+	result = tx.Model(&transaction).Updates(map[string]interface{}{"voucher_id": transaction.VoucherID})
 	if result.Error != nil {
 		return apperror.InternalServerError("failed to update transaction")
 	}

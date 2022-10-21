@@ -8,6 +8,7 @@ import (
 	"seadeals-backend/db"
 	"seadeals-backend/dto"
 	"seadeals-backend/model"
+	"strings"
 	"time"
 )
 
@@ -21,6 +22,10 @@ type OrderRepository interface {
 	GetOrderBySellerID(tx *gorm.DB, sellerID uint, query *OrderQuery) ([]*model.Order, int64, int64, error)
 	GetOrderByUserID(tx *gorm.DB, userID uint, query *OrderQuery) ([]*model.Order, int64, int64, error)
 	GetOrderDetailByID(tx *gorm.DB, orderID uint) (*model.Order, error)
+	// GetOrderDetailForReceipt function below is just to prevent heavy loading when fetching data
+	GetOrderDetailForReceipt(tx *gorm.DB, orderID uint) (*model.Order, error)
+	// GetOrderDetailForThermal function below is just to prevent heavy loading when fetching data
+	GetOrderDetailForThermal(tx *gorm.DB, orderID uint) (*model.Order, error)
 
 	UpdateOrderStatus(tx *gorm.DB, orderID uint, status string) (*model.Order, error)
 	CheckAndUpdateOnDelivery() []*model.Order
@@ -44,7 +49,10 @@ func (o *orderRepository) GetOrderBySellerID(tx *gorm.DB, sellerID uint, query *
 	var orders []*model.Order
 	result := tx.Model(&orders).Where("seller_id = ?", sellerID)
 	if query.Filter != "" {
-		result = result.Where("status ILIKE ?", query.Filter)
+		var filters []string
+		filters = strings.Split(query.Filter, ",")
+		fmt.Println(filters)
+		result = result.Where("status IN (?)", filters)
 	}
 
 	var totalData int64
@@ -73,7 +81,7 @@ func (o *orderRepository) GetOrderBySellerID(tx *gorm.DB, sellerID uint, query *
 	result = result.Preload("OrderItems.ProductVariantDetail.Product.Category")
 	result = result.Preload("OrderItems.ProductVariantDetail.Product.Promotion")
 	result = result.Preload("Transaction")
-	result = result.Order("created_at desc").Order("id").Find(&orders)
+	result = result.Order("updated_at desc").Order("id").Find(&orders)
 	if result.Error != nil {
 		return nil, 0, 0, apperror.InternalServerError("Cannot find order")
 	}
@@ -89,8 +97,12 @@ func (o *orderRepository) GetOrderBySellerID(tx *gorm.DB, sellerID uint, query *
 func (o *orderRepository) GetOrderByUserID(tx *gorm.DB, userID uint, query *OrderQuery) ([]*model.Order, int64, int64, error) {
 	var orders []*model.Order
 	result := tx.Model(&orders).Where("user_id = ?", userID)
+	fmt.Println("FILTER", query.Filter)
 	if query.Filter != "" {
-		result = result.Where("status ILIKE ?", query.Filter)
+		var filters []string
+		filters = strings.Split(query.Filter, ",")
+		fmt.Println(filters)
+		result = result.Where("status IN (?)", filters)
 	}
 
 	var totalData int64
@@ -118,8 +130,9 @@ func (o *orderRepository) GetOrderByUserID(tx *gorm.DB, userID uint, query *Orde
 	result = result.Preload("OrderItems.ProductVariantDetail.Product.ProductPhotos")
 	result = result.Preload("OrderItems.ProductVariantDetail.Product.Category")
 	result = result.Preload("OrderItems.ProductVariantDetail.Product.Promotion")
+	result = result.Preload("OrderItems.ProductVariantDetail.Product.Review", "user_id = ?", userID)
 	result = result.Preload("Transaction")
-	result = result.Order("created_at desc").Order("id").Find(&orders)
+	result = result.Order("updated_at desc").Order("id").Find(&orders)
 	if result.Error != nil {
 		return nil, 0, 0, apperror.InternalServerError("Cannot find order")
 	}
@@ -135,7 +148,50 @@ func (o *orderRepository) GetOrderByUserID(tx *gorm.DB, userID uint, query *Orde
 func (o *orderRepository) GetOrderDetailByID(tx *gorm.DB, orderID uint) (*model.Order, error) {
 	var order = &model.Order{}
 	order.ID = orderID
-	result := tx.Model(&order).Preload("OrderItems").Preload("Complaint.ComplaintPhotos").Preload("Transaction").First(&order)
+	result := tx.Model(&order).Preload("OrderItems.ProductVariantDetail").Preload("Complaint.ComplaintPhotos").Preload("Transaction").First(&order)
+	if result.Error != nil {
+		if result.Error == gorm.ErrRecordNotFound {
+			return nil, apperror.BadRequestError("order doesn't exists")
+		}
+		return nil, apperror.InternalServerError("Cannot find order")
+	}
+	return order, nil
+}
+
+func (o *orderRepository) GetOrderDetailForReceipt(tx *gorm.DB, orderID uint) (*model.Order, error) {
+	var order = &model.Order{}
+	order.ID = orderID
+	result := tx.Model(&order).Preload("OrderItems.ProductVariantDetail.Product.ProductDetail")
+	result = result.Preload("Transaction.Orders.OrderItems.ProductVariantDetail.Product")
+	result = result.Preload("Transaction.Orders.Seller.Address")
+	result = result.Preload("Transaction.Orders.Delivery")
+	result = result.Preload("Transaction.Voucher")
+	result = result.Preload("Transaction.Orders.OrderItems.ProductVariantDetail.ProductVariant1")
+	result = result.Preload("Transaction.Orders.OrderItems.ProductVariantDetail.ProductVariant2")
+	result = result.Preload("Voucher")
+	result = result.Preload("Delivery.Courier")
+	result = result.Preload("Transaction.Voucher")
+	result = result.Preload("Seller.Address")
+	result = result.Preload("User")
+	result = result.Preload("Complaint.ComplaintPhotos").Preload("Transaction")
+	result = result.First(&order)
+	if result.Error != nil {
+		if result.Error == gorm.ErrRecordNotFound {
+			return nil, apperror.BadRequestError("order doesn't exists")
+		}
+		return nil, apperror.InternalServerError("Cannot find order")
+	}
+	return order, nil
+}
+
+func (o *orderRepository) GetOrderDetailForThermal(tx *gorm.DB, orderID uint) (*model.Order, error) {
+	var order = &model.Order{}
+	order.ID = orderID
+	result := tx.Model(&order).Preload("OrderItems.ProductVariantDetail.Product.ProductDetail")
+	result = result.Preload("Delivery.Courier")
+	result = result.Preload("Seller.Address")
+	result = result.Preload("User")
+	result = result.First(&order)
 	if result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
 			return nil, apperror.BadRequestError("order doesn't exists")
@@ -172,7 +228,7 @@ func (o *orderRepository) CheckAndUpdateOnDelivery() []*model.Order {
 func (o *orderRepository) CheckAndUpdateOnOrderDelivered() []*model.Order {
 	var order []*model.Order
 	tx := db.Get().Begin()
-	_ = tx.Clauses(clause.Returning{}).Where("status = ?", dto.OrderDelivered).Where("? >= updated_at at time zone 'UTC' + interval '2 day'", time.Now()).Find(&order).Update("status", dto.OrderDone)
+	_ = tx.Model(&order).Clauses(clause.Returning{}).Where("status = ?", dto.OrderDelivered).Where("? >= updated_at at time zone 'UTC' + interval '2 day'", time.Now()).Update("status", dto.OrderDone)
 
 	tx.Commit()
 	return order
@@ -260,7 +316,7 @@ func (o *orderRepository) UpdateOrderStatusByTransID(tx *gorm.DB, transactionID 
 		}
 		return nil, apperror.InternalServerError("Cannot find order")
 	}
-	result = result.Model(&orders).Where("transaction_id = ?", transactionID).Preload("Delivery").Find(&orders)
+	result = result.Model(&orders).Where("transaction_id = ?", transactionID).Preload("OrderItems.ProductVariantDetail").Preload("Delivery").Find(&orders)
 	if result.Error != nil {
 		return nil, apperror.InternalServerError("Cannot find order")
 	}

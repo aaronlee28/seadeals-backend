@@ -19,6 +19,7 @@ type ProductRepository interface {
 	GetProductCountBySellerID(tx *gorm.DB, sellerID uint) (int64, error)
 
 	UpdateProductFavoriteCount(tx *gorm.DB, productID uint, isFavorite bool) (*model.Product, error)
+	AddProductSoldCount(tx *gorm.DB, productID uint, total int) (*model.Product, error)
 
 	SearchProduct(tx *gorm.DB, q *SearchQuery) (*[]model.Product, error)
 	SearchRecommendProduct(tx *gorm.DB, q *SearchQuery) ([]*dto.SellerProductsCustomTable, int64, int64, error)
@@ -203,6 +204,15 @@ func (r *productRepository) UpdateProductFavoriteCount(tx *gorm.DB, productID ui
 	}
 	if result.Error != nil {
 		return nil, apperror.InternalServerError("Cannot update product")
+	}
+	return product, nil
+}
+
+func (r *productRepository) AddProductSoldCount(tx *gorm.DB, productID uint, total int) (*model.Product, error) {
+	var product = &model.Product{ID: productID}
+	result := tx.Model(&product).Update("sold_count", gorm.Expr("sold_count + ?", total))
+	if result.Error != nil {
+		return nil, apperror.InternalServerError("Tidak bisa menambah sold_count product")
 	}
 	return product, nil
 }
