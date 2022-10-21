@@ -176,6 +176,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 	r.POST("/seller/deliver/order", middleware.AuthorizeJWTFor(model.SellerRoleName), middleware.RequestValidator(func() any {
 		return &dto.DeliverOrderReq{}
 	}), h.DeliverOrder)
+	r.GET("/seller/settings/print", middleware.AuthorizeJWTFor(model.SellerRoleName), h.GetSellerPrintSettings)
 	r.PATCH("/seller/settings/print", middleware.AuthorizeJWTFor(model.SellerRoleName), middleware.RequestValidator(func() any {
 		return &dto.DeliverSettingsPrint{}
 	}), h.UpdatePrintSettings)

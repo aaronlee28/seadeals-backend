@@ -12,6 +12,7 @@ type SellerRepository interface {
 	FindSellerByID(tx *gorm.DB, sellerID uint) (*model.Seller, error)
 	FindSellerByUserID(tx *gorm.DB, userID uint) (*model.Seller, error)
 	UpdateSellerPrintSettings(tx *gorm.DB, sellerID uint, allowPrint bool) (*model.Seller, error)
+	GetSellerPrintSettings(tx *gorm.DB, userID uint) (*model.Seller, error)
 }
 
 type sellerRepository struct{}
@@ -54,6 +55,15 @@ func (r *sellerRepository) UpdateSellerPrintSettings(tx *gorm.DB, userID uint, a
 	var seller model.Seller
 	result := tx.Model(&seller).Clauses(clause.Returning{}).Where("user_id = ?", userID).
 		Update("allow_print", allowPrint)
+	if result.Error == gorm.ErrRecordNotFound {
+		return nil, apperror.NotFoundError("Seller doesn't exist")
+	}
+	return &seller, result.Error
+}
+
+func (r *sellerRepository) GetSellerPrintSettings(tx *gorm.DB, userID uint) (*model.Seller, error) {
+	var seller model.Seller
+	result := tx.Select("id", "allow_print").Where("user_id = ?", userID).Find(&seller)
 	if result.Error == gorm.ErrRecordNotFound {
 		return nil, apperror.NotFoundError("Seller doesn't exist")
 	}
