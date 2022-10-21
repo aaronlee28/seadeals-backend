@@ -1,8 +1,10 @@
 package handler
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"os"
 	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
 	"seadeals-backend/helper"
@@ -111,6 +113,12 @@ func (h *Handler) WalletPin(ctx *gin.Context) {
 }
 
 func (h *Handler) RequestWalletChangeByEmail(ctx *gin.Context) {
+
+	if os.Getenv("ENV") == "testing" {
+		fmt.Println("disable cron")
+		return
+	}
+
 	payload, _ := ctx.Get("user")
 	user, _ := payload.(dto.UserJWT)
 	userID := user.UserID
@@ -125,6 +133,12 @@ func (h *Handler) RequestWalletChangeByEmail(ctx *gin.Context) {
 }
 
 func (h *Handler) ValidateIfRequestByEmailIsValid(ctx *gin.Context) {
+
+	if os.Getenv("ENV") == "testing" {
+		fmt.Println("disable cron")
+		return
+	}
+
 	payload, _ := ctx.Get("user")
 	user, _ := payload.(dto.UserJWT)
 	userID := user.UserID
@@ -143,6 +157,12 @@ func (h *Handler) ValidateIfRequestByEmailIsValid(ctx *gin.Context) {
 }
 
 func (h *Handler) ValidateIfRequestChangeByEmailCodeIsValid(ctx *gin.Context) {
+
+	if os.Getenv("ENV") == "testing" {
+		fmt.Println("disable cron")
+		return
+	}
+
 	payload, _ := ctx.Get("user")
 	user, _ := payload.(dto.UserJWT)
 	userID := user.UserID
@@ -160,6 +180,12 @@ func (h *Handler) ValidateIfRequestChangeByEmailCodeIsValid(ctx *gin.Context) {
 }
 
 func (h *Handler) ChangeWalletPinByEmail(ctx *gin.Context) {
+
+	if os.Getenv("ENV") == "testing" {
+		fmt.Println("disable cron")
+		return
+	}
+
 	payload, _ := ctx.Get("user")
 	user, _ := payload.(dto.UserJWT)
 	userID := user.UserID
@@ -177,6 +203,12 @@ func (h *Handler) ChangeWalletPinByEmail(ctx *gin.Context) {
 }
 
 func (h *Handler) ValidateWalletPin(ctx *gin.Context) {
+
+	if os.Getenv("ENV") == "testing" {
+		fmt.Println("disable cron")
+		return
+	}
+
 	user, exists := ctx.Get("user")
 	if !exists {
 		_ = ctx.Error(apperror.BadRequestError("User is invalid"))
@@ -203,6 +235,11 @@ func (h *Handler) ValidateWalletPin(ctx *gin.Context) {
 }
 
 func (h *Handler) GetWalletStatus(ctx *gin.Context) {
+
+	if os.Getenv("ENV") == "testing" {
+		fmt.Println("disable cron")
+		return
+	}
 	user, exists := ctx.Get("user")
 	if !exists {
 		_ = ctx.Error(apperror.BadRequestError("User is invalid"))

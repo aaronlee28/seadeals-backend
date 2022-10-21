@@ -808,6 +808,7 @@ func (o *orderService) FinishOrder(req *dto.FinishOrderReq, userID uint) (*model
 }
 
 func (o *orderService) RunCronJobs() {
+
 	c := cron.New(cron.WithLocation(time.UTC))
 	_, _ = c.AddFunc("@daily", func() {
 		deliveries, _ := o.deliveryRepo.CheckAndUpdateToDelivered()

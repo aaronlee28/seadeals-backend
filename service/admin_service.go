@@ -93,6 +93,3 @@ func (a *adminService) CreateCategory(req *dto.CreateCategory) (*model.ProductCa
 
 	return createdCategory, nil
 }
-
-//parent id cuman bisa pilih id yang udah ada di table (V)
-// parent id gak bisa link ke diri sendiri (V)
