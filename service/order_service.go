@@ -318,7 +318,7 @@ func (o *orderService) GetOrderBySellerID(userID uint, query *repository.OrderQu
 	if err != nil {
 		return nil, 0, 0, err
 	}
-	var orderRes []*dto.OrderListRes
+	var orderRes = make([]*dto.OrderListRes, 0)
 	for _, order := range orders {
 		var voucher *dto.VoucherOrderList
 		var voucherID uint
