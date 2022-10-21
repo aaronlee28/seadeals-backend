@@ -2,6 +2,7 @@ package service
 
 import (
 	"gorm.io/gorm"
+	"math"
 	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
 	"seadeals-backend/helper"
@@ -85,8 +86,12 @@ func (p *productService) FindProductDetailByID(productID uint, userID uint) (*dt
 	if err != nil {
 		return nil, nil, err
 	}
+
+	ratio := math.Pow(10, float64(1))
+	RoundedAvgRating := math.Round(averageReview*ratio) / ratio
+
 	sellerRes.TotalReviewer = uint(totalReview)
-	sellerRes.Rating = averageReview
+	sellerRes.Rating = RoundedAvgRating
 
 	followers, err := p.socialGraphRepo.GetFollowerCountBySellerID(tx, seller.ID)
 	if err != nil {

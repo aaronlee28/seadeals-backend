@@ -3,7 +3,7 @@ package cronjob
 import (
 	"fmt"
 	"gorm.io/gorm"
-	"seadeals-backend/config"
+	"os"
 	"seadeals-backend/service"
 )
 
@@ -22,6 +22,11 @@ type RunCronJobConfig struct {
 }
 
 func NewCronJob(c *RunCronJobConfig) RunCronJobHelper {
+	if os.Getenv("ENV") == "testing" {
+		fmt.Println("disable cron")
+		return nil
+	}
+
 	return &runCronJobHelper{
 		db:           c.DB,
 		orderService: c.OrderService,
@@ -29,7 +34,7 @@ func NewCronJob(c *RunCronJobConfig) RunCronJobHelper {
 }
 
 func (r *runCronJobHelper) RunCronJobs() {
-	if config.Config.ENV == "testing" {
+	if os.Getenv("ENV") == "testing" {
 		fmt.Println("disable cron")
 		return
 	}

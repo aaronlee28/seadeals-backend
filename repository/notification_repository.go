@@ -40,7 +40,6 @@ func (n *notificationRepository) AddToNotificationOneToOne(tx *gorm.DB, userID u
 
 func (n *notificationRepository) AddToNotificationFromModelForCron(newNotification *model.Notification) {
 	tx := db.Get().Begin()
-
 	result := tx.Clauses(clause.Returning{}).Create(&newNotification)
 	if result.Error != nil {
 		tx.Rollback()
