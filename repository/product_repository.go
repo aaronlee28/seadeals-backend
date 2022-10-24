@@ -122,9 +122,8 @@ func (r *productRepository) FindSimilarProduct(tx *gorm.DB, categoryID uint, que
 
 	promotions := tx.Model(&model.Promotion{})
 	promotions = promotions.Where("start_date <= ? AND end_date >= ?", time.Now(), time.Now())
-	promotions = promotions.Distinct("product_id")
-	promotions = promotions.Order("id")
-	promotions = promotions.Select("*")
+	promotions = promotions.Order("product_id, id")
+	promotions = promotions.Select("DISTINCT ON (product_id) *")
 
 	s1 := tx.Model(&model.ProductVariantDetail{})
 	s1 = s1.Select("min(price - COALESCE(promotions.amount, 0)) as min, max(price - COALESCE(promotions.amount, 0)) as max, min(price) as min_before_disc, max(price) as max_before_disc, product_variant_details.product_id")
@@ -254,9 +253,8 @@ func (r *productRepository) SearchRecommendProduct(tx *gorm.DB, query *SearchQue
 
 	promotions := tx.Model(&model.Promotion{})
 	promotions = promotions.Where("start_date <= ? AND end_date >= ?", time.Now(), time.Now())
-	promotions = promotions.Distinct("product_id")
-	promotions = promotions.Order("id")
-	promotions = promotions.Select("*")
+	promotions = promotions.Order("product_id, id")
+	promotions = promotions.Select("DISTINCT ON (product_id) *")
 
 	s1 := tx.Model(&model.ProductVariantDetail{})
 	s1 = s1.Select("min(price - COALESCE(promotions.amount, 0)) as min, max(price - COALESCE(promotions.amount, 0)) as max, min(price) as min_before_disc, max(price) as max_before_disc, product_variant_details.product_id")
