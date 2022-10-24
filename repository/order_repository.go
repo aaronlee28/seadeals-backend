@@ -71,6 +71,7 @@ func (o *orderRepository) GetOrderBySellerID(tx *gorm.DB, sellerID uint, query *
 	}
 
 	result = result.Preload("Delivery.DeliveryActivity")
+	result = result.Preload("User")
 	result = result.Preload("Delivery.Courier")
 	result = result.Preload("Seller")
 	result = result.Preload("Complaint")
@@ -121,6 +122,7 @@ func (o *orderRepository) GetOrderByUserID(tx *gorm.DB, userID uint, query *Orde
 	}
 
 	result = result.Preload("Delivery.DeliveryActivity")
+	result = result.Preload("User")
 	result = result.Preload("Delivery.Courier")
 	result = result.Preload("Seller")
 	result = result.Preload("Complaint")

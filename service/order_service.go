@@ -399,7 +399,6 @@ func (o *orderService) GetOrderBySellerID(userID uint, query *repository.OrderQu
 			deliveryTotal = order.Delivery.Total
 			deliveryID = order.Delivery.ID
 		}
-
 		var res = &dto.OrderListRes{
 			ID:        order.ID,
 			BuyerName: order.User.FullName,
