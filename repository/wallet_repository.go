@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"seadeals-backend/apperror"
 	"seadeals-backend/dto"
 	"seadeals-backend/model"
@@ -90,6 +91,7 @@ func (w *walletRepository) GetTransactionsByUserID(tx *gorm.DB, userID uint) ([]
 
 func (w *walletRepository) TransactionDetails(tx *gorm.DB, transactionID uint) (*model.Transaction, error) {
 	var transaction = &model.Transaction{}
+	var orders []*model.Order
 	result := tx.Where("id = ?", transactionID).First(&transaction)
 	if result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
@@ -97,6 +99,15 @@ func (w *walletRepository) TransactionDetails(tx *gorm.DB, transactionID uint) (
 		}
 		return nil, apperror.InternalServerError("cannot find transactions")
 	}
+	result2 := tx.Preload("Seller").Preload("OrderItems.ProductVariantDetail.ProductVariant1").Preload("OrderItems.ProductVariantDetail.ProductVariant2").Preload("OrderItems.ProductVariantDetail.Product").Preload("OrderItems.ProductVariantDetail.Product.Promotion").Where("transaction_id = ?", transactionID).Find(&orders)
+
+	if result2.Error != nil {
+		return nil, apperror.InternalServerError("cannot find order in the transaction")
+	}
+	for _, order := range orders {
+		fmt.Println(order.Seller.Name)
+	}
+	transaction.Orders = orders
 	return transaction, nil
 }
 

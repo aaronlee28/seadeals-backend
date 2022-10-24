@@ -127,6 +127,7 @@ func (w *walletService) TransactionDetails(userID uint, transactionID uint) (*dt
 		VoucherID:     t.VoucherID,
 		Total:         t.Total,
 		PaymentMethod: t.PaymentMethod,
+		Orders:        t.Orders,
 		CreatedAt:     t.CreatedAt,
 		UpdatedAt:     t.UpdatedAt,
 	}
