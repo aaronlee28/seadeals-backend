@@ -348,7 +348,7 @@ func (u *userSeaPayAccountServ) PayWithSeaLabsPay(userID uint, req *dto.Checkout
 		}
 
 		delivery := &model.Delivery{
-			Address:         seller.Address.Address,
+			Address:         buyerAddress.Address + ", " + buyerAddress.Province + ", " + buyerAddress.City + ", " + buyerAddress.SubDistrict + ", " + buyerAddress.PostalCode,
 			Status:          dto.DeliveryWaitingForPayment,
 			DeliveryNumber:  helper.RandomString(10),
 			Eta:             deliveryResult.Eta,
