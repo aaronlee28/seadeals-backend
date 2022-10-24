@@ -1,6 +1,7 @@
 package service_test
 
 import (
+	"errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"seadeals-backend/dto"
@@ -25,12 +26,48 @@ func TestProductVariantService_FindAllProductVariantByProductID(t *testing.T) {
 			ProductVarDetRepo:  mockRepo3,
 		}
 		s := service.NewProductVariantService(cfg)
-		expectedRes := &dto.ProductVariantPriceRes{}
-		mockRepo1.On("DeleteCartItem", mock.AnythingOfType(testutil.GormDBPointerType), uint(1), uint(1)).Return(&model.CartItem{}, nil)
+		var mockArray []*model.ProductVariantDetail
+		mockReturn := &model.ProductVariantDetail{}
+		mockArray = append(mockArray, mockReturn)
 
-		res, err := s.DeleteCartItem(uint(1), uint(1))
+		var mockArray2 []*dto.GetProductVariantRes
+		mockReturn2 := &dto.GetProductVariantRes{}
+		mockArray2 = append(mockArray2, mockReturn2)
+		expectedRes := &dto.ProductVariantRes{ProductVariants: mockArray2}
+
+		mockRepo2.On("FindAllProductVariantByProductID", mock.AnythingOfType(testutil.GormDBPointerType), mock.AnythingOfType("uint")).Return(mockArray, nil)
+
+		res, err := s.FindAllProductVariantByProductID(uint(1))
 
 		assert.Nil(t, err)
 		assert.Equal(t, expectedRes, res)
+	})
+
+	t.Run("Should return error", func(t *testing.T) {
+		gormDB := testutil.MockDB()
+		mockRepo1 := new(mocks.ProductRepository)
+		mockRepo2 := new(mocks.ProductVariantRepository)
+		mockRepo3 := new(mocks.ProductVariantDetailRepository)
+		cfg := &service.ProductVariantServiceConfig{
+			DB:                 gormDB,
+			ProductRepo:        mockRepo1,
+			ProductVariantRepo: mockRepo2,
+			ProductVarDetRepo:  mockRepo3,
+		}
+		s := service.NewProductVariantService(cfg)
+		var mockArray []*model.ProductVariantDetail
+		mockReturn := &model.ProductVariantDetail{}
+		mockArray = append(mockArray, mockReturn)
+
+		var mockArray2 []*dto.GetProductVariantRes
+		mockReturn2 := &dto.GetProductVariantRes{}
+		mockArray2 = append(mockArray2, mockReturn2)
+
+		mockRepo2.On("FindAllProductVariantByProductID", mock.AnythingOfType(testutil.GormDBPointerType), mock.AnythingOfType("uint")).Return(nil, errors.New(""))
+
+		res, err := s.FindAllProductVariantByProductID(uint(1))
+
+		assert.Nil(t, res)
+		assert.NotNil(t, err)
 	})
 }
