@@ -7,6 +7,7 @@ import (
 
 type OrderListRes struct {
 	ID                       uint                  `json:"id"`
+	BuyerName                string                `json:"buyer_name"`
 	SellerID                 uint                  `json:"seller_id"`
 	Seller                   SellerOrderList       `json:"seller"`
 	VoucherID                uint                  `json:"voucher_id"`

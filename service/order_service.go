@@ -401,8 +401,9 @@ func (o *orderService) GetOrderBySellerID(userID uint, query *repository.OrderQu
 		}
 
 		var res = &dto.OrderListRes{
-			ID:       order.ID,
-			SellerID: order.SellerID,
+			ID:        order.ID,
+			BuyerName: order.User.FullName,
+			SellerID:  order.SellerID,
 			Seller: dto.SellerOrderList{
 				Name: order.Seller.Name,
 			},
@@ -537,8 +538,9 @@ func (o *orderService) GetOrderByUserID(userID uint, query *repository.OrderQuer
 		}
 
 		var res = &dto.OrderListRes{
-			ID:       order.ID,
-			SellerID: order.SellerID,
+			ID:        order.ID,
+			BuyerName: order.User.FullName,
+			SellerID:  order.SellerID,
 			Seller: dto.SellerOrderList{
 				Name: order.Seller.Name,
 			},
