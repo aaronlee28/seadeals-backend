@@ -167,7 +167,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 
 	// ORDER
 	r.GET("/sellers/orders", middleware.AuthorizeJWTFor(model.SellerRoleName), h.GetSellerOrders)
-	r.GET("/user/orders", middleware.AuthorizeJWTFor(model.SellerRoleName), h.GetBuyerOrders)
+	r.GET("/user/orders", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetBuyerOrders)
 	r.POST("/user/finish/orders", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.FinishOrderReq{}
 	}), h.FinishOrder)
@@ -201,7 +201,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		return &dto.PatchVoucherReq{}
 	}), h.UpdateVoucher)
 	r.DELETE("/vouchers/:id", middleware.AuthorizeJWTFor(model.SellerRoleName), h.DeleteVoucherByID)
-	r.GET("/global-vouchers/", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetAvailableGlobalVouchers)
+	r.GET("/global-vouchers", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetAvailableGlobalVouchers)
 
 	// REFUND
 	r.POST("/cancel/orders", middleware.AuthorizeJWTFor(model.SellerRoleName), middleware.RequestValidator(func() any {
