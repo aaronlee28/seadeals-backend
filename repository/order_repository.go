@@ -36,6 +36,7 @@ type OrderRepository interface {
 	UpdateStockByProductVariantDetailID(pvdID uint, quantity uint)
 	UpdateOrderStatusByTransID(tx *gorm.DB, transactionID uint, status string) ([]*model.Order, error)
 	CheckAndUpdateOnOrderDelivered() []*model.Order
+	GetOrderByID(tx *gorm.DB, userID uint, orderID uint) (*model.Order, error)
 }
 
 type orderRepository struct {
@@ -323,4 +324,31 @@ func (o *orderRepository) UpdateOrderStatusByTransID(tx *gorm.DB, transactionID 
 		return nil, apperror.InternalServerError("Cannot find order")
 	}
 	return orders, nil
+}
+
+func (o *orderRepository) GetOrderByID(tx *gorm.DB, userID uint, orderID uint) (*model.Order, error) {
+	var order *model.Order
+	result := tx.Model(&order).Where("user_id = ?", userID).Where("order_id = ?", orderID)
+	result = result.Preload("Delivery.DeliveryActivity")
+	result = result.Preload("User")
+	result = result.Preload("Delivery.Courier")
+	result = result.Preload("Seller")
+	result = result.Preload("Complaint")
+	result = result.Preload("Voucher")
+	result = result.Preload("OrderItems.ProductVariantDetail.ProductVariant1")
+	result = result.Preload("OrderItems.ProductVariantDetail.ProductVariant2")
+	result = result.Preload("OrderItems.ProductVariantDetail.Product.ProductPhotos")
+	result = result.Preload("OrderItems.ProductVariantDetail.Product.Category")
+	result = result.Preload("OrderItems.ProductVariantDetail.Product.Promotion")
+	result = result.Preload("OrderItems.ProductVariantDetail.Product.Review", "user_id = ?", userID)
+	result = result.Preload("Transaction")
+	result = result.Order("updated_at desc").Order("id").First(&order)
+
+	if result.Error != nil {
+		if result.Error == gorm.ErrRecordNotFound {
+			return nil, apperror.BadRequestError("order doesn't exists")
+		}
+		return nil, apperror.InternalServerError("Cannot find order")
+	}
+	return order, nil
 }

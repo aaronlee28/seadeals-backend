@@ -167,7 +167,8 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 
 	// ORDER
 	r.GET("/sellers/orders", middleware.AuthorizeJWTFor(model.SellerRoleName), h.GetSellerOrders)
-	r.GET("/user/orders", middleware.AuthorizeJWTFor(model.SellerRoleName), h.GetBuyerOrders)
+	r.GET("/user/orders", middleware.AuthorizeJWTFor(model.SellerRoleName), h.GetOrderByID)
+	r.GET("/user/order/:id", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetBuyerOrders)
 	r.POST("/user/finish/orders", middleware.AuthorizeJWTFor(model.UserRoleName), middleware.RequestValidator(func() any {
 		return &dto.FinishOrderReq{}
 	}), h.FinishOrder)
