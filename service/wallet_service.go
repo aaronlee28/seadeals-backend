@@ -125,6 +125,7 @@ func (w *walletService) TransactionDetails(userID uint, transactionID uint) (*dt
 	transaction := &dto.TransactionDetailsRes{
 		Id:            t.ID,
 		VoucherID:     t.VoucherID,
+		Voucher:       t.Voucher,
 		Total:         t.Total,
 		PaymentMethod: t.PaymentMethod,
 		Orders:        t.Orders,
