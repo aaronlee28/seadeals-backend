@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"seadeals-backend/apperror"
@@ -218,4 +219,26 @@ func (h *Handler) GetTotalPredictedPrice(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, dto.StatusOKResponse(response))
+}
+
+func (h *Handler) GetOrderByID(ctx *gin.Context) {
+	payload, _ := ctx.Get("user")
+	user, _ := payload.(dto.UserJWT)
+	userID := user.UserID
+
+	idParam, err := strconv.ParseUint(ctx.Param("id"), 10, 64)
+	if err != nil {
+		_ = ctx.Error(apperror.BadRequestError("Invalid id format"))
+		return
+	}
+	fmt.Println("hahahaha", userID)
+	fmt.Println("hahahaha", idParam)
+	result, err := h.orderService.GetOrderByID(userID, uint(idParam))
+	if err != nil {
+		_ = ctx.Error(err)
+		return
+	}
+
+	successResponse := dto.StatusOKResponse(result)
+	ctx.JSON(http.StatusOK, successResponse)
 }

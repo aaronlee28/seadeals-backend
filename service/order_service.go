@@ -31,6 +31,7 @@ type OrderService interface {
 
 	RunCronJobs()
 	GetTotalPredictedPrice(req *dto.PredictedPriceReq, userID uint) (*dto.TotalPredictedPriceRes, error)
+	GetOrderByID(userID uint, orderID uint) (*dto.OrderListRes, error)
 }
 
 type orderService struct {
@@ -1310,5 +1311,142 @@ func (o *orderService) GetTotalPredictedPrice(req *dto.PredictedPriceReq, userID
 	}
 
 	res.TotalPredictedPrice = totalAllOrderPrices + totalDelivery
+	return res, nil
+}
+
+func (o *orderService) GetOrderByID(userID uint, orderID uint) (*dto.OrderListRes, error) {
+	tx := o.db.Begin()
+	var err error
+	defer helper.CommitOrRollback(tx, &err)
+
+	order, err := o.orderRepository.GetOrderByID(tx, userID, orderID)
+	if err != nil {
+		return nil, err
+	}
+	if order.UserID != userID {
+		err = apperror.BadRequestError("Tidak bisa membatalkan order user lain")
+		return nil, err
+	}
+	var hasReviewEveryItem = true
+	var voucher *dto.VoucherOrderList
+	var voucherID uint
+
+	var payedAt *time.Time
+	if order.Transaction.Status == dto.TransactionPayed {
+		payedAt = &order.Transaction.UpdatedAt
+	}
+
+	var orderItems []*dto.OrderItemOrderList
+	var priceBeforeDisc float64
+	for _, item := range order.OrderItems {
+		var variantDetail string
+		if item.ProductVariantDetail.ProductVariant1 != nil {
+			variantDetail += *item.ProductVariantDetail.Variant1Value
+		}
+		if item.ProductVariantDetail.ProductVariant2 != nil {
+			variantDetail += ", " + *item.ProductVariantDetail.Variant2Value
+		}
+
+		var productImageURL string
+		if len(item.ProductVariantDetail.Product.ProductPhotos) > 0 {
+			productImageURL = item.ProductVariantDetail.Product.ProductPhotos[0].PhotoURL
+		}
+
+		var review *dto.ReviewOrderList
+		if item.ProductVariantDetail.Product.Review != nil {
+			review = &dto.ReviewOrderList{
+				ID:          item.ProductVariantDetail.Product.Review.ID,
+				Rating:      item.ProductVariantDetail.Product.Review.Rating,
+				Description: item.ProductVariantDetail.Product.Review.Description,
+				ImageUrl:    item.ProductVariantDetail.Product.Review.ImageURL,
+			}
+		} else {
+			hasReviewEveryItem = false
+		}
+
+		var orderItemRes = &dto.OrderItemOrderList{
+			ID:                     item.ID,
+			ProductVariantDetailID: item.ProductVariantDetailID,
+			ProductDetail: dto.ProductDetailOrderList{
+				ID:           item.ProductVariantDetail.Product.ID,
+				Name:         item.ProductVariantDetail.Product.Name,
+				CategoryID:   item.ProductVariantDetail.Product.CategoryID,
+				Category:     item.ProductVariantDetail.Product.Category.Name,
+				Slug:         item.ProductVariantDetail.Product.Slug,
+				PhotoURL:     productImageURL,
+				Variant:      variantDetail,
+				Price:        item.ProductVariantDetail.Price,
+				ReviewByUser: review,
+			},
+			Quantity: item.Quantity,
+			Subtotal: item.Subtotal,
+		}
+		priceBeforeDisc += item.Subtotal
+		orderItems = append(orderItems, orderItemRes)
+	}
+
+	if order.VoucherID != nil && *order.VoucherID != 0 {
+		voucherID = *order.VoucherID
+		voucher = &dto.VoucherOrderList{
+			Code:          order.Voucher.Code,
+			VoucherType:   order.Voucher.AmountType,
+			Amount:        order.Voucher.Amount,
+			AmountReduced: priceBeforeDisc - order.Total,
+		}
+	}
+
+	var orderDelivery *dto.DeliveryOrderList
+	var deliveryTotal float64
+	var deliveryID uint
+	if order.Delivery != nil {
+		var orderDeliveryActivity []*dto.DeliveryActivityOrderList
+		for _, activity := range order.Delivery.DeliveryActivity {
+			var deliveryActivity = &dto.DeliveryActivityOrderList{
+				Description: activity.Description,
+				CreatedAt:   activity.CreatedAt,
+			}
+			orderDeliveryActivity = append(orderDeliveryActivity, deliveryActivity)
+		}
+
+		orderDelivery = &dto.DeliveryOrderList{
+			DestinationAddress: order.Delivery.Address,
+			Status:             order.Delivery.Status,
+			DeliveryNumber:     order.Delivery.DeliveryNumber,
+			ETA:                order.Delivery.Eta,
+			CourierID:          order.Delivery.CourierID,
+			Courier:            order.Delivery.Courier.Name,
+			Activity:           orderDeliveryActivity,
+		}
+		deliveryTotal = order.Delivery.Total
+		deliveryID = order.Delivery.ID
+	}
+
+	var res = &dto.OrderListRes{
+		ID:        order.ID,
+		BuyerName: order.User.FullName,
+		SellerID:  order.SellerID,
+		Seller: dto.SellerOrderList{
+			Name: order.Seller.Name,
+		},
+		VoucherID:     voucherID,
+		Voucher:       voucher,
+		TransactionID: order.TransactionID,
+		Transaction: dto.TransactionOrderList{
+			PaymentMethod: order.Transaction.PaymentMethod,
+			Total:         order.Transaction.Total,
+			Status:        order.Transaction.Status,
+			PayedAt:       payedAt,
+		},
+		TotalOrderPrice:          priceBeforeDisc,
+		TotalOrderPriceAfterDisc: order.Total,
+		TotalDelivery:            deliveryTotal,
+		Status:                   order.Status,
+		HasReviewedAllItem:       hasReviewEveryItem,
+		OrderItems:               orderItems,
+		DeliveryID:               deliveryID,
+		Delivery:                 orderDelivery,
+		Complaint:                order.Complaint,
+		UpdatedAt:                order.UpdatedAt,
+	}
 	return res, nil
 }
