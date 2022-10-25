@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"seadeals-backend/apperror"
@@ -231,8 +230,6 @@ func (h *Handler) GetOrderByID(ctx *gin.Context) {
 		_ = ctx.Error(apperror.BadRequestError("Invalid id format"))
 		return
 	}
-	fmt.Println("hahahaha", userID)
-	fmt.Println("hahahaha", idParam)
 	result, err := h.orderService.GetOrderByID(userID, uint(idParam))
 	if err != nil {
 		_ = ctx.Error(err)

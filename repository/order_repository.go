@@ -325,7 +325,7 @@ func (o *orderRepository) UpdateOrderStatusByTransID(tx *gorm.DB, transactionID 
 
 func (o *orderRepository) GetOrderByID(tx *gorm.DB, userID uint, orderID uint) (*model.Order, error) {
 	var order *model.Order
-	result := tx.Model(&order).Where("user_id = ?", userID).Where("order_id = ?", orderID)
+	result := tx.Model(&order).Where("id = ? AND user_id = ?", orderID, userID)
 	result = result.Preload("Delivery.DeliveryActivity")
 	result = result.Preload("User")
 	result = result.Preload("Delivery.Courier")
