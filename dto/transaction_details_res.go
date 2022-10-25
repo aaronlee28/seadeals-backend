@@ -8,6 +8,7 @@ import (
 type TransactionDetailsRes struct {
 	Id            uint           `json:"id"`
 	VoucherID     *uint          `json:"voucher_id"`
+	Voucher       *model.Voucher `json:"voucher"`
 	Total         float64        `json:"total"`
 	PaymentType   string         `json:"payment_type"`
 	PaymentMethod string         `json:"payment_method"`

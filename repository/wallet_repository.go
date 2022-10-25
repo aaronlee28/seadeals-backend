@@ -92,7 +92,7 @@ func (w *walletRepository) GetTransactionsByUserID(tx *gorm.DB, userID uint) ([]
 func (w *walletRepository) TransactionDetails(tx *gorm.DB, transactionID uint) (*model.Transaction, error) {
 	var transaction = &model.Transaction{}
 	var orders []*model.Order
-	result := tx.Where("id = ?", transactionID).First(&transaction)
+	result := tx.Where("id = ?", transactionID).Preload("Voucher").First(&transaction)
 	if result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
 			return nil, apperror.NotFoundError("No such transaction exists")
