@@ -574,7 +574,7 @@ func (w *walletService) PayOrderWithWallet(userID uint, req *dto.CheckoutCartReq
 		}
 
 		delivery := &model.Delivery{
-			Address:         seller.Address.Address,
+			Address:         buyerAddress.Address + ", " + buyerAddress.Province + ", " + buyerAddress.City + ", " + buyerAddress.SubDistrict + ", " + buyerAddress.PostalCode,
 			Status:          dto.DeliveryWaitingForSeller,
 			DeliveryNumber:  helper.RandomString(10),
 			Total:           float64(deliveryResult.Total),

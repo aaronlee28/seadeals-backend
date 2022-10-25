@@ -52,7 +52,6 @@ func (o *orderRepository) GetOrderBySellerID(tx *gorm.DB, sellerID uint, query *
 	if query.Filter != "" {
 		var filters []string
 		filters = strings.Split(query.Filter, ",")
-		fmt.Println(filters)
 		result = result.Where("status IN (?)", filters)
 	}
 
@@ -75,7 +74,7 @@ func (o *orderRepository) GetOrderBySellerID(tx *gorm.DB, sellerID uint, query *
 	result = result.Preload("User")
 	result = result.Preload("Delivery.Courier")
 	result = result.Preload("Seller")
-	result = result.Preload("Complaint")
+	result = result.Preload("Complaint.ComplaintPhotos")
 	result = result.Preload("Voucher")
 	result = result.Preload("OrderItems.ProductVariantDetail.ProductVariant1")
 	result = result.Preload("OrderItems.ProductVariantDetail.ProductVariant2")
@@ -99,11 +98,9 @@ func (o *orderRepository) GetOrderBySellerID(tx *gorm.DB, sellerID uint, query *
 func (o *orderRepository) GetOrderByUserID(tx *gorm.DB, userID uint, query *OrderQuery) ([]*model.Order, int64, int64, error) {
 	var orders []*model.Order
 	result := tx.Model(&orders).Where("user_id = ?", userID)
-	fmt.Println("FILTER", query.Filter)
 	if query.Filter != "" {
 		var filters []string
 		filters = strings.Split(query.Filter, ",")
-		fmt.Println(filters)
 		result = result.Where("status IN (?)", filters)
 	}
 
@@ -126,7 +123,7 @@ func (o *orderRepository) GetOrderByUserID(tx *gorm.DB, userID uint, query *Orde
 	result = result.Preload("User")
 	result = result.Preload("Delivery.Courier")
 	result = result.Preload("Seller")
-	result = result.Preload("Complaint")
+	result = result.Preload("Complaint.ComplaintPhotos")
 	result = result.Preload("Voucher")
 	result = result.Preload("OrderItems.ProductVariantDetail.ProductVariant1")
 	result = result.Preload("OrderItems.ProductVariantDetail.ProductVariant2")
