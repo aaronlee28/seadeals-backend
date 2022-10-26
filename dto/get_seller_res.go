@@ -8,6 +8,7 @@ import (
 
 type GetSellerRes struct {
 	ID            uint           `json:"id"`
+	UserID        uint           `json:"user_id"`
 	Name          string         `json:"name"`
 	Description   string         `json:"description"`
 	Address       *GetAddressRes `json:"address"`
@@ -66,6 +67,7 @@ func (_ *GetSellerRes) From(s *model.Seller) *GetSellerRes {
 
 	return &GetSellerRes{
 		ID:          s.ID,
+		UserID:      s.UserID,
 		Name:        s.Name,
 		Description: s.Description,
 		Address:     address,
