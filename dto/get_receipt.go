@@ -38,6 +38,7 @@ type OrderItemReceipt struct {
 	Weight       uint    `json:"weight"`
 	Quantity     uint    `json:"quantity"`
 	PricePerItem float64 `json:"price_per_item"`
+	Discount     float64 `json:"discount"`
 	Subtotal     float64 `json:"subtotal"`
 	Variant      string  `json:"variant"`
 }

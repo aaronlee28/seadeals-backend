@@ -161,6 +161,7 @@ func (o *orderService) GetDetailOrderForReceipt(orderID uint, userID uint) (*dto
 			Weight:       uint(item.ProductVariantDetail.Product.ProductDetail.Weight),
 			Quantity:     item.Quantity,
 			PricePerItem: item.ProductVariantDetail.Price,
+			Discount:     item.ProductVariantDetail.Price*float64(item.Quantity) - item.Subtotal,
 			Subtotal:     item.Subtotal,
 			Variant:      variantDetail,
 		}
@@ -232,7 +233,7 @@ func (o *orderService) GetDetailOrderForReceipt(orderID uint, userID uint) (*dto
 		},
 		OrderDetail: dto.OrderDetailReceipt{
 			TotalQuantity: totalQuantity,
-			TotalOrder:    order.Total,
+			TotalOrder:    totalOrderBeforeDisc,
 			DeliveryPrice: order.Delivery.Total,
 			Total:         order.Total + order.Delivery.Total,
 			ShopVoucher:   voucher,
