@@ -228,7 +228,7 @@ func (u *userService) UserDetails(userID uint) (*dto.UserDetailsRes, error) {
 	res := &dto.UserDetailsRes{
 		Username:  userDetails.Username,
 		FullName:  userDetails.FullName,
-		Email:     userDetails.FullName,
+		Email:     userDetails.Email,
 		Phone:     userDetails.Phone,
 		Gender:    userDetails.Gender,
 		BirthDate: userDetails.BirthDate,
