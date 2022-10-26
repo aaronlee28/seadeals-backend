@@ -283,6 +283,7 @@ func (o *orderService) GetDetailOrderForThermal(orderID uint, userID uint) (*dto
 			variantDetail += ", " + *item.ProductVariantDetail.Variant2Value
 		}
 		product := &dto.ProductDetailThermal{
+			ID:       item.ProductVariantDetail.ID,
 			Name:     item.ProductVariantDetail.Product.Name,
 			Variant:  variantDetail,
 			Quantity: item.Quantity,
@@ -296,10 +297,16 @@ func (o *orderService) GetDetailOrderForThermal(orderID uint, userID uint) (*dto
 			Address: order.Delivery.Address,
 			City:    order.Delivery.CityDestination,
 		},
+		Courier: dto.CourierThermal{
+			Name: order.Delivery.Courier.Name,
+			Code: order.Delivery.Courier.Code,
+		},
 		SellerName:     order.Seller.Name,
 		TotalWeight:    order.Delivery.Weight,
 		DeliveryNumber: order.Delivery.DeliveryNumber,
+		Price:          order.Delivery.Total,
 		OriginCity:     order.Seller.Address.City,
+		IssuedAt:       order.CreatedAt,
 		Products:       products,
 	}
 
