@@ -188,6 +188,8 @@ func (o *orderRepository) GetOrderDetailForThermal(tx *gorm.DB, orderID uint) (*
 	var order = &model.Order{}
 	order.ID = orderID
 	result := tx.Model(&order).Preload("OrderItems.ProductVariantDetail.Product.ProductDetail")
+	result = result.Preload("Transaction.Orders.OrderItems.ProductVariantDetail.ProductVariant1")
+	result = result.Preload("Transaction.Orders.OrderItems.ProductVariantDetail.ProductVariant2")
 	result = result.Preload("Delivery.Courier")
 	result = result.Preload("Seller.Address")
 	result = result.Preload("User")

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"seadeals-backend/dto"
 	"seadeals-backend/repository"
+	"strconv"
 )
 
 func (h *Handler) DeleteCartItem(ctx *gin.Context) {
@@ -76,6 +77,8 @@ func (h *Handler) GetCartItem(ctx *gin.Context) {
 		return
 	}
 
-	successResponse := dto.StatusOKResponse(gin.H{"total_page": totalPage, "total_data": totalData, "current_page": 1, "limit": 5, "cart_items": result})
+	limit, _ := strconv.Atoi(query.Limit)
+
+	successResponse := dto.StatusOKResponse(gin.H{"total_page": totalPage, "total_data": totalData, "current_page": 1, "limit": limit, "cart_items": result})
 	ctx.JSON(http.StatusOK, successResponse)
 }
