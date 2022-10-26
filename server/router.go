@@ -202,7 +202,7 @@ func NewRouter(c *RouterConfig) *gin.Engine {
 		return &dto.PatchVoucherReq{}
 	}), h.UpdateVoucher)
 	r.DELETE("/vouchers/:id", middleware.AuthorizeJWTFor(model.SellerRoleName), h.DeleteVoucherByID)
-	r.GET("/global-vouchers/", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetAvailableGlobalVouchers)
+	r.GET("/global-vouchers", middleware.AuthorizeJWTFor(model.UserRoleName), h.GetAvailableGlobalVouchers)
 
 	// REFUND
 	r.POST("/cancel/orders", middleware.AuthorizeJWTFor(model.SellerRoleName), middleware.RequestValidator(func() any {
