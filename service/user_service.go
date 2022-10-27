@@ -262,6 +262,11 @@ func (u *userService) ChangeUserPassword(userID uint, req *dto.ChangePasswordReq
 	var userDetails *model.User
 	userDetails, err = u.userRepository.GetUserDetailsByID(tx, userID)
 
+	user, err := u.userRepository.MatchingCredential(tx, req.Email, req.CurrentPassword)
+	if err != nil || user == nil {
+		return apperror.BadRequestError("incorrect current password")
+	}
+
 	isMatch, _ := regexp.MatchString(req.NewPassword, req.RepeatNewPassword)
 	if !isMatch {
 		return apperror.BadRequestError("Password does not match")
