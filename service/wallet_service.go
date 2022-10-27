@@ -510,6 +510,9 @@ func (w *walletService) PayOrderWithWallet(userID uint, req *dto.CheckoutCartReq
 			} else {
 				totalOrderItem = cartItem.ProductVariantDetail.Price * float64(cartItem.Quantity)
 			}
+			if totalOrderItem < 0 {
+				totalOrderItem = 0
+			}
 			totalOrder += totalOrderItem
 
 			// Get weight
@@ -541,6 +544,10 @@ func (w *walletService) PayOrderWithWallet(userID uint, req *dto.CheckoutCartReq
 		} else if voucher != nil {
 			err = apperror.BadRequestError("Order tidak memenuhi kriteria voucher " + voucher.Name)
 			return nil, err
+		}
+
+		if totalOrder < 0 {
+			totalOrder = 0
 		}
 		var seller *model.Seller
 		seller, err = w.sellerRepository.FindSellerByID(tx, item.SellerID)
@@ -611,7 +618,7 @@ func (w *walletService) PayOrderWithWallet(userID uint, req *dto.CheckoutCartReq
 			UserID:   userID,
 			OrderID:  order.ID,
 			SellerID: seller.ID,
-			Total:    totalOrder + delivery.Total,
+			Total:    totalOrder,
 			HasTaken: false,
 		}
 		_, err = w.accountHolderRepo.SendToAccountHolder(tx, accountHolder)
@@ -634,6 +641,9 @@ func (w *walletService) PayOrderWithWallet(userID uint, req *dto.CheckoutCartReq
 	} else if globalVoucher != nil {
 		err = apperror.BadRequestError("Order tidak memenuhi kriteria voucher global")
 		return nil, err
+	}
+	if totalOrderPrice < 0 {
+		totalOrderPrice = 0
 	}
 
 	var totalTransaction float64

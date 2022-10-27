@@ -284,6 +284,9 @@ func (u *userSeaPayAccountServ) PayWithSeaLabsPay(userID uint, req *dto.Checkout
 			} else {
 				totalOrderItem = cartItem.ProductVariantDetail.Price * float64(cartItem.Quantity)
 			}
+			if totalOrderItem < 0 {
+				totalOrderItem = 0
+			}
 			orderSubtotal += totalOrderItem
 
 			// Get weight
@@ -316,6 +319,9 @@ func (u *userSeaPayAccountServ) PayWithSeaLabsPay(userID uint, req *dto.Checkout
 		} else if voucher != nil {
 			err = apperror.BadRequestError("Order tidak memenuhi kriteria voucher " + voucher.Name)
 			return "", nil, err
+		}
+		if orderSubtotal < 0 {
+			orderSubtotal = 0
 		}
 
 		var seller *model.Seller
@@ -385,7 +391,7 @@ func (u *userSeaPayAccountServ) PayWithSeaLabsPay(userID uint, req *dto.Checkout
 			UserID:   userID,
 			OrderID:  order.ID,
 			SellerID: seller.ID,
-			Total:    orderSubtotal + delivery.Total,
+			Total:    orderSubtotal,
 			HasTaken: false,
 		}
 		_, err = u.accountHolderRepo.SendToAccountHolder(tx, accountHolder)
@@ -403,6 +409,9 @@ func (u *userSeaPayAccountServ) PayWithSeaLabsPay(userID uint, req *dto.Checkout
 	} else if globalVoucher != nil {
 		err = apperror.BadRequestError("Order tidak memenuhi kriteria voucher global")
 		return "", nil, err
+	}
+	if totalOrderPrice < 0 {
+		totalOrderPrice = 0
 	}
 
 	var totalTransaction float64

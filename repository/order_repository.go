@@ -29,13 +29,13 @@ type OrderRepository interface {
 
 	UpdateOrderStatus(tx *gorm.DB, orderID uint, status string) (*model.Order, error)
 	CheckAndUpdateOnDelivery() []*model.Order
-	CheckAndUpdateWaitingForSeller() []*model.Order
+	FindAndUpdateWaitingForSellerToRefunded() []*model.Order
 	RefundToWalletByUserID(userID uint, refundedAmount float64) *model.Wallet
 	AddToWalletTransaction(walletID uint, refundAmount float64)
 	GetOrderItemsByOrderID(orderID uint) []*model.OrderItem
 	UpdateStockByProductVariantDetailID(pvdID uint, quantity uint)
 	UpdateOrderStatusByTransID(tx *gorm.DB, transactionID uint, status string) ([]*model.Order, error)
-	CheckAndUpdateOnOrderDelivered() []*model.Order
+	FindAndUpdateDeliveredOrderToDone() []*model.Order
 	GetOrderByID(tx *gorm.DB, userID uint, orderID uint) (*model.Order, error)
 }
 
@@ -229,7 +229,7 @@ func (o *orderRepository) CheckAndUpdateOnDelivery() []*model.Order {
 
 }
 
-func (o *orderRepository) CheckAndUpdateOnOrderDelivered() []*model.Order {
+func (o *orderRepository) FindAndUpdateDeliveredOrderToDone() []*model.Order {
 	var order []*model.Order
 	tx := db.Get().Begin()
 	_ = tx.Model(&order).Clauses(clause.Returning{}).Where("status = ?", dto.OrderDelivered).Where("? >= updated_at at time zone 'UTC' + interval '2 day'", time.Now()).Update("status", dto.OrderDone)
@@ -239,7 +239,7 @@ func (o *orderRepository) CheckAndUpdateOnOrderDelivered() []*model.Order {
 
 }
 
-func (o *orderRepository) CheckAndUpdateWaitingForSeller() []*model.Order {
+func (o *orderRepository) FindAndUpdateWaitingForSellerToRefunded() []*model.Order {
 	tx := db.Get().Begin()
 	var orders []*model.Order
 	result := tx.Clauses(clause.Returning{}).Where("status = ?", dto.OrderWaitingSeller).Where("? >= updated_at at time zone 'UTC' + interval '3 day'", time.Now()).Find(&orders).Update("status", dto.OrderRefunded)
