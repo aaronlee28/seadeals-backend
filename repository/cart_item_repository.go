@@ -82,8 +82,9 @@ func (c *cartItemRepository) UpdateCart(tx *gorm.DB, req *dto.UpdateCartItemReq,
 func (c *cartItemRepository) GetCartItem(tx *gorm.DB, query *Query, userID uint) ([]*model.CartItem, int64, int64, error) {
 	var cartItems []*model.CartItem
 	var count int64
+
 	result := tx.Model(&model.CartItem{})
-	result = result.Where("user_id = ?", userID).Where("quantity != ?", 0).Count(&count)
+	result = result.Order("created_at desc").Where("user_id = ?", userID).Where("quantity != ?", 0).Count(&count)
 	if result.Error != nil {
 		return nil, 0, 0, apperror.InternalServerError("Cannot count cart item")
 	}

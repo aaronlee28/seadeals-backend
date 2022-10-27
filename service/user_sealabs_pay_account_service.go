@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"gorm.io/gorm"
 	"seadeals-backend/apperror"
 	"seadeals-backend/config"
@@ -85,6 +86,7 @@ func (u *userSeaPayAccountServ) CheckSeaLabsAccountExists(req *dto.CheckSeaLabsP
 
 	sign := helper.GenerateHMACSHA256(combinedString, apiKey)
 	_, _, err = helper.TransactionToSeaLabsPay(req.AccountNumber, strconv.Itoa(1), sign, "/order/pay/sea-labs-pay/callback", "trx")
+	fmt.Println("hahahh", err)
 	if err != nil {
 		if err.Error() == "user not found" {
 			return nil, apperror.BadRequestError("Invalid Sea Labs Pay Account")
