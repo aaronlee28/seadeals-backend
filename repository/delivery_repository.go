@@ -16,7 +16,7 @@ type DeliveryRepository interface {
 	CreateDelivery(tx *gorm.DB, delivery *model.Delivery) (*model.Delivery, error)
 	UpdateDeliveryStatus(tx *gorm.DB, deliveryID uint, status string) (*model.Delivery, error)
 	UpdateDeliveryStatusByOrderID(tx *gorm.DB, orderID uint, status string) (*model.Delivery, error)
-	CheckAndUpdateToDelivered() ([]*model.Delivery, error)
+	FindAndUpdateOngoingToDelivered() ([]*model.Delivery, error)
 }
 
 type deliveryRepository struct{}
@@ -64,7 +64,7 @@ func (d *deliveryRepository) UpdateDeliveryStatusByOrderID(tx *gorm.DB, orderID 
 	return delivery, nil
 }
 
-func (d *deliveryRepository) CheckAndUpdateToDelivered() ([]*model.Delivery, error) {
+func (d *deliveryRepository) FindAndUpdateOngoingToDelivered() ([]*model.Delivery, error) {
 	tx := db.Get().Begin()
 	var deliveries []*model.Delivery
 	result := tx.Model(&deliveries).Clauses(clause.Returning{}).Where("status = ?", dto.DeliveryOngoing).Where("? >= updated_at at time zone 'UTC' + interval '1 day' * eta", time.Now()).Find(&deliveries).Update("status", dto.DeliveryDone)

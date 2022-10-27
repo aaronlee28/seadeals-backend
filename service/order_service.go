@@ -141,12 +141,17 @@ func (o *orderService) GetDetailOrderForReceipt(orderID uint, userID uint) (*dto
 		return nil, err
 	}
 
+	totalPriceBeforeDisc, err := o.transactionRepo.GetPriceBeforeGlobalDisc(tx, order.TransactionID)
+	if err != nil {
+		return nil, err
+	}
+
 	var totalQuantity uint
 	var totalOrderBeforeDisc float64
 	var orderItems []*dto.OrderItemReceipt
 	for _, item := range order.OrderItems {
 		totalQuantity += item.Quantity
-		totalOrderBeforeDisc += item.Subtotal
+		totalOrderBeforeDisc += math.Floor(item.Subtotal)
 
 		var variantDetail string
 		if item.ProductVariantDetail.ProductVariant1 != nil {
@@ -160,9 +165,9 @@ func (o *orderService) GetDetailOrderForReceipt(orderID uint, userID uint) (*dto
 			Name:         item.ProductVariantDetail.Product.Name,
 			Weight:       uint(item.ProductVariantDetail.Product.ProductDetail.Weight),
 			Quantity:     item.Quantity,
-			PricePerItem: item.ProductVariantDetail.Price,
-			Discount:     item.ProductVariantDetail.Price*float64(item.Quantity) - item.Subtotal,
-			Subtotal:     item.Subtotal,
+			PricePerItem: math.Floor(item.ProductVariantDetail.Price),
+			Discount:     math.Floor(item.ProductVariantDetail.Price*float64(item.Quantity) - item.Subtotal),
+			Subtotal:     math.Floor(item.Subtotal),
 			Variant:      variantDetail,
 		}
 		orderItems = append(orderItems, orderItem)
@@ -178,7 +183,24 @@ func (o *orderService) GetDetailOrderForReceipt(orderID uint, userID uint) (*dto
 			Type:        order.Voucher.AmountType,
 			Name:        order.Voucher.Name,
 			Amount:      order.Voucher.Amount,
-			TotalReduce: totalReduced,
+			TotalReduce: math.Floor(totalReduced),
+		}
+	}
+
+	var globalVoucherForDiscount *dto.GlobalVoucherForOrderReceipt
+	if order.Transaction.Voucher != nil {
+		var totalReduced float64
+		var globalVoucher = order.Transaction.Voucher
+		if globalVoucher.AmountType == "percentage" {
+			totalReduced = (globalVoucher.Amount / 100) * order.Total
+		} else {
+			totalReduced = (order.Total / totalPriceBeforeDisc) * order.Total
+		}
+		globalVoucherForDiscount = &dto.GlobalVoucherForOrderReceipt{
+			Type:        order.Transaction.Voucher.AmountType,
+			Name:        order.Transaction.Voucher.Name,
+			Amount:      order.Transaction.Voucher.Amount,
+			TotalReduce: math.Floor(totalReduced),
 		}
 	}
 
@@ -195,18 +217,18 @@ func (o *orderService) GetDetailOrderForReceipt(orderID uint, userID uint) (*dto
 				Name:         order.Transaction.Voucher.Name,
 				Type:         order.Transaction.Voucher.AmountType,
 				Amount:       order.Transaction.Voucher.Amount,
-				TotalReduced: totalReduced,
+				TotalReduced: math.Floor(totalReduced),
 			}
 			globalVouchers = append(globalVouchers, globalVoucher)
 		}
 
 		orderPayment := &dto.OrderPaymentReceipt{
 			SellerName: o2.Seller.Name,
-			TotalOrder: o2.Total,
+			TotalOrder: math.Floor(o2.Total + o2.Delivery.Total),
 		}
 		orderPayments = append(orderPayments, orderPayment)
-		totalTransaction += o2.Total
-		total += o2.Total - totalReduced
+		totalTransaction += math.Floor(o2.Total + o2.Delivery.Total)
+		total += math.Floor(totalTransaction - totalReduced)
 	}
 
 	if order.Transaction.Voucher != nil && order.Transaction.Voucher.AmountType == "quantity" {
@@ -232,18 +254,19 @@ func (o *orderService) GetDetailOrderForReceipt(orderID uint, userID uint) (*dto
 			Address:    order.Delivery.Address,
 		},
 		OrderDetail: dto.OrderDetailReceipt{
-			TotalQuantity: totalQuantity,
-			TotalOrder:    totalOrderBeforeDisc,
-			DeliveryPrice: order.Delivery.Total,
-			Total:         order.Total + order.Delivery.Total,
-			ShopVoucher:   voucher,
-			OrderItems:    orderItems,
+			TotalQuantity:         totalQuantity,
+			TotalOrder:            totalOrderBeforeDisc,
+			DeliveryPrice:         order.Delivery.Total,
+			Total:                 math.Floor(order.Total + order.Delivery.Total),
+			GlobalVoucherForOrder: globalVoucherForDiscount,
+			ShopVoucher:           voucher,
+			OrderItems:            orderItems,
 		},
 		Transaction: dto.TransactionReceipt{
 			TotalTransaction: totalTransaction,
 			GlobalDiscount:   globalVouchers,
 			OrderPayments:    orderPayments,
-			Total:            total,
+			Total:            math.Floor(total),
 		},
 		Courier: dto.CourierReceipt{
 			Name:    order.Delivery.Courier.Name,
@@ -1030,7 +1053,7 @@ func (o *orderService) RunCronJobs() {
 
 	c := cron.New(cron.WithLocation(time.UTC))
 	_, _ = c.AddFunc("@daily", func() {
-		deliveries, _ := o.deliveryRepo.CheckAndUpdateToDelivered()
+		deliveries, _ := o.deliveryRepo.FindAndUpdateOngoingToDelivered()
 		tx := o.db.Begin()
 		for _, delivery := range deliveries {
 			order, _ := o.orderRepository.UpdateOrderStatus(tx, delivery.OrderID, dto.OrderDelivered)
@@ -1046,7 +1069,7 @@ func (o *orderService) RunCronJobs() {
 	})
 
 	_, _ = c.AddFunc("@daily", func() {
-		orders := o.orderRepository.CheckAndUpdateOnOrderDelivered()
+		orders := o.orderRepository.FindAndUpdateDeliveredOrderToDone()
 		for _, order := range orders {
 			tx := o.db.Begin()
 			accountHolder, _ := o.accountHolderRepo.TakeMoneyFromAccountHolderByOrderID(tx, order.ID)
@@ -1081,7 +1104,7 @@ func (o *orderService) RunCronJobs() {
 	})
 
 	_, _ = c.AddFunc("@daily", func() {
-		orders := o.orderRepository.CheckAndUpdateWaitingForSeller()
+		orders := o.orderRepository.FindAndUpdateWaitingForSellerToRefunded()
 		for _, order := range orders {
 			tx := o.db.Begin()
 			orderDetail, _ := o.orderRepository.GetOrderDetailByID(tx, order.ID)
@@ -1239,6 +1262,9 @@ func (o *orderService) GetTotalPredictedPrice(req *dto.PredictedPriceReq, userID
 			} else {
 				totalOrderItem = cartItem.ProductVariantDetail.Price * float64(cartItem.Quantity)
 			}
+			if totalOrderItem < 0 {
+				totalOrderItem = 0
+			}
 			totalOrder += totalOrderItem
 
 			// Get weight
@@ -1259,6 +1285,9 @@ func (o *orderService) GetTotalPredictedPrice(req *dto.PredictedPriceReq, userID
 		} else if voucher != nil {
 			err = apperror.BadRequestError("Order tidak memenuhi kriteria voucher " + voucher.Name)
 			return nil, err
+		}
+		if totalOrder < 0 {
+			totalOrder = 0
 		}
 
 		var seller *model.Seller
@@ -1309,13 +1338,13 @@ func (o *orderService) GetTotalPredictedPrice(req *dto.PredictedPriceReq, userID
 			totalAllOrderPrices -= (globalVoucher.Amount / 100) * totalAllOrderPrices
 		} else {
 			totalAllOrderPrices -= globalVoucher.Amount
-			if totalAllOrderPrices < 0 {
-				totalAllOrderPrices = 0
-			}
 		}
 	} else if globalVoucher != nil {
 		err = apperror.BadRequestError("Order tidak memenuhi kriteria voucher global")
 		return nil, err
+	}
+	if totalAllOrderPrices < 0 {
+		totalAllOrderPrices = 0
 	}
 
 	res.TotalPredictedPrice = totalAllOrderPrices + totalDelivery

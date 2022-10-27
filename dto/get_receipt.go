@@ -18,12 +18,20 @@ type BuyerReceipt struct {
 }
 
 type OrderDetailReceipt struct {
-	TotalQuantity uint                `json:"total_quantity"`
-	TotalOrder    float64             `json:"total_order"`
-	DeliveryPrice float64             `json:"delivery_price"`
-	Total         float64             `json:"total"`
-	ShopVoucher   *ShopVoucherReceipt `json:"shop_voucher"`
-	OrderItems    []*OrderItemReceipt `json:"order_items"`
+	TotalQuantity         uint                          `json:"total_quantity"`
+	TotalOrder            float64                       `json:"total_order"`
+	DeliveryPrice         float64                       `json:"delivery_price"`
+	Total                 float64                       `json:"total"`
+	GlobalVoucherForOrder *GlobalVoucherForOrderReceipt `json:"global_voucher_for_order"`
+	ShopVoucher           *ShopVoucherReceipt           `json:"shop_voucher"`
+	OrderItems            []*OrderItemReceipt           `json:"order_items"`
+}
+
+type GlobalVoucherForOrderReceipt struct {
+	Type        string  `json:"type"`
+	Name        string  `json:"name"`
+	Amount      float64 `json:"amount"`
+	TotalReduce float64 `json:"total_reduce"`
 }
 
 type ShopVoucherReceipt struct {
