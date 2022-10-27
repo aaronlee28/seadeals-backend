@@ -54,6 +54,7 @@ func (o *orderRepository) GetOrderBySellerID(tx *gorm.DB, sellerID uint, query *
 		filters = strings.Split(query.Filter, ",")
 		result = result.Where("status IN (?)", filters)
 	}
+	result.Where("status NOT LIKE ?", dto.OrderWaitingPayment)
 
 	var totalData int64
 	table := result.Count(&totalData)
@@ -103,6 +104,7 @@ func (o *orderRepository) GetOrderByUserID(tx *gorm.DB, userID uint, query *Orde
 		filters = strings.Split(query.Filter, ",")
 		result = result.Where("status IN (?)", filters)
 	}
+	result.Where("status NOT LIKE ?", dto.OrderWaitingPayment)
 
 	var totalData int64
 	table := result.Count(&totalData)
