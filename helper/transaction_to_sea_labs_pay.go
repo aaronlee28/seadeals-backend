@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"seadeals-backend/apperror"
 	"seadeals-backend/config"
 	"strconv"
@@ -14,6 +15,11 @@ import (
 )
 
 func TransactionToSeaLabsPay(accountNumber string, amount string, sign string, callback string, trxType string) (string, uint, error) {
+
+	if os.Getenv("ENV") == "testing" {
+		return "", 0, nil
+	}
+
 	client := &http.Client{
 		Timeout: time.Second * 10,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {

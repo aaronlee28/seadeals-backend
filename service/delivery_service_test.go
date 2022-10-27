@@ -392,3 +392,7 @@ func TestDeliveryService_DeliverOrder(t *testing.T) {
 		assert.NotNil(t, err)
 	})
 }
+
+func TestDeliveryService_UpdatePrintSettings(t *testing.T) {
+
+}

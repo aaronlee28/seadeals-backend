@@ -20,6 +20,7 @@ type VoucherService interface {
 	FindVoucherByUserID(userID uint, qp *model.VoucherQueryParam) (*dto.GetVouchersRes, error)
 	ValidateVoucher(req *dto.PostValidateVoucherReq) (*dto.GetVoucherRes, error)
 	UpdateVoucher(req *dto.PatchVoucherReq, id, userID uint) (*dto.GetVoucherRes, error)
+	//
 	DeleteVoucherByID(id, userID uint) (bool, error)
 	GetVouchersBySellerID(sellerID uint) ([]*dto.GetVoucherRes, error)
 	GetAvailableGlobalVouchers() ([]*dto.GetVoucherRes, error)
@@ -272,21 +273,14 @@ func (s *voucherService) DeleteVoucherByID(id, userID uint) (bool, error) {
 		err = apperror.UnauthorizedError("cannot delete other shop voucher")
 		return false, err
 	}
-
-	voucher, err := s.voucherRepo.FindVoucherDetailByID(tx, id)
-	if err != nil {
-		return false, err
-	}
-	if voucher.StartDate.Before(time.Now()) {
+	if v.StartDate.Before(time.Now()) {
 		err = apperror.BadRequestError("cannot delete voucher that has been started")
 		return false, err
 	}
-
 	isDeleted, err := s.voucherRepo.DeleteVoucherByID(tx, id)
 	if err != nil {
 		return false, err
 	}
-
 	return isDeleted, nil
 }
 
