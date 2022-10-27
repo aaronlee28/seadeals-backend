@@ -264,7 +264,7 @@ func (o *orderService) GetDetailOrderForThermal(orderID uint, userID uint) (*dto
 		return nil, err
 	}
 
-	order, err := o.orderRepository.GetOrderDetailForReceipt(tx, orderID)
+	order, err := o.orderRepository.GetOrderDetailForThermal(tx, orderID)
 	if err != nil {
 		return nil, err
 	}

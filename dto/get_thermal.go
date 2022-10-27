@@ -11,7 +11,7 @@ type Thermal struct {
 	DeliveryNumber string                  `json:"delivery_number"`
 	OriginCity     string                  `json:"origin_city"`
 	IssuedAt       time.Time               `json:"issued_at"`
-	Products       []*ProductDetailThermal `json:"product"`
+	Products       []*ProductDetailThermal `json:"products"`
 }
 
 type BuyerThermal struct {
