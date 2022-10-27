@@ -84,7 +84,7 @@ func (c *cartItemRepository) GetCartItem(tx *gorm.DB, query *Query, userID uint)
 	var count int64
 
 	result := tx.Model(&model.CartItem{})
-	result = result.Order("created_at desc").Where("user_id = ?", userID).Where("quantity != ?", 0).Count(&count)
+	result = result.Order("updated_at desc").Where("user_id = ?", userID).Where("quantity != ?", 0).Count(&count)
 	if result.Error != nil {
 		return nil, 0, 0, apperror.InternalServerError("Cannot count cart item")
 	}
