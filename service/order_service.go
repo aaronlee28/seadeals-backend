@@ -228,7 +228,7 @@ func (o *orderService) GetDetailOrderForReceipt(orderID uint, userID uint) (*dto
 		}
 		orderPayments = append(orderPayments, orderPayment)
 		totalTransaction += math.Floor(o2.Total + o2.Delivery.Total)
-		total += math.Floor(totalTransaction - totalReduced)
+		total += math.Floor(o2.Total + o2.Delivery.Total - totalReduced)
 	}
 
 	if order.Transaction.Voucher != nil && order.Transaction.Voucher.AmountType == "quantity" {
