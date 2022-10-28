@@ -173,7 +173,7 @@ func (o *orderService) GetDetailOrderForReceipt(orderID uint, userID uint) (*dto
 		orderItems = append(orderItems, orderItem)
 	}
 
-	var voucher *dto.ShopVoucherReceipt
+	var voucher = &dto.ShopVoucherReceipt{}
 	if order.Voucher != nil {
 		totalReduced := totalOrderBeforeDisc - order.Total
 		if totalReduced < 0 {
@@ -187,7 +187,7 @@ func (o *orderService) GetDetailOrderForReceipt(orderID uint, userID uint) (*dto
 		}
 	}
 
-	var globalVoucherForDiscount *dto.GlobalVoucherForOrderReceipt
+	var globalVoucherForOrder = &dto.GlobalVoucherForOrderReceipt{}
 	if order.Transaction.Voucher != nil {
 		var totalReduced float64
 		var globalVoucher = order.Transaction.Voucher
@@ -196,7 +196,7 @@ func (o *orderService) GetDetailOrderForReceipt(orderID uint, userID uint) (*dto
 		} else {
 			totalReduced = (order.Total / totalPriceBeforeDisc) * order.Total
 		}
-		globalVoucherForDiscount = &dto.GlobalVoucherForOrderReceipt{
+		globalVoucherForOrder = &dto.GlobalVoucherForOrderReceipt{
 			Type:        order.Transaction.Voucher.AmountType,
 			Name:        order.Transaction.Voucher.Name,
 			Amount:      order.Transaction.Voucher.Amount,
@@ -210,7 +210,9 @@ func (o *orderService) GetDetailOrderForReceipt(orderID uint, userID uint) (*dto
 	var total float64
 	for _, o2 := range order.Transaction.Orders {
 		var totalReduced float64
+
 		if order.Transaction.VoucherID != nil && order.Transaction.Voucher.AmountType == "percentage" {
+
 			totalReduced = (order.Transaction.Voucher.Amount / 100) * o2.Total
 			globalVoucher := &dto.GlobalDiscountReceipt{
 				SellerName:   o2.Seller.Name,
@@ -239,6 +241,7 @@ func (o *orderService) GetDetailOrderForReceipt(orderID uint, userID uint) (*dto
 			Amount:       order.Transaction.Voucher.Amount,
 			TotalReduced: order.Transaction.Voucher.Amount,
 		}
+
 		globalVouchers = append(globalVouchers, globalVoucher)
 		total -= order.Transaction.Voucher.Amount
 		if total < 0 {
@@ -257,8 +260,8 @@ func (o *orderService) GetDetailOrderForReceipt(orderID uint, userID uint) (*dto
 			TotalQuantity:         totalQuantity,
 			TotalOrder:            totalOrderBeforeDisc,
 			DeliveryPrice:         order.Delivery.Total,
-			Total:                 math.Floor(order.Total + order.Delivery.Total),
-			GlobalVoucherForOrder: globalVoucherForDiscount,
+			Total:                 math.Floor(order.Total + order.Delivery.Total - globalVoucherForOrder.TotalReduce),
+			GlobalVoucherForOrder: globalVoucherForOrder,
 			ShopVoucher:           voucher,
 			OrderItems:            orderItems,
 		},

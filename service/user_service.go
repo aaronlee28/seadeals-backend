@@ -259,6 +259,10 @@ func (u *userService) ChangeUserPassword(userID uint, req *dto.ChangePasswordReq
 	var err error
 	defer helper.CommitOrRollback(tx, &err)
 
+	if req.NewPassword == req.NewPassword {
+		return apperror.InternalServerError("new password must be different")
+	}
+
 	var userDetails *model.User
 	userDetails, err = u.userRepository.GetUserDetailsByID(tx, userID)
 
