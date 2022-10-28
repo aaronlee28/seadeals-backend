@@ -415,7 +415,7 @@ func TestPromotionService_CreatePromotion(t *testing.T) {
 
 		mockRepo2.On("FindSellerByUserID", mock.AnythingOfType(testutil.GormDBPointerType), uint(0)).Return(&model.Seller{}, nil)
 
-		mockRepo3.On("GetProductDetail", mock.AnythingOfType(testutil.GormDBPointerType), uint(0)).Return(&model.Product{}, nil)
+		mockRepo3.On("GetProductDetail", mock.AnythingOfType(testutil.GormDBPointerType), uint(0)).Return(nil, errors.New(""))
 
 		mockRepo1.On("CreatePromotion", mock.AnythingOfType(testutil.GormDBPointerType), &createPromotionMock, uint(0)).Return(&model.Promotion{}, nil)
 
@@ -600,8 +600,8 @@ func TestPromotionService_CreatePromotion(t *testing.T) {
 		s := service.NewPromotionService(cfg)
 		createPromotionReqArrayMock := []dto.CreatePromotionReq{}
 		currentTime := time.Now()
-		sD := currentTime.Add(time.Hour * 2)
-		eD := currentTime.Add(time.Hour * 1)
+		sD := currentTime.Add(time.Hour * 1)
+		eD := currentTime.Add(time.Hour * 2)
 		createPromotionMock := dto.CreatePromotionReq{
 			ProductID:   0,
 			Name:        "",
@@ -617,11 +617,11 @@ func TestPromotionService_CreatePromotion(t *testing.T) {
 		createPromotionReqArrayMock = append(createPromotionReqArrayMock, createPromotionMock)
 		req := dto.CreatePromotionArrayReq{createPromotionReqArrayMock}
 
-		mockRepo2.On("FindSellerByUserID", mock.AnythingOfType(testutil.GormDBPointerType), uint(0)).Return(&model.Seller{}, nil)
+		mockRepo2.On("FindSellerByUserID", mock.AnythingOfType(testutil.GormDBPointerType), uint(0)).Return(&model.Seller{ID: 1}, nil)
 
-		mockRepo3.On("GetProductDetail", mock.AnythingOfType(testutil.GormDBPointerType), uint(0)).Return(&model.Product{}, nil)
+		mockRepo3.On("GetProductDetail", mock.AnythingOfType(testutil.GormDBPointerType), uint(0)).Return(&model.Product{SellerID: 2}, nil)
 
-		mockRepo1.On("CreatePromotion", mock.AnythingOfType(testutil.GormDBPointerType), &createPromotionMock, uint(0)).Return(&model.Promotion{}, nil)
+		mockRepo1.On("CreatePromotion", mock.AnythingOfType(testutil.GormDBPointerType), &createPromotionMock, uint(1)).Return(&model.Promotion{}, nil)
 
 		socialGraphMock := &model.SocialGraph{
 			Model:    gorm.Model{},
@@ -633,14 +633,14 @@ func TestPromotionService_CreatePromotion(t *testing.T) {
 			Seller:   nil,
 		}
 
-		mockRepo4.On("GetFollowerUserID", mock.AnythingOfType(testutil.GormDBPointerType), uint(0)).Return([]*model.SocialGraph{socialGraphMock}, nil)
+		mockRepo4.On("GetFollowerUserID", mock.AnythingOfType(testutil.GormDBPointerType), uint(1)).Return([]*model.SocialGraph{socialGraphMock}, nil)
 
 		mockRepo5.On("AddToNotificationFromModel", mock.AnythingOfType(testutil.GormDBPointerType), mock.AnythingOfType("*model.Notification"))
 
 		res, err := s.CreatePromotion(uint(0), &req)
 
-		assert.Nil(t, err)
-		assert.NotNil(t, res)
+		assert.Nil(t, res)
+		assert.NotNil(t, err)
 	})
 }
 
