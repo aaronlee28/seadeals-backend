@@ -210,7 +210,9 @@ func (o *orderService) GetDetailOrderForReceipt(orderID uint, userID uint) (*dto
 	var total float64
 	for _, o2 := range order.Transaction.Orders {
 		var totalReduced float64
+
 		if order.Transaction.VoucherID != nil && order.Transaction.Voucher.AmountType == "percentage" {
+
 			totalReduced = (order.Transaction.Voucher.Amount / 100) * o2.Total
 			globalVoucher := &dto.GlobalDiscountReceipt{
 				SellerName:   o2.Seller.Name,
@@ -228,7 +230,7 @@ func (o *orderService) GetDetailOrderForReceipt(orderID uint, userID uint) (*dto
 		}
 		orderPayments = append(orderPayments, orderPayment)
 		totalTransaction += math.Floor(o2.Total + o2.Delivery.Total)
-		total += math.Floor(totalTransaction - totalReduced)
+		total += math.Floor(o2.Total + o2.Delivery.Total - totalReduced)
 	}
 
 	if order.Transaction.Voucher != nil && order.Transaction.Voucher.AmountType == "quantity" {
@@ -239,6 +241,7 @@ func (o *orderService) GetDetailOrderForReceipt(orderID uint, userID uint) (*dto
 			Amount:       order.Transaction.Voucher.Amount,
 			TotalReduced: order.Transaction.Voucher.Amount,
 		}
+
 		globalVouchers = append(globalVouchers, globalVoucher)
 		total -= order.Transaction.Voucher.Amount
 		if total < 0 {

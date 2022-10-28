@@ -763,6 +763,8 @@ func TestUserService_ChangeUserPassword(t *testing.T) {
 		s := service.NewUserService(cfg)
 		req := &dto.ChangePasswordReq{NewPassword: "456", RepeatNewPassword: "456"}
 
+		mockRepo1.On("MatchingCredential", mock.AnythingOfType(testutil.GormDBPointerType), mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(&model.User{Username: "asdf"}, nil)
+
 		mockRepo1.On("GetUserDetailsByID", mock.AnythingOfType(testutil.GormDBPointerType), mock.AnythingOfType("uint")).Return(&model.User{Username: "asdf"}, nil)
 
 		mockRepo1.On("ChangeUserPassword", mock.AnythingOfType(testutil.GormDBPointerType), mock.AnythingOfType("uint"), mock.AnythingOfType("string")).Return(nil)
@@ -770,6 +772,35 @@ func TestUserService_ChangeUserPassword(t *testing.T) {
 		err := s.ChangeUserPassword(uint(1), req)
 
 		assert.Nil(t, err)
+
+	})
+	t.Run("Should return response body", func(t *testing.T) {
+
+		gormDB := testutil.MockDB()
+		mockRepo1 := new(mocks.UserRepository)
+		mockRepo2 := new(mocks.UserRoleRepository)
+		mockRepo3 := new(mocks.AddressRepository)
+		mockRepo4 := new(mocks.WalletRepository)
+		cfg := &service.UserServiceConfig{
+			DB:               gormDB,
+			UserRepository:   mockRepo1,
+			UserRoleRepo:     mockRepo2,
+			AddressRepo:      mockRepo3,
+			WalletRepository: mockRepo4,
+			AppConfig:        config.AppConfig{},
+		}
+		s := service.NewUserService(cfg)
+		req := &dto.ChangePasswordReq{NewPassword: "456", RepeatNewPassword: "456"}
+
+		mockRepo1.On("MatchingCredential", mock.AnythingOfType(testutil.GormDBPointerType), mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(nil, errors.New(""))
+
+		mockRepo1.On("GetUserDetailsByID", mock.AnythingOfType(testutil.GormDBPointerType), mock.AnythingOfType("uint")).Return(&model.User{Username: "asdf"}, nil)
+
+		mockRepo1.On("ChangeUserPassword", mock.AnythingOfType(testutil.GormDBPointerType), mock.AnythingOfType("uint"), mock.AnythingOfType("string")).Return(nil)
+
+		err := s.ChangeUserPassword(uint(1), req)
+
+		assert.NotNil(t, err)
 
 	})
 
@@ -790,6 +821,8 @@ func TestUserService_ChangeUserPassword(t *testing.T) {
 		}
 		s := service.NewUserService(cfg)
 		req := &dto.ChangePasswordReq{NewPassword: "456", RepeatNewPassword: "123"}
+
+		mockRepo1.On("MatchingCredential", mock.AnythingOfType(testutil.GormDBPointerType), mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(&model.User{Username: "asdf"}, nil)
 
 		mockRepo1.On("GetUserDetailsByID", mock.AnythingOfType(testutil.GormDBPointerType), mock.AnythingOfType("uint")).Return(&model.User{Username: "asdf"}, nil)
 
@@ -818,6 +851,8 @@ func TestUserService_ChangeUserPassword(t *testing.T) {
 		s := service.NewUserService(cfg)
 		req := &dto.ChangePasswordReq{NewPassword: "asdf", RepeatNewPassword: "asdf"}
 
+		mockRepo1.On("MatchingCredential", mock.AnythingOfType(testutil.GormDBPointerType), mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(&model.User{Username: "asdf"}, nil)
+
 		mockRepo1.On("GetUserDetailsByID", mock.AnythingOfType(testutil.GormDBPointerType), mock.AnythingOfType("uint")).Return(&model.User{Username: "asdf"}, nil)
 
 		mockRepo1.On("ChangeUserPassword", mock.AnythingOfType(testutil.GormDBPointerType), mock.AnythingOfType("uint"), mock.AnythingOfType("string")).Return(nil)
@@ -844,6 +879,8 @@ func TestUserService_ChangeUserPassword(t *testing.T) {
 		}
 		s := service.NewUserService(cfg)
 		req := &dto.ChangePasswordReq{NewPassword: "456", RepeatNewPassword: "456"}
+
+		mockRepo1.On("MatchingCredential", mock.AnythingOfType(testutil.GormDBPointerType), mock.AnythingOfType("string"), mock.AnythingOfType("string")).Return(&model.User{Username: "asdf"}, nil)
 
 		mockRepo1.On("GetUserDetailsByID", mock.AnythingOfType(testutil.GormDBPointerType), mock.AnythingOfType("uint")).Return(&model.User{Username: "asdf"}, nil)
 
