@@ -173,7 +173,7 @@ func (o *orderService) GetDetailOrderForReceipt(orderID uint, userID uint) (*dto
 		orderItems = append(orderItems, orderItem)
 	}
 
-	var voucher *dto.ShopVoucherReceipt
+	var voucher = &dto.ShopVoucherReceipt{}
 	if order.Voucher != nil {
 		totalReduced := totalOrderBeforeDisc - order.Total
 		if totalReduced < 0 {
@@ -187,7 +187,7 @@ func (o *orderService) GetDetailOrderForReceipt(orderID uint, userID uint) (*dto
 		}
 	}
 
-	var globalVoucherForOrder *dto.GlobalVoucherForOrderReceipt
+	var globalVoucherForOrder = &dto.GlobalVoucherForOrderReceipt{}
 	if order.Transaction.Voucher != nil {
 		var totalReduced float64
 		var globalVoucher = order.Transaction.Voucher
