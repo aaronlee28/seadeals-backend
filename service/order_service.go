@@ -210,7 +210,9 @@ func (o *orderService) GetDetailOrderForReceipt(orderID uint, userID uint) (*dto
 	var total float64
 	for _, o2 := range order.Transaction.Orders {
 		var totalReduced float64
+
 		if order.Transaction.VoucherID != nil && order.Transaction.Voucher.AmountType == "percentage" {
+
 			totalReduced = (order.Transaction.Voucher.Amount / 100) * o2.Total
 			globalVoucher := &dto.GlobalDiscountReceipt{
 				SellerName:   o2.Seller.Name,
@@ -239,6 +241,7 @@ func (o *orderService) GetDetailOrderForReceipt(orderID uint, userID uint) (*dto
 			Amount:       order.Transaction.Voucher.Amount,
 			TotalReduced: order.Transaction.Voucher.Amount,
 		}
+
 		globalVouchers = append(globalVouchers, globalVoucher)
 		total -= order.Transaction.Voucher.Amount
 		if total < 0 {
@@ -286,7 +289,6 @@ func (o *orderService) GetDetailOrderForThermal(orderID uint, userID uint) (*dto
 	if err != nil {
 		return nil, err
 	}
-
 	order, err := o.orderRepository.GetOrderDetailForThermal(tx, orderID)
 	if err != nil {
 		return nil, err
@@ -295,7 +297,6 @@ func (o *orderService) GetDetailOrderForThermal(orderID uint, userID uint) (*dto
 		err = apperror.UnauthorizedError("Tidak bisa melihat Thermal seller lain")
 		return nil, err
 	}
-
 	var products []*dto.ProductDetailThermal
 	for _, item := range order.OrderItems {
 		var variantDetail string
@@ -313,7 +314,6 @@ func (o *orderService) GetDetailOrderForThermal(orderID uint, userID uint) (*dto
 		}
 		products = append(products, product)
 	}
-
 	var orderRes = &dto.Thermal{
 		Buyer: dto.BuyerThermal{
 			Name:    order.User.FullName,
@@ -345,7 +345,6 @@ func (o *orderService) GetOrderBySellerID(userID uint, query *repository.OrderQu
 	if err != nil {
 		return nil, 0, 0, err
 	}
-
 	orders, totalPage, totalData, err := o.orderRepository.GetOrderBySellerID(tx, seller.ID, query)
 	if err != nil {
 		return nil, 0, 0, err
@@ -359,7 +358,6 @@ func (o *orderService) GetOrderBySellerID(userID uint, query *repository.OrderQu
 		if order.Transaction.Status == dto.TransactionPayed {
 			payedAt = &order.Transaction.UpdatedAt
 		}
-
 		var orderItems []*dto.OrderItemOrderList
 		var priceBeforeDisc float64
 		for _, item := range order.OrderItems {
@@ -375,7 +373,6 @@ func (o *orderService) GetOrderBySellerID(userID uint, query *repository.OrderQu
 			if len(item.ProductVariantDetail.Product.ProductPhotos) > 0 {
 				productImageURL = item.ProductVariantDetail.Product.ProductPhotos[0].PhotoURL
 			}
-
 			var orderItemRes = &dto.OrderItemOrderList{
 				ID:                     item.ID,
 				ProductVariantDetailID: item.ProductVariantDetailID,
@@ -395,7 +392,6 @@ func (o *orderService) GetOrderBySellerID(userID uint, query *repository.OrderQu
 			priceBeforeDisc += item.Subtotal
 			orderItems = append(orderItems, orderItemRes)
 		}
-
 		if order.VoucherID != nil && *order.VoucherID != 0 {
 			voucherID = *order.VoucherID
 			voucher = &dto.VoucherOrderList{
@@ -405,7 +401,6 @@ func (o *orderService) GetOrderBySellerID(userID uint, query *repository.OrderQu
 				AmountReduced: priceBeforeDisc - order.Total,
 			}
 		}
-
 		var orderDelivery *dto.DeliveryOrderList
 		var deliveryTotal float64
 		var deliveryID uint
@@ -418,7 +413,6 @@ func (o *orderService) GetOrderBySellerID(userID uint, query *repository.OrderQu
 				}
 				orderDeliveryActivity = append(orderDeliveryActivity, deliveryActivity)
 			}
-
 			orderDelivery = &dto.DeliveryOrderList{
 				DestinationAddress: order.Delivery.Address,
 				Status:             order.Delivery.Status,
@@ -459,7 +453,6 @@ func (o *orderService) GetOrderBySellerID(userID uint, query *repository.OrderQu
 		}
 		orderRes = append(orderRes, res)
 	}
-
 	return orderRes, totalPage, totalData, nil
 }
 
@@ -482,7 +475,6 @@ func (o *orderService) GetOrderByUserID(userID uint, query *repository.OrderQuer
 		if order.Transaction.Status == dto.TransactionPayed {
 			payedAt = &order.Transaction.UpdatedAt
 		}
-
 		var orderItems []*dto.OrderItemOrderList
 		var priceBeforeDisc float64
 		for _, item := range order.OrderItems {
@@ -498,7 +490,6 @@ func (o *orderService) GetOrderByUserID(userID uint, query *repository.OrderQuer
 			if len(item.ProductVariantDetail.Product.ProductPhotos) > 0 {
 				productImageURL = item.ProductVariantDetail.Product.ProductPhotos[0].PhotoURL
 			}
-
 			var review *dto.ReviewOrderList
 			if item.ProductVariantDetail.Product.Review != nil {
 				review = &dto.ReviewOrderList{
@@ -510,7 +501,6 @@ func (o *orderService) GetOrderByUserID(userID uint, query *repository.OrderQuer
 			} else {
 				hasReviewEveryItem = false
 			}
-
 			var orderItemRes = &dto.OrderItemOrderList{
 				ID:                     item.ID,
 				ProductVariantDetailID: item.ProductVariantDetailID,
@@ -531,7 +521,6 @@ func (o *orderService) GetOrderByUserID(userID uint, query *repository.OrderQuer
 			priceBeforeDisc += item.Subtotal
 			orderItems = append(orderItems, orderItemRes)
 		}
-
 		if order.VoucherID != nil && *order.VoucherID != 0 {
 			voucherID = *order.VoucherID
 			voucher = &dto.VoucherOrderList{
@@ -541,7 +530,6 @@ func (o *orderService) GetOrderByUserID(userID uint, query *repository.OrderQuer
 				AmountReduced: priceBeforeDisc - order.Total,
 			}
 		}
-
 		var orderDelivery *dto.DeliveryOrderList
 		var deliveryTotal float64
 		var deliveryID uint
@@ -554,7 +542,6 @@ func (o *orderService) GetOrderByUserID(userID uint, query *repository.OrderQuer
 				}
 				orderDeliveryActivity = append(orderDeliveryActivity, deliveryActivity)
 			}
-
 			orderDelivery = &dto.DeliveryOrderList{
 				DestinationAddress: order.Delivery.Address,
 				Status:             order.Delivery.Status,
@@ -567,7 +554,6 @@ func (o *orderService) GetOrderByUserID(userID uint, query *repository.OrderQuer
 			deliveryTotal = order.Delivery.Total
 			deliveryID = order.Delivery.ID
 		}
-
 		var res = &dto.OrderListRes{
 			ID:        order.ID,
 			BuyerName: order.User.FullName,
@@ -597,7 +583,6 @@ func (o *orderService) GetOrderByUserID(userID uint, query *repository.OrderQuer
 		}
 		orderRes = append(orderRes, res)
 	}
-
 	return orderRes, totalPage, totalData, nil
 }
 

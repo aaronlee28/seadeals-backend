@@ -101,7 +101,7 @@ func (p *promotionService) CreatePromotion(id uint, req *dto.CreatePromotionArra
 		if promotionReq.StartDate.Before(time.Now()) {
 			return nil, apperror.BadRequestError("date before today")
 		}
-		if promotionReq.StartDate.Before(promotionReq.EndDate) {
+		if promotionReq.EndDate.Before(promotionReq.StartDate) {
 			return nil, apperror.BadRequestError("start date before end date")
 		}
 
