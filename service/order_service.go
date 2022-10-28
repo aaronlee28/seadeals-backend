@@ -187,7 +187,7 @@ func (o *orderService) GetDetailOrderForReceipt(orderID uint, userID uint) (*dto
 		}
 	}
 
-	var globalVoucherForDiscount *dto.GlobalVoucherForOrderReceipt
+	var globalVoucherForOrder *dto.GlobalVoucherForOrderReceipt
 	if order.Transaction.Voucher != nil {
 		var totalReduced float64
 		var globalVoucher = order.Transaction.Voucher
@@ -196,7 +196,7 @@ func (o *orderService) GetDetailOrderForReceipt(orderID uint, userID uint) (*dto
 		} else {
 			totalReduced = (order.Total / totalPriceBeforeDisc) * order.Total
 		}
-		globalVoucherForDiscount = &dto.GlobalVoucherForOrderReceipt{
+		globalVoucherForOrder = &dto.GlobalVoucherForOrderReceipt{
 			Type:        order.Transaction.Voucher.AmountType,
 			Name:        order.Transaction.Voucher.Name,
 			Amount:      order.Transaction.Voucher.Amount,
@@ -257,8 +257,8 @@ func (o *orderService) GetDetailOrderForReceipt(orderID uint, userID uint) (*dto
 			TotalQuantity:         totalQuantity,
 			TotalOrder:            totalOrderBeforeDisc,
 			DeliveryPrice:         order.Delivery.Total,
-			Total:                 math.Floor(order.Total + order.Delivery.Total),
-			GlobalVoucherForOrder: globalVoucherForDiscount,
+			Total:                 math.Floor(order.Total + order.Delivery.Total - globalVoucherForOrder.TotalReduce),
+			GlobalVoucherForOrder: globalVoucherForOrder,
 			ShopVoucher:           voucher,
 			OrderItems:            orderItems,
 		},
