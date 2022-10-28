@@ -259,7 +259,7 @@ func (u *userService) ChangeUserPassword(userID uint, req *dto.ChangePasswordReq
 	var err error
 	defer helper.CommitOrRollback(tx, &err)
 
-	if req.NewPassword == req.NewPassword {
+	if req.CurrentPassword == req.NewPassword {
 		return apperror.InternalServerError("new password must be different")
 	}
 
