@@ -259,16 +259,15 @@ func (u *userService) ChangeUserPassword(userID uint, req *dto.ChangePasswordReq
 	var err error
 	defer helper.CommitOrRollback(tx, &err)
 
-	if req.CurrentPassword == req.NewPassword {
-		return apperror.InternalServerError("new password must be different")
-	}
-
 	var userDetails *model.User
 	userDetails, err = u.userRepository.GetUserDetailsByID(tx, userID)
 
 	user, err := u.userRepository.MatchingCredential(tx, req.Email, req.CurrentPassword)
 	if err != nil || user == nil {
 		return apperror.BadRequestError("incorrect current password")
+	}
+	if req.CurrentPassword == req.NewPassword {
+		return apperror.InternalServerError("new password must be different")
 	}
 
 	isMatch, _ := regexp.MatchString(req.NewPassword, req.RepeatNewPassword)
