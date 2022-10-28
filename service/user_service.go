@@ -266,6 +266,9 @@ func (u *userService) ChangeUserPassword(userID uint, req *dto.ChangePasswordReq
 	if err != nil || user == nil {
 		return apperror.BadRequestError("incorrect current password")
 	}
+	if req.CurrentPassword == req.NewPassword {
+		return apperror.InternalServerError("new password must be different")
+	}
 
 	isMatch, _ := regexp.MatchString(req.NewPassword, req.RepeatNewPassword)
 	if !isMatch {
