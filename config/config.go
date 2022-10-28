@@ -15,6 +15,12 @@ type dbConfig struct {
 	Port     string
 }
 
+type intervalConfig struct {
+	DeliveredOrderToDone     string
+	WaitingForSellerToRefund string
+	OnDeliveryToDelivered    string
+}
+
 type AppConfig struct {
 	AppName                  string
 	BaseURL                  string
@@ -23,6 +29,8 @@ type AppConfig struct {
 	JWTSecret                []byte
 	JWTExpiredInMinuteTime   int64
 	DBConfig                 dbConfig
+	Interval                 intervalConfig
+	IntervalCron             string
 	DatabaseURL              string
 	MailJetPublicKey         string
 	MailJetSecretKey         string
@@ -34,7 +42,9 @@ type AppConfig struct {
 	AWSMail                  string
 	ShippingKey              string
 	ShippingURL              string
+	ShippingActionOnError    string
 	RedirectPaymentBase      string
+	TZ                       string
 }
 
 var Config = AppConfig{}
@@ -54,6 +64,12 @@ func Reset() {
 			DBName:   getEnv("DB_NAME", "seadeals_db"),
 			Port:     getEnv("DB_PORT", "5432"),
 		},
+		Interval: intervalConfig{
+			DeliveredOrderToDone:     getEnv("INTERVAL_DELIVERED_TO_DONE", "2 day"),
+			WaitingForSellerToRefund: getEnv("INTERVAL_WAIT_FOR_SELL_TO_REFUND", "3 day"),
+			OnDeliveryToDelivered:    getEnv("INTERVAL_ON_DELIVERY_TO_DELIVERED", "1 day"),
+		},
+		IntervalCron:             getEnv("INTERVAL_CRON", "@daily"),
 		DatabaseURL:              getEnv("DATABASE_URL", ""),
 		MailJetPublicKey:         getEnv("MAILJET_PUBLIC_KEY", ""),
 		MailJetSecretKey:         getEnv("MAILJET_SECRET_KEY", ""),
@@ -65,7 +81,9 @@ func Reset() {
 		AWSMail:                  getEnv("AWS_MAIL", ""),
 		ShippingKey:              getEnv("SHIPPING_API_KEY", ""),
 		ShippingURL:              getEnv("SHIPPING_API_URL", ""),
+		ShippingActionOnError:    getEnv("SHIPPING_ACTION_ON_ERROR", ""),
 		RedirectPaymentBase:      getEnv("REDIRECT_PAY_BASE", "http://localhost:3000"),
+		TZ:                       getEnv("TZ", "Asia/Jakarta"),
 	}
 }
 

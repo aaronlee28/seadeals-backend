@@ -3,7 +3,6 @@ package helper
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"seadeals-backend/apperror"
 	"seadeals-backend/config"
@@ -58,7 +57,6 @@ func CalculateDeliveryPrice(r *dto.DeliveryCalculateReq) (*dto.DeliveryCalculate
 		return nil, err
 	}
 	if resp.StatusCode != 200 {
-		fmt.Println(req.Header.Get("Api-Key"))
 		type shippingError struct {
 			StatusCode int    `json:"status_code"`
 			Code       string `json:"code"`
@@ -69,7 +67,15 @@ func CalculateDeliveryPrice(r *dto.DeliveryCalculateReq) (*dto.DeliveryCalculate
 		if err != nil {
 			return nil, err
 		}
-		return nil, apperror.BadRequestError(j.Message + ": Error dalam delivery API")
+
+		if config.Config.ShippingActionOnError == "ignore" {
+			return &dto.DeliveryCalculateReturn{
+				Total: 20000,
+				Eta:   2,
+			}, nil
+		} else {
+			return nil, apperror.BadRequestError(j.Message + ": Error dalam delivery API")
+		}
 	}
 
 	var dtoRes []dto.DeliveryCalculateRes

@@ -28,20 +28,23 @@ func NewReviewRepository() ReviewRepository {
 }
 
 func (r *reviewRepository) GetReviewsAvgAndCountBySellerID(tx *gorm.DB, sellerID uint) (float64, int64, error) {
-	var average float64
+	var average *float64
+	var zero float64
 	var totalReview int64
 	result := tx.Model(&model.Review{}).Joins("Product", tx.Where(&model.Product{SellerID: sellerID})).Count(&totalReview)
 	if result.Error != nil {
-		fmt.Println(result.Error)
 		return 0, 0, apperror.InternalServerError("Cannot count total review")
 	}
 
-	result = result.Select("avg(rating) as total").Find(&average)
+	result = result.Select("avg(rating) as average").Scan(&average)
 	if result.Error != nil {
 		return 0, 0, apperror.InternalServerError("Cannot count average review")
 	}
+	if average == nil {
+		average = &zero
+	}
 
-	return average, totalReview, nil
+	return *average, totalReview, nil
 }
 
 func (r *reviewRepository) GetReviewsAvgAndCountByProductID(tx *gorm.DB, productID uint) (float64, int64, error) {

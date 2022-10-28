@@ -4,6 +4,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"seadeals-backend/apperror"
+	"seadeals-backend/config"
 	"seadeals-backend/db"
 	"seadeals-backend/dto"
 	"seadeals-backend/model"
@@ -67,7 +68,7 @@ func (d *deliveryRepository) UpdateDeliveryStatusByOrderID(tx *gorm.DB, orderID 
 func (d *deliveryRepository) FindAndUpdateOngoingToDelivered() ([]*model.Delivery, error) {
 	tx := db.Get().Begin()
 	var deliveries []*model.Delivery
-	result := tx.Model(&deliveries).Clauses(clause.Returning{}).Where("status = ?", dto.DeliveryOngoing).Where("? >= updated_at at time zone 'UTC' + interval '1 day' * eta", time.Now()).Find(&deliveries).Update("status", dto.DeliveryDone)
+	result := tx.Model(&deliveries).Clauses(clause.Returning{}).Where("status = ?", dto.DeliveryOngoing).Where("? >= updated_at at time zone '"+config.Config.TZ+"' + interval '"+config.Config.Interval.OnDeliveryToDelivered+"' * eta", time.Now()).Find(&deliveries).Update("status", dto.DeliveryDone)
 	if result.Error != nil {
 		return nil, apperror.InternalServerError("Cannot update delivery")
 	}

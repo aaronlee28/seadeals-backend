@@ -1052,7 +1052,7 @@ func (o *orderService) FinishOrder(req *dto.FinishOrderReq, userID uint) (*model
 func (o *orderService) RunCronJobs() {
 
 	c := cron.New(cron.WithLocation(time.UTC))
-	_, _ = c.AddFunc("@daily", func() {
+	_, _ = c.AddFunc(config.Config.IntervalCron, func() {
 		deliveries, _ := o.deliveryRepo.FindAndUpdateOngoingToDelivered()
 		tx := o.db.Begin()
 		for _, delivery := range deliveries {
@@ -1068,7 +1068,7 @@ func (o *orderService) RunCronJobs() {
 		tx.Commit()
 	})
 
-	_, _ = c.AddFunc("@daily", func() {
+	_, _ = c.AddFunc(config.Config.IntervalCron, func() {
 		orders := o.orderRepository.FindAndUpdateDeliveredOrderToDone()
 		for _, order := range orders {
 			tx := o.db.Begin()
@@ -1103,7 +1103,7 @@ func (o *orderService) RunCronJobs() {
 		}
 	})
 
-	_, _ = c.AddFunc("@daily", func() {
+	_, _ = c.AddFunc(config.Config.IntervalCron, func() {
 		orders := o.orderRepository.FindAndUpdateWaitingForSellerToRefunded()
 		for _, order := range orders {
 			tx := o.db.Begin()
