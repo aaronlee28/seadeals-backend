@@ -41,7 +41,7 @@ func (p *promotionRepository) CreatePromotion(tx *gorm.DB, req *dto.CreatePromot
 		Amount:      req.Amount,
 		BannerURL:   req.BannerURL,
 	}
-	checkDate := tx.Where("? between start_date and end_date", req.StartDate).Where("? between start_date and end_date", req.EndDate).Where("start_date between ? and ?", req.StartDate, req.EndDate).Where("end_date between ? and ?", req.StartDate, req.EndDate).First(&checkPromotion)
+	checkDate := tx.Where("? between start_date and end_date", req.StartDate).Where("? between start_date and end_date", req.EndDate).Where("start_date between ? and ?", req.StartDate, req.EndDate).Where("end_date between ? and ?", req.StartDate, req.EndDate).First(&checkPromotion).Where("seller_id=?", sellerID)
 	if checkDate.Error == nil {
 		return nil, apperror.BadRequestError("overlapped dates")
 	}
