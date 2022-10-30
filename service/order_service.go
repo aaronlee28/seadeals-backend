@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/robfig/cron/v3"
 	"gorm.io/gorm"
-	"log"
 	"math"
 	"net/http"
 	"seadeals-backend/apperror"
@@ -122,7 +121,7 @@ func refundMoneyToSeaLabsPay(URL string, jsonStr []byte) error {
 		var j seaLabsPayError
 		err = json.NewDecoder(resp.Body).Decode(&j)
 		if err != nil {
-			panic(err)
+			fmt.Println(j)
 		}
 		return apperror.BadRequestError(j.Message)
 	}
@@ -1146,7 +1145,7 @@ func (o *orderService) RunCronJobs() {
 					o.orderRepository.UpdateStockByProductVariantDetailID(orderItem.ProductVariantDetailID, orderItem.Quantity)
 				}
 				if err != nil {
-					log.Fatalln("ERROR: ", err)
+					fmt.Println("ERROR: ", err)
 					tx.Rollback()
 				}
 				tx.Commit()
