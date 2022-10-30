@@ -65,13 +65,18 @@ func (_ *GetSellerRes) From(s *model.Seller) *GetSellerRes {
 		isFollow = true
 	}
 
+	avatarURL := "https://firebasestorage.googleapis.com/v0/b/bucket-seadeals.appspot.com/o/avatars%2Fuser%2Fanonym.jpeg?alt=media&token=66dbb36a-2ac1-4b1f-ad67-b2834eefdcef"
+	if s.User.AvatarURL != nil {
+		avatarURL = *s.User.AvatarURL
+	}
+
 	return &GetSellerRes{
 		ID:          s.ID,
 		UserID:      s.UserID,
 		Name:        s.Name,
 		Description: s.Description,
 		Address:     address,
-		ProfileURL:  s.PictureURL,
+		ProfileURL:  avatarURL,
 		BannerURL:   s.BannerURL,
 		JoinDate:    joinStatus,
 		IsFollow:    isFollow,
