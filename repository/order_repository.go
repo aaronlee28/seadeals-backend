@@ -245,7 +245,7 @@ func (o *orderRepository) FindAndUpdateWaitingForSellerToRefunded() []*model.Ord
 func (o *orderRepository) RefundToWalletByUserID(userID uint, refundedAmount float64) *model.Wallet {
 	tx := db.Get().Begin()
 	var wallet *model.Wallet
-	result := tx.Clauses(clause.Returning{}).Where("id = ?", userID).First(&wallet).Update("balance", wallet.Balance+refundedAmount)
+	result := tx.Clauses(clause.Returning{}).Where("user_id = ?", userID).First(&wallet).Update("balance", wallet.Balance+refundedAmount)
 	if result.Error != nil {
 		tx.Rollback()
 		fmt.Println("error:", result.Error)
