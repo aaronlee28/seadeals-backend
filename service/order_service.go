@@ -3,8 +3,10 @@ package service
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"github.com/robfig/cron/v3"
 	"gorm.io/gorm"
+	"log"
 	"math"
 	"net/http"
 	"seadeals-backend/apperror"
@@ -109,6 +111,7 @@ func refundMoneyToSeaLabsPay(URL string, jsonStr []byte) error {
 	if err != nil {
 		return err
 	}
+	fmt.Println("CODE:", resp.StatusCode)
 	if resp.StatusCode != 200 {
 		type seaLabsPayError struct {
 			Code    string `json:"code"`
@@ -1118,34 +1121,33 @@ func (o *orderService) RunCronJobs() {
 					o.orderRepository.UpdateStockByProductVariantDetailID(orderItem.ProductVariantDetailID, orderItem.Quantity)
 				}
 			} else {
+				var amountRefunded = orderDetail.Total
 				if orderDetail.Transaction.VoucherID != nil {
-					var amountRefunded = orderDetail.Total
-					if orderDetail.Transaction.VoucherID != nil {
-						priceBeforeGlobalDisc, _ := o.transactionRepo.GetPriceBeforeGlobalDisc(tx, orderDetail.TransactionID)
-						voucher, _ := o.voucherRepo.FindVoucherDetailByID(tx, *orderDetail.Transaction.VoucherID)
-						if voucher.AmountType == "percentage" {
-							amountRefunded = orderDetail.Total - ((voucher.Amount / 100) * orderDetail.Total)
-						} else {
-							amountReduced := (orderDetail.Total / priceBeforeGlobalDisc) * orderDetail.Total
-							amountRefunded = orderDetail.Total - amountReduced
-						}
+					priceBeforeGlobalDisc, _ := o.transactionRepo.GetPriceBeforeGlobalDisc(tx, orderDetail.TransactionID)
+					voucher, _ := o.voucherRepo.FindVoucherDetailByID(tx, *orderDetail.Transaction.VoucherID)
+					if voucher.AmountType == "percentage" {
+						amountRefunded = orderDetail.Total - ((voucher.Amount / 100) * orderDetail.Total)
+					} else {
+						amountReduced := (orderDetail.Total / priceBeforeGlobalDisc) * orderDetail.Total
+						amountRefunded = orderDetail.Total - amountReduced
 					}
+				}
 
-					delivery, _ := o.deliveryRepo.GetDeliveryByOrderID(tx, orderDetail.ID)
-					amountRefunded += delivery.Total
+				delivery, _ := o.deliveryRepo.GetDeliveryByOrderID(tx, orderDetail.ID)
+				amountRefunded += delivery.Total
 
-					transHolder, err := o.seaLabsPayTransHolderRepo.GetTransHolderFromTransactionID(tx, orderDetail.TransactionID)
-					URL := config.Config.SeaLabsPayRefundURL
-					var jsonStr = []byte(`{"reason":"Seller cancel the order", "amount":` + strconv.Itoa(int(amountRefunded)) + `, "txn_id":` + strconv.Itoa(int(transHolder.TxnID)) + `}`)
+				transHolder, err := o.seaLabsPayTransHolderRepo.GetTransHolderFromTransactionID(tx, orderDetail.TransactionID)
+				URL := config.Config.SeaLabsPayRefundURL
+				var jsonStr = []byte(`{"reason":"Seller cancel the order", "amount":` + strconv.Itoa(int(amountRefunded)) + `, "txn_id":` + strconv.Itoa(int(transHolder.TxnID)) + `}`)
 
-					err = refundMoneyToSeaLabsPay(URL, jsonStr)
-					orderItems := o.orderRepository.GetOrderItemsByOrderID(orderDetail.ID)
-					for _, orderItem := range orderItems {
-						o.orderRepository.UpdateStockByProductVariantDetailID(orderItem.ProductVariantDetailID, orderItem.Quantity)
-					}
-					if err != nil {
-						tx.Rollback()
-					}
+				err = refundMoneyToSeaLabsPay(URL, jsonStr)
+				orderItems := o.orderRepository.GetOrderItemsByOrderID(orderDetail.ID)
+				for _, orderItem := range orderItems {
+					o.orderRepository.UpdateStockByProductVariantDetailID(orderItem.ProductVariantDetailID, orderItem.Quantity)
+				}
+				if err != nil {
+					log.Fatalln("ERROR: ", err)
+					tx.Rollback()
 				}
 				tx.Commit()
 			}
