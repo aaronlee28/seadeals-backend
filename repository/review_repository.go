@@ -31,7 +31,7 @@ func (r *reviewRepository) GetReviewsAvgAndCountBySellerID(tx *gorm.DB, sellerID
 	var average *float64
 	var zero float64
 	var totalReview int64
-	result := tx.Model(&model.Review{}).Joins("Product", tx.Where(&model.Product{SellerID: sellerID})).Count(&totalReview)
+	result := tx.Model(&model.Review{}).Joins("JOIN products ON products.id = reviews.product_id").Where("products.seller_id = ? AND products.deleted_at = ?", sellerID, nil).Count(&totalReview)
 	if result.Error != nil {
 		return 0, 0, apperror.InternalServerError("Cannot count total review")
 	}
