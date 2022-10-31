@@ -1015,7 +1015,6 @@ func (o *orderService) FinishOrder(req *dto.FinishOrderReq, userID uint) (*model
 	if err != nil {
 		return nil, err
 	}
-
 	for _, item := range order.OrderItems {
 		_, err = o.productRepo.AddProductSoldCount(tx, item.ProductVariantDetail.ProductID, int(item.Quantity))
 		if err != nil {
@@ -1173,7 +1172,6 @@ func (o *orderService) GetTotalPredictedPrice(req *dto.PredictedPriceReq, userID
 		return nil, err
 	}
 	timeNow := time.Now()
-
 	if globalVoucher != nil {
 		if timeNow.After(globalVoucher.EndDate) || timeNow.Before(globalVoucher.StartDate) {
 			err = apperror.InternalServerError("Level 3 Voucher invalid")
@@ -1299,8 +1297,8 @@ func (o *orderService) GetTotalPredictedPrice(req *dto.PredictedPriceReq, userID
 			Weight:          strconv.Itoa(totalWeight),
 			Courier:         courier.Code,
 		}
-
 		var deliveryCalcResult *dto.DeliveryCalculateReturn
+
 		deliveryCalcResult, err = helper.CalculateDeliveryPrice(deliveryReq)
 		if err != nil {
 			return nil, err

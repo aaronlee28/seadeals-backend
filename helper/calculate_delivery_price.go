@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
+	"os"
 	"seadeals-backend/apperror"
 	"seadeals-backend/config"
 	"seadeals-backend/dto"
@@ -35,6 +36,10 @@ func CalculateDeliveryPrice(r *dto.DeliveryCalculateReq) (*dto.DeliveryCalculate
 	var err error
 	var req *http.Request
 	var resp *http.Response
+
+	if os.Getenv("ENV") == "testing" {
+		return &dto.DeliveryCalculateReturn{Total: 1, Eta: 1}, nil
+	}
 
 	client := &http.Client{}
 	URL := config.Config.ShippingURL
