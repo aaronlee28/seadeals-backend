@@ -196,7 +196,11 @@ func (o *orderService) GetDetailOrderForReceipt(orderID uint, userID uint) (*dto
 		if globalVoucher.AmountType == "percentage" {
 			totalReduced = (globalVoucher.Amount / 100) * order.Total
 		} else {
-			totalReduced = (order.Total / totalPriceBeforeDisc) * order.Total
+			totalReduced = (order.Total / totalPriceBeforeDisc) * globalVoucher.Amount
+			fmt.Println("order Total : ", order.Total)
+			fmt.Println("total transaction : ", totalPriceBeforeDisc)
+			fmt.Println((order.Total / totalPriceBeforeDisc) * order.Total)
+
 		}
 		globalVoucherForOrder = &dto.GlobalVoucherForOrderReceipt{
 			Type:        order.Transaction.Voucher.AmountType,
@@ -216,6 +220,19 @@ func (o *orderService) GetDetailOrderForReceipt(orderID uint, userID uint) (*dto
 		if order.Transaction.VoucherID != nil && order.Transaction.Voucher.AmountType == "percentage" {
 
 			totalReduced = (order.Transaction.Voucher.Amount / 100) * o2.Total
+			globalVoucher := &dto.GlobalDiscountReceipt{
+				SellerName:   o2.Seller.Name,
+				Name:         order.Transaction.Voucher.Name,
+				Type:         order.Transaction.Voucher.AmountType,
+				Amount:       order.Transaction.Voucher.Amount,
+				TotalReduced: math.Floor(totalReduced),
+			}
+			globalVouchers = append(globalVouchers, globalVoucher)
+		}
+
+		if order.Transaction.VoucherID != nil && order.Transaction.Voucher.AmountType == "nominal" {
+
+			totalReduced = (o2.Total / totalPriceBeforeDisc) * order.Transaction.Voucher.Amount
 			globalVoucher := &dto.GlobalDiscountReceipt{
 				SellerName:   o2.Seller.Name,
 				Name:         order.Transaction.Voucher.Name,
@@ -627,7 +644,7 @@ func (o *orderService) CancelOrderBySeller(orderID uint, userID uint) (*model.Or
 		if voucher.AmountType == "percentage" {
 			amountRefunded = order.Total - ((voucher.Amount / 100) * order.Total)
 		} else {
-			amountReduced := (order.Total / priceBeforeGlobalDisc) * order.Total
+			amountReduced := (order.Total / priceBeforeGlobalDisc) * voucher.Amount
 			amountRefunded = order.Total - amountReduced
 		}
 	}
@@ -819,7 +836,7 @@ func (o *orderService) AcceptRefundRequest(req *dto.RejectAcceptRefundReq, userI
 		if voucher.AmountType == "percentage" {
 			amountRefunded = order.Total - ((voucher.Amount / 100) * order.Total)
 		} else {
-			amountReduced := (order.Total / priceBeforeGlobalDisc) * order.Total
+			amountReduced := (order.Total / priceBeforeGlobalDisc) * voucher.Amount
 			amountRefunded = order.Total - amountReduced
 		}
 	}
@@ -1104,7 +1121,7 @@ func (o *orderService) RunCronJobs() {
 					if voucher.AmountType == "percentage" {
 						amountRefunded = orderDetail.Total - ((voucher.Amount / 100) * orderDetail.Total)
 					} else {
-						amountReduced := (orderDetail.Total / priceBeforeGlobalDisc) * orderDetail.Total
+						amountReduced := (orderDetail.Total / priceBeforeGlobalDisc) * voucher.Amount
 						amountRefunded = orderDetail.Total - amountReduced
 					}
 				}
