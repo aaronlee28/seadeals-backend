@@ -1,5 +1,6 @@
 module seadeals-backend
 
+// +heroku goVersion go1.15
 go 1.18
 
 require (
